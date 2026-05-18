@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import {
   index,
   integer,
-  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -33,14 +32,39 @@ export const scoreDecisionEnum = pgEnum("nf_score_decision", [
   "pass", "conditional", "build", "prioritise",
 ]);
 
-// ─── Clients ─────────────────────────────────────────────────────────────────
+// ─── Clients ──────────────────────────────────────────────────────────────────
+// Full onboarding profile — collected before any project is created
 
 export const clients = pgTable("nf_clients", {
   id: uuid("id").primaryKey().defaultRandom(),
+
+  // Contact
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+
+  // Company
   company: varchar("company", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  industry: varchar("industry", { length: 255 }),
+  companySize: varchar("company_size", { length: 50 }),   // "1-10" | "11-50" | "51-200" | "201-1000" | "1000+"
+  region: varchar("region", { length: 100 }),
+
+  // Business context
+  businessDescription: text("business_description"),       // What they do
+  targetCustomers: text("target_customers"),               // Who their customers are
+  currentChallenges: text("current_challenges"),           // Pain points we're solving
+  existingTech: text("existing_tech"),                     // Their current stack / tools
+
+  // Commercial
+  typicalBudget: varchar("typical_budget", { length: 100 }), // Budget expectation
+  urgency: varchar("urgency", { length: 50 }),             // "exploring" | "planning" | "urgent"
+  decisionMakerRole: varchar("decision_maker_role", { length: 100 }),
+
+  // Internal
   notes: text("notes"),
+  onboardedAt: timestamp("onboarded_at"),                  // null = incomplete onboarding
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
