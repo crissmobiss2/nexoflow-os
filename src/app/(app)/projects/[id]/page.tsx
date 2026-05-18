@@ -5,7 +5,8 @@ import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import {
   ArrowLeft, FileText, Code2, Loader2,
-  CheckCircle2, Circle, ArrowRight, Zap, Terminal,
+  CheckCircle2, Circle, ArrowRight, Zap, Terminal, FileSignature,
+  Eye, Globe, Copy,
 } from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const { data: project, refetch, isLoading } = api.projects.get.useQuery({ id });
   const generateScope = api.projects.generateScope.useMutation({ onSuccess: () => void refetch() });
   const generateArch = api.projects.generateArchitecture.useMutation({ onSuccess: () => void refetch() });
+  const enablePortal = api.projects.enablePortal.useMutation({ onSuccess: () => void refetch() });
+  const disablePortal = api.projects.disablePortal.useMutation({ onSuccess: () => void refetch() });
 
   if (isLoading) {
     return (
@@ -83,6 +86,28 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       loading: false,
       disabled: !archArtifact,
       step: "03",
+    },
+    {
+      label: "Proposal",
+      description: "Client-ready proposal with scope, timeline & pricing",
+      icon: <FileSignature className="w-4 h-4" />,
+      done: false,
+      href: `/projects/${id}/proposal`,
+      action: undefined,
+      loading: false,
+      disabled: !scopeArtifact,
+      step: "04",
+    },
+    {
+      label: "Sprint",
+      description: "Break scope into tasks with kanban planning",
+      icon: <CheckCircle2 className="w-4 h-4" />,
+      done: false,
+      href: `/projects/${id}/sprint`,
+      action: undefined,
+      loading: false,
+      disabled: !scopeArtifact,
+      step: "05",
     },
   ];
 
@@ -200,6 +225,101 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   </div>
                 ))}
             </div>
+          </div>
+
+          {/* Client Portal */}
+          <div
+            className="rounded-xl p-5"
+            style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+              <Globe className="w-3.5 h-3.5" />
+              Client Portal
+            </h2>
+
+            {!project.portalEnabled ? (
+              <div className="space-y-3">
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                  Enable a read-only client portal so your client can view the scope, timeline, and progress.
+                </p>
+                <button
+                  className="nf-input inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all w-fit"
+                  style={{
+                    background: "var(--brand-gradient)",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    opacity: enablePortal.isPending ? 0.6 : 1,
+                  }}
+                  disabled={enablePortal.isPending}
+                  onClick={() => enablePortal.mutate({ projectId: id })}
+                >
+                  {enablePortal.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                  {enablePortal.isPending ? "Enabling..." : "Enable Client Portal"}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      background: "hsl(142, 68%, 52%, 0.12)",
+                      color: "var(--status-success)",
+                      border: "1px solid hsl(142, 68%, 52%, 0.25)",
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    Active
+                  </span>
+                </div>
+
+                {project.portalToken && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>
+                      Portal URL
+                    </p>
+                    <div
+                      className="flex items-center gap-2 p-2.5 rounded-lg text-xs break-all"
+                      style={{
+                        background: "var(--surface-elevated)",
+                        border: "1px solid var(--surface-border)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <span className="flex-1 min-w-0 truncate font-mono">
+                        nexoflow-os.vercel.app/portal/{project.portalToken}
+                      </span>
+                      <button
+                        className="shrink-0 p-1 rounded transition-colors hover:opacity-70"
+                        style={{ color: "var(--text-muted)" }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `https://nexoflow-os.vercel.app/portal/${project.portalToken ?? ""}`
+                          );
+                        }}
+                        title="Copy URL"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  className="text-xs font-medium transition-colors hover:opacity-70"
+                  style={{ color: "var(--status-error)" }}
+                  disabled={disablePortal.isPending}
+                  onClick={() => disablePortal.mutate({ projectId: id })}
+                >
+                  {disablePortal.isPending ? "Disabling..." : "Disable portal"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

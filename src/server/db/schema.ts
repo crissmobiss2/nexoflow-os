@@ -1,9 +1,11 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -30,6 +32,10 @@ export const phaseStatusEnum = pgEnum("nf_phase_status", [
 
 export const scoreDecisionEnum = pgEnum("nf_score_decision", [
   "pass", "conditional", "build", "prioritise",
+]);
+
+export const sprintTaskStatusEnum = pgEnum("nf_sprint_status", [
+  "backlog", "todo", "in_progress", "review", "done", "cancelled",
 ]);
 
 export const aiModeEnum = pgEnum("nf_ai_mode", [
@@ -77,6 +83,8 @@ export const projects = pgTable(
     scoreDecision: scoreDecisionEnum("score_decision"),
     budgetRange: varchar("budget_range", { length: 100 }),
     timelineWeeks: integer("timeline_weeks"),
+    portalToken: text("portal_token").unique(),
+    portalEnabled: boolean("portal_enabled").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -192,6 +200,78 @@ export const aiMessages = pgTable(
   (t) => [index("nf_messages_conv_idx").on(t.conversationId)],
 );
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export const users = pgTable("nf_user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: timestamp("email_verified", { mode: "date" }),
+  image: text("image"),
+  role: varchar("role", { length: 20 }).default("viewer").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const accounts = pgTable(
+  "nf_account",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.provider, t.providerAccountId] }),
+  }),
+);
+
+export const sessions = pgTable("nf_session", {
+  sessionToken: text("session_token").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+export const verificationTokens = pgTable(
+  "nf_verification_token",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.identifier, t.token] }),
+  }),
+);
+
+// ─── Sprint Tasks ──────────────────────────────────────────────────────────────
+
+export const sprintTasks = pgTable(
+  "nf_sprint_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+    phaseId: uuid("phase_id").references(() => projectPhases.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 500 }).notNull(),
+    description: text("description"),
+    storyPoints: integer("story_points").default(1),
+    status: sprintTaskStatusEnum("status").default("backlog").notNull(),
+    assigneeId: text("assignee_id").references(() => users.id, { onDelete: "set null" }),
+    priority: integer("priority").default(0),
+    order: integer("order_val").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_sprint_tasks_project_idx").on(t.projectId)],
+);
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const clientRelations = relations(clients, ({ many }) => ({
@@ -219,6 +299,11 @@ export const phaseRelations = relations(projectPhases, ({ one }) => ({
   project: one(projects, { fields: [projectPhases.projectId], references: [projects.id] }),
 }));
 
+export const sprintTaskRelations = relations(sprintTasks, ({ one }) => ({
+  project: one(projects, { fields: [sprintTasks.projectId], references: [projects.id] }),
+  assignee: one(users, { fields: [sprintTasks.assigneeId], references: [users.id] }),
+}));
+
 export const conversationRelations = relations(aiConversations, ({ one, many }) => ({
   project: one(projects, { fields: [aiConversations.projectId], references: [projects.id] }),
   messages: many(aiMessages),
@@ -226,4 +311,17 @@ export const conversationRelations = relations(aiConversations, ({ one, many }) 
 
 export const messageRelations = relations(aiMessages, ({ one }) => ({
   conversation: one(aiConversations, { fields: [aiMessages.conversationId], references: [aiConversations.id] }),
+}));
+
+export const userRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
+  sessions: many(sessions),
+}));
+
+export const accountRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+}));
+
+export const sessionRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));

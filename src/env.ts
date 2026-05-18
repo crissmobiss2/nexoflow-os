@@ -5,6 +5,8 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
     ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-"),
+    AUTH_SECRET: z.string().min(1),
+    AUTH_RESEND_KEY: z.string().optional(),
     // Optional: path to local Obsidian vault for richer AI context.
     // Falls back to bundled knowledge files when not set.
     SECOND_BRAIN_PATH: z.string().optional(),
@@ -16,6 +18,8 @@ export const env = createEnv({
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_RESEND_KEY: process.env.AUTH_RESEND_KEY,
     SECOND_BRAIN_PATH: process.env.SECOND_BRAIN_PATH,
     NODE_ENV: process.env.NODE_ENV,
   },

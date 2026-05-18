@@ -206,6 +206,51 @@ export const projectsRouter = createTRPCRouter({
       return { content: result.content };
     }),
 
+  getProposal: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await ctx.db.query.projects.findFirst({
+        where: eq(projects.id, input.id),
+        with: { client: true, brief: true, artifacts: true, phases: true },
+      });
+      if (!project) throw new Error("Project not found");
+      const scopeArtifact = project.artifacts.find((a) => a.artifactType === "scope_doc");
+      return {
+        ...project,
+        scopeContent: scopeArtifact?.content ?? null,
+      };
+    }),
+
+  getPortalProject: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.projects.findFirst({
+        where: eq(projects.portalToken, input.token),
+        with: { client: true, brief: true, artifacts: true, phases: true },
+      });
+    }),
+
+  enablePortal: publicProcedure
+    .input(z.object({ projectId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const token = crypto.randomUUID();
+      await ctx.db
+        .update(projects)
+        .set({ portalToken: token, portalEnabled: true })
+        .where(eq(projects.id, input.projectId));
+      return { token };
+    }),
+
+  disablePortal: publicProcedure
+    .input(z.object({ projectId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(projects)
+        .set({ portalEnabled: false })
+        .where(eq(projects.id, input.projectId));
+      return { success: true };
+    }),
+
   getArtifact: publicProcedure
     .input(
       z.object({

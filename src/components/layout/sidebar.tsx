@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { signOut } from "@/lib/auth";
 import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
-  BookOpen, Brain, Sparkles,
+  BookOpen, Brain, Sparkles, LogOut, BarChart2,
 } from "lucide-react";
+import type { Session } from "next-auth";
 
 const NAV_SECTIONS = [
   {
     label: "Intelligence",
     items: [
-      { href: "/ai",        label: "AI Studio",      icon: Brain,          badge: "New" },
+      { href: "/ai",        label: "AI Studio",      icon: Brain,          badge: "New" as const },
       { href: "/knowledge", label: "Knowledge Hub",  icon: BookOpen,       badge: null },
       { href: "/playbooks", label: "Playbooks",      icon: Sparkles,       badge: null },
     ],
@@ -21,13 +23,14 @@ const NAV_SECTIONS = [
     label: "Workspace",
     items: [
       { href: "/",          label: "Dashboard",      icon: LayoutDashboard, badge: null },
+      { href: "/analytics", label: "Analytics",      icon: BarChart2,       badge: null },
       { href: "/clients",   label: "Clients",        icon: Users,           badge: null },
       { href: "/projects",  label: "Projects",       icon: FolderKanban,    badge: null },
     ],
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ session }: { session: Session | null }) {
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -135,9 +138,39 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 shrink-0" style={{ borderTop: "1px solid var(--surface-border)" }}>
-        <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>NexoFlow OS · v2.0</div>
+      {/* User section */}
+      <div className="shrink-0" style={{ borderTop: "1px solid var(--surface-border)" }}>
+        {session?.user && (
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+              style={{ background: "var(--brand-gradient)" }}
+            >
+              {session.user.name?.charAt(0)?.toUpperCase() ?? session.user.email?.charAt(0)?.toUpperCase() ?? "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                {session.user.name ?? session.user.email ?? "User"}
+              </div>
+              <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                {session.user.role ?? "viewer"}
+              </div>
+            </div>
+            <button
+              onClick={() => signOut()}
+              className="p-1.5 rounded-lg transition-all duration-150 hover:opacity-80 shrink-0"
+              style={{ color: "var(--text-muted)" }}
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {!session?.user && (
+          <div className="p-4 shrink-0">
+            <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>NexoFlow OS · v2.0</div>
+          </div>
+        )}
       </div>
     </aside>
   );

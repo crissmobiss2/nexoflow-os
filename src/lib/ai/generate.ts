@@ -6,6 +6,7 @@ import {
   SCOPE_PROMPT,
   ARCHITECTURE_PROMPT,
   CODE_GEN_PROMPT,
+  SPRINT_TASK_GEN_PROMPT,
 } from "./prompts";
 
 const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
@@ -120,4 +121,27 @@ export async function* generateCodeStream(
       yield event.delta.text;
     }
   }
+}
+
+export type SprintTaskItem = {
+  title: string;
+  description: string;
+  storyPoints: number;
+  priority: number;
+};
+
+export async function generateSprintTasks(projectName: string, scopeDoc: string): Promise<SprintTaskItem[]> {
+  const prompt = SPRINT_TASK_GEN_PROMPT(projectName, scopeDoc);
+
+  const message = await anthropic.messages.create({
+    model: HAIKU,
+    max_tokens: 4096,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = message.content[0]?.type === "text" ? message.content[0].text : "";
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch?.[0]) throw new Error("Failed to parse sprint tasks response");
+
+  return JSON.parse(jsonMatch[0]) as SprintTaskItem[];
 }

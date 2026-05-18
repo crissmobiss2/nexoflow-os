@@ -311,44 +311,48 @@ ARCHITECTURE:
 ${architecture}
 
 ---
-
-Generate the following files in full. Use this exact format for each file:
-
-\`\`\`filepath:path/to/file.ext
-[complete file content]
-\`\`\`
-
-FILES TO GENERATE:
-
-1. **package.json** — All dependencies with exact version numbers. Include all NexoFlow standard packages. Scripts: dev, build, start, lint, typecheck, db:push, db:studio.
-
-2. **tsconfig.json** — NexoFlow strict TypeScript config with path aliases (@/*, @/components/*, @/server/*, @/lib/*).
-
-3. **.env.example** — Every environment variable with inline comments explaining what it is and where to get it.
-
-4. **drizzle.config.ts** — Configured for the project's schema location.
-
-5. **src/env.ts** — T3-style env validation with @t3-oss/env-nextjs. Validate every env var.
-
-6. **src/server/db/index.ts** — Drizzle client setup with connection pooling.
-
-7. **src/server/db/schema.ts** — COMPLETE Drizzle schema matching the architecture document. Real tables, real columns, real relations.
-
-8. **src/server/trpc.ts** — tRPC v11 initialisation with context, auth middleware, and error handling.
-
-9. **src/server/routers/index.ts** — Root tRPC router importing all sub-routers.
-
-10. **src/server/routers/[main-entity].ts** — The primary router for this project's core entity with at least 5 procedures (list, get, create, update, delete/archive).
-
-11. **src/app/layout.tsx** — Root layout with providers, Inter font, and metadata.
-
-12. **src/app/providers.tsx** — All client providers (tRPC, auth, theme if applicable).
-
-13. **src/lib/utils.ts** — cn() helper + 5-6 project-specific utility functions.
-
-14. **src/middleware.ts** — Route protection middleware using Auth.js or JWT.
-
-15. **README.md** — Professional setup guide: prerequisites, environment setup, database setup, development commands, deployment. Write it like a senior engineer wrote it.
-
-Ensure all imports are correct, all TypeScript types are explicit, and the code follows NexoFlow's standards throughout.
+...
 `;
+
+export const SPRINT_TASK_GEN_PROMPT = (projectName: string, scopeDoc: string) => `
+${SYSTEM_BASE}
+
+## TASK: Sprint Task Generation
+
+You are breaking down a project scope document into actionable sprint tasks for the NexoFlow development team.
+
+PROJECT: ${projectName}
+
+SCOPE DOCUMENT:
+${scopeDoc}
+
+Generate a JSON array of tasks. Each task should be a concrete, actionable unit of work that a developer can pick up and complete. Follow these guidelines:
+
+1. Each task should be small enough to complete in 1-3 days
+2. Group related work logically
+3. Assign story points (1-13, Fibonacci-like: 1, 2, 3, 5, 8, 13)
+4. Assign priority (0 = low, 1 = medium, 2 = high, 3 = critical)
+5. Start all tasks in "backlog" status
+6. Write clear, specific titles and descriptions
+
+Return ONLY valid JSON — a single array of objects. No markdown, no explanation, no code fences.
+
+Example:
+[
+  {
+    "title": "Set up Next.js project with Tailwind and tRPC",
+    "description": "Initialize the Next.js 16 project with TypeScript strict mode, configure Tailwind v4, set up tRPC v11 with the project router structure, and install all base dependencies.",
+    "storyPoints": 3,
+    "priority": 3
+  },
+  {
+    "title": "Implement user authentication (Auth.js)",
+    "description": "Set up Auth.js v5 with email/password credentials provider and Google OAuth. Create sign-in, sign-up, and password reset pages. Protect all /app routes with middleware.",
+    "storyPoints": 8,
+    "priority": 3
+  }
+]
+
+Generate 8-15 well-defined tasks that cover the full scope of work. Make them real, specific, and immediately actionable.
+`;
+
