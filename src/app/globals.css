@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  /* NexoFlow Brand */
+  --brand-primary: hsl(220, 90%, 56%);
+  --brand-primary-hover: hsl(220, 90%, 48%);
+  --brand-accent: hsl(262, 83%, 58%);
+
+  /* Surface */
+  --surface-bg: hsl(220, 20%, 97%);
+  --surface-card: hsl(0, 0%, 100%);
+  --surface-elevated: hsl(220, 20%, 99%);
+  --surface-border: hsl(220, 15%, 90%);
+
+  /* Text */
+  --text-primary: hsl(220, 20%, 10%);
+  --text-secondary: hsl(220, 10%, 45%);
+  --text-muted: hsl(220, 10%, 65%);
+
+  /* Status */
+  --status-success: hsl(142, 71%, 45%);
+  --status-warning: hsl(38, 92%, 50%);
+  --status-error: hsl(0, 84%, 60%);
+  --status-info: hsl(201, 94%, 37%);
+
+  /* Score colours */
+  --score-prioritise: hsl(142, 71%, 45%);
+  --score-build: hsl(220, 90%, 56%);
+  --score-conditional: hsl(38, 92%, 50%);
+  --score-pass: hsl(0, 84%, 60%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Markdown content styles */
+.prose-nexoflow h1 { font-size: 1.728rem; font-weight: 700; margin-bottom: 1rem; }
+.prose-nexoflow h2 { font-size: 1.44rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+.prose-nexoflow h3 { font-size: 1.2rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.prose-nexoflow p { margin-bottom: 1rem; color: var(--text-primary); }
+.prose-nexoflow ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+.prose-nexoflow li { margin-bottom: 0.25rem; }
+.prose-nexoflow code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; background: hsl(220, 15%, 94%); padding: 0.125em 0.375em; border-radius: 4px; }
+.prose-nexoflow pre { background: hsl(220, 20%, 10%); color: hsl(220, 10%, 90%); padding: 1.25rem; border-radius: 8px; overflow-x: auto; margin-bottom: 1rem; }
+.prose-nexoflow pre code { background: none; padding: 0; }
+.prose-nexoflow table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+.prose-nexoflow th { background: hsl(220, 15%, 94%); font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid var(--surface-border); }
+.prose-nexoflow td { padding: 0.5rem 0.75rem; border: 1px solid var(--surface-border); }
