@@ -3,7 +3,8 @@
 import { use } from "react";
 import { api } from "@/lib/trpc/client";
 import Link from "next/link";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
+import { renderMarkdown } from "@/lib/markdown";
 
 export default function ScopePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -12,6 +13,9 @@ export default function ScopePage({ params }: { params: Promise<{ id: string }> 
     artifactType: "scope_doc",
   });
   const { data: project } = api.projects.get.useQuery({ id });
+  const generateScope = api.projects.generateScope.useMutation({
+    onSuccess: () => window.location.reload(),
+  });
 
   if (isLoading) {
     return (
@@ -23,14 +27,24 @@ export default function ScopePage({ params }: { params: Promise<{ id: string }> 
 
   if (!artifact) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <p className="text-[var(--text-secondary)]">No scope document found.</p>
-        <Link href={`/projects/${id}`} className="text-[var(--brand-primary)] text-sm hover:underline mt-2 inline-block">
+      <div className="p-8 max-w-4xl mx-auto text-center">
+        <p className="text-[var(--text-secondary)] mb-4">No scope document found.</p>
+        <Link href={`/projects/${id}`} className="text-[var(--brand-primary)] text-sm hover:underline">
           ← Back to project
         </Link>
       </div>
     );
   }
+
+  const exportMd = () => {
+    const blob = new Blob([artifact.content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project?.name ?? "scope"} — Scope Document.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -42,53 +56,40 @@ export default function ScopePage({ params }: { params: Promise<{ id: string }> 
           <ArrowLeft className="w-4 h-4" />
           {project?.name ?? "Back"}
         </Link>
-        <button
-          onClick={() => {
-            const blob = new Blob([artifact.content], { type: "text/markdown" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${project?.name ?? "scope"}-scope.md`;
-            a.click();
-          }}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] border border-[var(--surface-border)] rounded-lg hover:bg-[var(--surface-bg)] transition-colors"
-        >
-          <Download className="w-4 h-4" /> Export
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => generateScope.mutate({ projectId: id })}
+            disabled={generateScope.isPending}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] border border-[var(--surface-border)] rounded-lg hover:bg-[var(--surface-bg)] disabled:opacity-50 transition-colors"
+          >
+            {generateScope.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Regenerate
+          </button>
+          <button
+            onClick={exportMd}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] border border-[var(--surface-border)] rounded-lg hover:bg-[var(--surface-bg)] transition-colors"
+          >
+            <Download className="w-4 h-4" /> Export .md
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-[var(--surface-border)] p-8">
+      <div className="bg-white rounded-xl border border-[var(--surface-border)] p-8 md:p-12">
         <div
           className="prose-nexoflow"
-          dangerouslySetInnerHTML={{ __html: markdownToHtml(artifact.content) }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(artifact.content) }}
         />
       </div>
 
-      {artifact.promptTokens && (
+      {artifact.promptTokens != null && (
         <p className="text-xs text-[var(--text-muted)] mt-4 text-center">
-          Generated with {artifact.modelUsed} ·{" "}
-          {((artifact.promptTokens + (artifact.completionTokens ?? 0)) / 1000).toFixed(1)}K tokens
+          {artifact.modelUsed} · {((artifact.promptTokens + (artifact.completionTokens ?? 0)) / 1000).toFixed(1)}K tokens
         </p>
       )}
     </div>
   );
-}
-
-// Minimal markdown → HTML converter (replace with a proper lib like marked in production)
-function markdownToHtml(md: string): string {
-  return md
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/(<li>.*<\/li>)/gms, "<ul>$1</ul>")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^(?!<[hul])/gm, "<p>")
-    .replace(/(?<![>])$/gm, "</p>")
-    .replace(/<p><\/p>/g, "")
-    .replace(/<p>(<[hul])/g, "$1")
-    .replace(/(<\/[hul][^>]*>)<\/p>/g, "$1");
 }

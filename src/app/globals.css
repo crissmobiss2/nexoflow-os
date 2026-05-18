@@ -1,55 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  /* NexoFlow Brand */
   --brand-primary: hsl(220, 90%, 56%);
   --brand-primary-hover: hsl(220, 90%, 48%);
   --brand-accent: hsl(262, 83%, 58%);
 
-  /* Surface */
   --surface-bg: hsl(220, 20%, 97%);
   --surface-card: hsl(0, 0%, 100%);
-  --surface-elevated: hsl(220, 20%, 99%);
   --surface-border: hsl(220, 15%, 90%);
 
-  /* Text */
   --text-primary: hsl(220, 20%, 10%);
   --text-secondary: hsl(220, 10%, 45%);
   --text-muted: hsl(220, 10%, 65%);
 
-  /* Status */
   --status-success: hsl(142, 71%, 45%);
   --status-warning: hsl(38, 92%, 50%);
   --status-error: hsl(0, 84%, 60%);
-  --status-info: hsl(201, 94%, 37%);
-
-  /* Score colours */
-  --score-prioritise: hsl(142, 71%, 45%);
-  --score-build: hsl(220, 90%, 56%);
-  --score-conditional: hsl(38, 92%, 50%);
-  --score-pass: hsl(0, 84%, 60%);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.6;
+  background: var(--surface-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Markdown content styles */
-.prose-nexoflow h1 { font-size: 1.728rem; font-weight: 700; margin-bottom: 1rem; }
-.prose-nexoflow h2 { font-size: 1.44rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
-.prose-nexoflow h3 { font-size: 1.2rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-.prose-nexoflow p { margin-bottom: 1rem; color: var(--text-primary); }
-.prose-nexoflow ul { padding-left: 1.5rem; margin-bottom: 1rem; }
-.prose-nexoflow li { margin-bottom: 0.25rem; }
-.prose-nexoflow code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; background: hsl(220, 15%, 94%); padding: 0.125em 0.375em; border-radius: 4px; }
-.prose-nexoflow pre { background: hsl(220, 20%, 10%); color: hsl(220, 10%, 90%); padding: 1.25rem; border-radius: 8px; overflow-x: auto; margin-bottom: 1rem; }
-.prose-nexoflow pre code { background: none; padding: 0; }
-.prose-nexoflow table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-.prose-nexoflow th { background: hsl(220, 15%, 94%); font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid var(--surface-border); }
-.prose-nexoflow td { padding: 0.5rem 0.75rem; border: 1px solid var(--surface-border); }
+/* ─── Prose / Markdown ──────────────────────────────────────────────────────── */
+.prose-nexoflow { max-width: 72ch; }
+.prose-nexoflow h1 { font-size: 1.728rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.75rem; color: var(--text-primary); }
+.prose-nexoflow h2 { font-size: 1.44rem; font-weight: 600; line-height: 1.3; margin-top: 2.5rem; margin-bottom: 0.75rem; color: var(--text-primary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.4rem; }
+.prose-nexoflow h3 { font-size: 1.2rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+.prose-nexoflow h4 { font-size: 1rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+.prose-nexoflow p { margin-bottom: 1rem; color: var(--text-primary); line-height: 1.75; }
+.prose-nexoflow ul, .prose-nexoflow ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.prose-nexoflow li { margin-bottom: 0.35rem; line-height: 1.7; }
+.prose-nexoflow li > ul { margin-top: 0.35rem; margin-bottom: 0; }
+.prose-nexoflow strong { font-weight: 600; }
+.prose-nexoflow em { font-style: italic; }
+.prose-nexoflow a { color: var(--brand-primary); text-decoration: underline; }
+.prose-nexoflow blockquote { border-left: 3px solid var(--brand-primary); padding-left: 1rem; margin: 1.25rem 0; color: var(--text-secondary); font-style: italic; }
+.prose-nexoflow code { font-family: ui-monospace, 'JetBrains Mono', monospace; font-size: 0.85em; background: hsl(220, 15%, 94%); padding: 0.15em 0.4em; border-radius: 4px; color: var(--text-primary); }
+.prose-nexoflow pre { background: hsl(220, 20%, 10%); color: hsl(220, 10%, 88%); padding: 1.25rem 1.5rem; border-radius: 10px; overflow-x: auto; margin: 1.25rem 0; font-size: 0.875rem; line-height: 1.6; }
+.prose-nexoflow pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+.prose-nexoflow table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.9rem; }
+.prose-nexoflow th { background: hsl(220, 15%, 95%); font-weight: 600; text-align: left; padding: 0.6rem 1rem; border: 1px solid var(--surface-border); }
+.prose-nexoflow td { padding: 0.55rem 1rem; border: 1px solid var(--surface-border); }
+.prose-nexoflow tr:nth-child(even) td { background: hsl(220, 20%, 98%); }
+.prose-nexoflow hr { border: none; border-top: 1px solid var(--surface-border); margin: 2rem 0; }

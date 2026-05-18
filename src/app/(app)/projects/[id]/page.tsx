@@ -3,26 +3,37 @@
 import { use } from "react";
 import { api } from "@/lib/trpc/client";
 import Link from "next/link";
-import { ArrowLeft, Zap, FileText, Code2, Loader2, CheckCircle2, Circle } from "lucide-react";
+import {
+  ArrowLeft, FileText, Code2, Loader2,
+  CheckCircle2, Circle, ArrowRight, Zap,
+} from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-const SCORE_LABELS: Record<string, string> = {
-  marketSize: "Market Size",
-  problemClarity: "Problem Clarity",
-  competitiveGap: "Competitive Gap",
-  revenueModel: "Revenue Model",
-  teamFit: "Team Fit",
-  timeToValue: "Time to Value",
-  strategicAlignment: "Strategic Alignment",
+const SCORE_DIMENSIONS: Array<{ key: string; label: string }> = [
+  { key: "marketSize", label: "Market Size" },
+  { key: "problemClarity", label: "Problem Clarity" },
+  { key: "competitiveGap", label: "Competitive Gap" },
+  { key: "revenueModel", label: "Revenue Model" },
+  { key: "teamFit", label: "Team Fit" },
+  { key: "timeToValue", label: "Time to Value" },
+  { key: "strategicAlignment", label: "Strategic Alignment" },
+];
+
+const DECISION_STYLES: Record<string, string> = {
+  prioritise: "bg-green-50 text-green-700 border-green-200",
+  build: "bg-blue-50 text-blue-700 border-blue-200",
+  conditional: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  pass: "bg-red-50 text-red-700 border-red-200",
 };
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: project, refetch } = api.projects.get.useQuery({ id });
-  const generateScope = api.projects.generateScope.useMutation({ onSuccess: () => refetch() });
-  const generateArch = api.projects.generateArchitecture.useMutation({ onSuccess: () => refetch() });
+  const { data: project, refetch, isLoading } = api.projects.get.useQuery({ id });
+  const generateScope = api.projects.generateScope.useMutation({ onSuccess: () => void refetch() });
+  const generateArch = api.projects.generateArchitecture.useMutation({ onSuccess: () => void refetch() });
 
-  if (!project) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-6 h-6 animate-spin text-[var(--text-muted)]" />
@@ -30,9 +41,53 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     );
   }
 
+  if (!project) {
+    return (
+      <div className="p-8">
+        <p className="text-[var(--text-secondary)]">Project not found.</p>
+        <Link href="/projects" className="text-[var(--brand-primary)] text-sm hover:underline mt-2 inline-block">← Back</Link>
+      </div>
+    );
+  }
+
   const scoreInfo = project.opportunityScore ? formatScore(project.opportunityScore) : null;
   const scopeArtifact = project.artifacts.find((a) => a.artifactType === "scope_doc");
   const archArtifact = project.artifacts.find((a) => a.artifactType === "architecture");
+  const codeArtifact = project.artifacts.find((a) => a.artifactType === "code_bundle");
+  const decisionStyle = project.scoreDecision ? DECISION_STYLES[project.scoreDecision] : "";
+
+  const steps = [
+    {
+      label: "Scope Document",
+      description: "Client-ready scope + pricing",
+      icon: <FileText className="w-4 h-4" />,
+      done: !!scopeArtifact,
+      href: scopeArtifact ? `/projects/${id}/scope` : undefined,
+      action: () => generateScope.mutate({ projectId: id }),
+      loading: generateScope.isPending,
+      disabled: false,
+    },
+    {
+      label: "Architecture",
+      description: "System design + tech stack",
+      icon: <Code2 className="w-4 h-4" />,
+      done: !!archArtifact,
+      href: archArtifact ? `/projects/${id}/architecture` : undefined,
+      action: () => generateArch.mutate({ projectId: id }),
+      loading: generateArch.isPending,
+      disabled: !scopeArtifact,
+    },
+    {
+      label: "Generate Code",
+      description: "Production-ready boilerplate",
+      icon: <Zap className="w-4 h-4" />,
+      done: !!codeArtifact,
+      href: `/projects/${id}/generate`,
+      action: undefined,
+      loading: false,
+      disabled: !archArtifact,
+    },
+  ];
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -40,7 +95,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         href="/projects"
         className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6"
       >
-        <ArrowLeft className="w-4 h-4" /> Back to projects
+        <ArrowLeft className="w-4 h-4" /> Projects
       </Link>
 
       {/* Header */}
@@ -50,31 +105,29 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             {formatProjectType(project.projectType)}
             {project.industry ? ` · ${project.industry}` : ""}
-            {project.createdAt ? ` · Created ${formatDate(project.createdAt)}` : ""}
+            {" · "}Created {formatDate(project.createdAt)}
           </p>
         </div>
-        {scoreInfo && (
-          <div className="text-right">
-            <div className={`text-3xl font-bold ${scoreInfo.color}`}>
-              {project.opportunityScore}/70
-            </div>
-            <div className={`text-sm font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</div>
+        {scoreInfo && project.scoreDecision && (
+          <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-semibold", decisionStyle)}>
+            <span className="text-xl font-bold">{project.opportunityScore}</span>
+            <span className="text-xs opacity-70">/70</span>
+            <span className="capitalize">{project.scoreDecision}</span>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Left: Score + Phases */}
+        {/* Left column */}
         <div className="space-y-5">
           {/* Score breakdown */}
           {project.score && (
             <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-              <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-4">
-                Opportunity Score
-              </h2>
+              <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Opportunity Score</h2>
               <div className="space-y-2.5">
-                {Object.entries(SCORE_LABELS).map(([key, label]) => {
-                  const val = (project.score as Record<string, number>)[key] ?? 0;
+                {SCORE_DIMENSIONS.map(({ key, label }) => {
+                  const scoreObj = project.score as unknown as Record<string, unknown>;
+                  const val = typeof scoreObj[key] === "number" ? (scoreObj[key] as number) : 0;
                   return (
                     <div key={key}>
                       <div className="flex justify-between text-xs mb-1">
@@ -83,8 +136,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                       </div>
                       <div className="h-1.5 bg-[var(--surface-border)] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[var(--brand-primary)] rounded-full"
-                          style={{ width: `${val * 10}%` }}
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${val * 10}%`,
+                            background: val >= 7 ? "var(--status-success)" : val >= 5 ? "var(--brand-primary)" : "var(--status-warning)",
+                          }}
                         />
                       </div>
                     </div>
@@ -92,7 +148,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 })}
               </div>
               {project.score.aiRationale && (
-                <p className="text-xs text-[var(--text-secondary)] mt-4 pt-4 border-t border-[var(--surface-border)]">
+                <p className="text-xs text-[var(--text-secondary)] mt-4 pt-4 border-t border-[var(--surface-border)] leading-relaxed">
                   {project.score.aiRationale}
                 </p>
               )}
@@ -101,28 +157,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
           {/* Build phases */}
           <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-4">Build Phases</h2>
-            <div className="space-y-3">
-              {project.phases
+            <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Build Phases</h2>
+            <div className="space-y-2.5">
+              {[...project.phases]
                 .sort((a, b) => a.phaseOrder - b.phaseOrder)
                 .map((phase) => (
                   <div key={phase.id} className="flex items-center gap-3">
                     {phase.status === "completed" ? (
                       <CheckCircle2 className="w-4 h-4 text-[var(--status-success)] shrink-0" />
-                    ) : phase.status === "in_progress" ? (
-                      <div className="w-4 h-4 rounded-full border-2 border-[var(--brand-primary)] shrink-0" />
                     ) : (
                       <Circle className="w-4 h-4 text-[var(--surface-border)] shrink-0" />
                     )}
-                    <span
-                      className={`text-sm ${
-                        phase.status === "completed"
-                          ? "text-[var(--text-secondary)] line-through"
-                          : phase.status === "in_progress"
-                            ? "text-[var(--text-primary)] font-medium"
-                            : "text-[var(--text-muted)]"
-                      }`}
-                    >
+                    <span className={cn("text-sm", phase.status === "completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text-secondary)]")}>
                       {phase.phaseName}
                     </span>
                   </div>
@@ -131,42 +177,22 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
 
-        {/* Right: Actions + Artifacts */}
+        {/* Right column */}
         <div className="col-span-2 space-y-5">
-          {/* Actions */}
+          {/* AI generation steps */}
           <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-4">
-              AI Generation
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <ActionButton
-                icon={<FileText className="w-4 h-4" />}
-                label="Generate Scope"
-                description="Scope doc ready to send to client"
-                onClick={() => generateScope.mutate({ projectId: id })}
-                loading={generateScope.isPending}
-                done={!!scopeArtifact}
-                href={scopeArtifact ? `/projects/${id}/scope` : undefined}
-              />
-              <ActionButton
-                icon={<Code2 className="w-4 h-4" />}
-                label="Architecture"
-                description="System design + tech stack"
-                onClick={() => generateArch.mutate({ projectId: id })}
-                loading={generateArch.isPending}
-                done={!!archArtifact}
-                disabled={!scopeArtifact}
-                href={archArtifact ? `/projects/${id}/architecture` : undefined}
-              />
+            <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Build Pipeline</h2>
+            <div className="space-y-3">
+              {steps.map((step, i) => (
+                <BuildStep key={i} {...step} />
+              ))}
             </div>
           </div>
 
-          {/* Brief summary */}
+          {/* Brief */}
           {project.brief && (
             <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-              <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-4">
-                Client Brief
-              </h2>
+              <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Client Brief</h2>
               <dl className="space-y-3">
                 {[
                   ["Target User", project.brief.targetUser],
@@ -174,16 +200,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   ["Existing Tech", project.brief.existingTech],
                   ["Integrations", project.brief.keyIntegrations],
                   ["Constraints", project.brief.constraints],
-                ].map(([label, value]) =>
-                  value ? (
+                  ["Context", project.brief.additionalContext],
+                ]
+                  .filter(([, v]) => v)
+                  .map(([label, value]) => (
                     <div key={label as string}>
-                      <dt className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide mb-0.5">
-                        {label}
-                      </dt>
-                      <dd className="text-sm text-[var(--text-primary)]">{value}</dd>
+                      <dt className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-0.5">{label}</dt>
+                      <dd className="text-sm text-[var(--text-primary)] leading-relaxed">{value}</dd>
                     </div>
-                  ) : null,
-                )}
+                  ))}
               </dl>
             </div>
           )}
@@ -193,51 +218,47 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   );
 }
 
-function ActionButton({
-  icon,
-  label,
-  description,
-  onClick,
-  loading,
-  done,
-  disabled,
-  href,
+function BuildStep({
+  label, description, icon, done, href, action, loading, disabled,
 }: {
-  icon: React.ReactNode;
   label: string;
   description: string;
-  onClick: () => void;
-  loading: boolean;
+  icon: React.ReactNode;
   done: boolean;
-  disabled?: boolean;
   href?: string;
+  action?: () => void;
+  loading: boolean;
+  disabled: boolean;
 }) {
-  const content = (
+  const inner = (
     <div
-      className={`p-4 rounded-lg border transition-colors text-left w-full ${
+      className={cn(
+        "flex items-center gap-4 p-4 rounded-lg border transition-all",
         done
-          ? "border-[var(--status-success)] bg-[hsl(142,71%,45%,0.05)] cursor-pointer hover:bg-[hsl(142,71%,45%,0.1)]"
+          ? "border-green-200 bg-green-50 cursor-pointer hover:bg-green-100"
           : disabled
-            ? "border-[var(--surface-border)] bg-[var(--surface-bg)] opacity-50 cursor-not-allowed"
-            : "border-[var(--surface-border)] hover:border-[var(--brand-primary)] hover:bg-[hsl(220,90%,56%,0.04)] cursor-pointer"
-      }`}
-      onClick={!disabled && !loading && !done ? onClick : undefined}
+          ? "border-[var(--surface-border)] bg-[var(--surface-bg)] opacity-50"
+          : "border-[var(--surface-border)] hover:border-[var(--brand-primary)] hover:bg-[hsl(220,90%,56%,0.03)] cursor-pointer",
+      )}
+      onClick={!disabled && !done && !loading && action ? action : undefined}
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className={done ? "text-[var(--status-success)]" : "text-[var(--brand-primary)]"}>
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : icon}
-        </span>
-        <span className="text-sm font-semibold text-[var(--text-primary)]">
-          {loading ? "Generating..." : done ? `${label} ✓` : label}
-        </span>
+      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", done ? "bg-green-100 text-green-600" : "bg-[hsl(220,90%,56%,0.08)] text-[var(--brand-primary)]")}>
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <CheckCircle2 className="w-4 h-4" /> : icon}
       </div>
-      <p className="text-xs text-[var(--text-secondary)]">{description}</p>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-[var(--text-primary)]">
+          {loading ? "Generating..." : label}
+        </div>
+        <div className="text-xs text-[var(--text-secondary)] mt-0.5">{description}</div>
+      </div>
+      {(done || !disabled) && !loading && (
+        <ArrowRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+      )}
     </div>
   );
 
-  if (done && href) {
-    return <Link href={href}>{content}</Link>;
+  if ((done || !disabled) && href) {
+    return <Link href={href as string}>{inner}</Link>;
   }
-
-  return content;
+  return inner;
 }

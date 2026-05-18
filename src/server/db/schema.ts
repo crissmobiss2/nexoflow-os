@@ -11,59 +11,31 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-// ─── Enums ───────────────────────────────────────────────────────────────────
-
-export const projectTypeEnum = pgEnum("project_type", [
-  "website",
-  "web_app",
-  "mobile_app",
-  "desktop_app",
-  "saas",
-  "marketplace",
-  "internal_tool",
-  "ai_product",
-  "ecommerce",
-  "portal",
+export const projectTypeEnum = pgEnum("nf_project_type", [
+  "website", "web_app", "mobile_app", "desktop_app",
+  "saas", "marketplace", "internal_tool", "ai_product", "ecommerce", "portal",
 ]);
 
-export const projectStatusEnum = pgEnum("project_status", [
-  "brief",
-  "scored",
-  "scoped",
-  "architected",
-  "generating",
-  "ready",
-  "archived",
+export const projectStatusEnum = pgEnum("nf_project_status", [
+  "brief", "scored", "scoped", "architected", "generating", "ready", "archived",
 ]);
 
-export const artifactTypeEnum = pgEnum("artifact_type", [
-  "scope_doc",
-  "tech_stack",
-  "architecture",
-  "risk_register",
-  "code_bundle",
-  "file_tree",
-  "database_schema",
-  "deployment_config",
+export const artifactTypeEnum = pgEnum("nf_artifact_type", [
+  "scope_doc", "tech_stack", "architecture", "risk_register",
+  "code_bundle", "file_tree", "database_schema", "deployment_config",
 ]);
 
-export const phaseStatusEnum = pgEnum("phase_status", [
-  "pending",
-  "in_progress",
-  "completed",
-  "skipped",
+export const phaseStatusEnum = pgEnum("nf_phase_status", [
+  "pending", "in_progress", "completed", "skipped",
 ]);
 
-export const scoreDecisionEnum = pgEnum("score_decision", [
-  "pass",
-  "conditional",
-  "build",
-  "prioritise",
+export const scoreDecisionEnum = pgEnum("nf_score_decision", [
+  "pass", "conditional", "build", "prioritise",
 ]);
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
-export const clients = pgTable("clients", {
+export const clients = pgTable("nf_clients", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
@@ -76,7 +48,7 @@ export const clients = pgTable("clients", {
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const projects = pgTable(
-  "projects",
+  "nf_projects",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 255 }).notNull(),
@@ -91,34 +63,31 @@ export const projects = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (t) => [index("projects_status_idx").on(t.status), index("projects_client_idx").on(t.clientId)],
+  (t) => [
+    index("nf_projects_status_idx").on(t.status),
+    index("nf_projects_client_idx").on(t.clientId),
+  ],
 );
 
 // ─── Project Briefs ───────────────────────────────────────────────────────────
 
-export const projectBriefs = pgTable("project_briefs", {
+export const projectBriefs = pgTable("nf_project_briefs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
-    .references(() => projects.id, { onDelete: "cascade" })
-    .notNull(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   targetUser: text("target_user"),
   coreJobToBeDone: text("core_job_to_be_done"),
   existingTech: text("existing_tech"),
   keyIntegrations: text("key_integrations"),
   constraints: text("constraints"),
   additionalContext: text("additional_context"),
-  rawFields: jsonb("raw_fields"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
-// ─── Opportunity Score Breakdown ──────────────────────────────────────────────
+// ─── Opportunity Scores ───────────────────────────────────────────────────────
 
-export const opportunityScores = pgTable("opportunity_scores", {
+export const opportunityScores = pgTable("nf_opportunity_scores", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
-    .references(() => projects.id, { onDelete: "cascade" })
-    .notNull()
-    .unique(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull().unique(),
   marketSize: integer("market_size").notNull(),
   problemClarity: integer("problem_clarity").notNull(),
   competitiveGap: integer("competitive_gap").notNull(),
@@ -132,15 +101,13 @@ export const opportunityScores = pgTable("opportunity_scores", {
   scoredAt: timestamp("scored_at").defaultNow().notNull(),
 });
 
-// ─── Project Artifacts ─────────────────────────────────────────────────────────
+// ─── Artifacts ────────────────────────────────────────────────────────────────
 
 export const projectArtifacts = pgTable(
-  "project_artifacts",
+  "nf_project_artifacts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    projectId: uuid("project_id")
-      .references(() => projects.id, { onDelete: "cascade" })
-      .notNull(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
     artifactType: artifactTypeEnum("artifact_type").notNull(),
     content: text("content").notNull(),
     version: integer("version").default(1).notNull(),
@@ -149,18 +116,14 @@ export const projectArtifacts = pgTable(
     completionTokens: integer("completion_tokens"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [
-    index("artifacts_project_type_idx").on(t.projectId, t.artifactType),
-  ],
+  (t) => [index("nf_artifacts_project_type_idx").on(t.projectId, t.artifactType)],
 );
 
-// ─── Project Phases ────────────────────────────────────────────────────────────
+// ─── Phases ───────────────────────────────────────────────────────────────────
 
-export const projectPhases = pgTable("project_phases", {
+export const projectPhases = pgTable("nf_project_phases", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
-    .references(() => projects.id, { onDelete: "cascade" })
-    .notNull(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   phaseName: varchar("phase_name", { length: 100 }).notNull(),
   phaseOrder: integer("phase_order").notNull(),
   status: phaseStatusEnum("status").default("pending").notNull(),

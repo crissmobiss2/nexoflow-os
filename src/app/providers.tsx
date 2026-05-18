@@ -13,13 +13,18 @@ function getBaseUrl() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: { queries: { staleTime: 30_000 } },
+  }));
+
   const [trpcClient] = useState(() =>
     api.createClient({
-      transformer: superjson,
       links: [
         loggerLink({ enabled: (op) => process.env.NODE_ENV === "development" }),
-        httpBatchLink({ url: `${getBaseUrl()}/api/trpc` }),
+        httpBatchLink({
+          url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
+        }),
       ],
     }),
   );

@@ -1,10 +1,10 @@
-import { initTRPC, TRPCError } from "@trpc/server";
+import { initTRPC } from "@trpc/server";
 import { type NextRequest } from "next/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { db } from "./db";
 
-export const createTRPCContext = async (opts: { req: NextRequest }) => {
+export const createTRPCContext = async (opts: { req: NextRequest | { headers: Headers } }) => {
   return { db, req: opts.req };
 };
 
