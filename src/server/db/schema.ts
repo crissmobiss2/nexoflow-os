@@ -10,6 +10,7 @@ import {
   timestamp,
   uuid,
   varchar,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const projectTypeEnum = pgEnum("nf_project_type", [
@@ -166,11 +167,13 @@ export const knowledgeSnippets = pgTable(
     category: varchar("category", { length: 255 }).notNull(),
     name: varchar("name", { length: 500 }).notNull(),
     content: text("content").notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
     index("nf_snippets_category_idx").on(t.category),
     index("nf_snippets_name_idx").on(t.name),
+    index("nf_snippets_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
   ],
 );
 
