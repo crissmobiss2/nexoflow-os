@@ -5,9 +5,9 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
     ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-"),
-    SECOND_BRAIN_PATH: z
-      .string()
-      .default("C:/NexoFlow Second-Brain/second-brain"),
+    // Optional: path to local Obsidian vault for richer AI context.
+    // Falls back to bundled knowledge files when not set.
+    SECOND_BRAIN_PATH: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
