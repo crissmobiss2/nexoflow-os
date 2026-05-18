@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Users,
-  Zap,
-  ChevronRight,
-} from "lucide-react";
+import { LayoutDashboard, FolderKanban, Users } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -21,36 +15,66 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-[var(--surface-border)] flex flex-col">
+    <aside
+      className="w-56 min-h-screen flex flex-col shrink-0"
+      style={{
+        background: "var(--surface-card)",
+        borderRight: "1px solid var(--surface-border)",
+      }}
+    >
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-[var(--surface-border)]">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[var(--brand-primary)] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+      <div
+        className="h-14 flex items-center px-5 shrink-0"
+        style={{ borderBottom: "1px solid var(--surface-border)" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--brand-gradient)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
           </div>
-          <span className="font-semibold text-[var(--text-primary)] tracking-tight">
-            NexoFlow OS
-          </span>
+          <div>
+            <div className="text-sm font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
+              NexoFlow
+            </div>
+            <div className="text-[10px] leading-none mt-0.5 font-medium tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
+              OS
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 p-2.5 space-y-0.5">
+        <div className="px-2 py-1.5 mb-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            Workspace
+          </span>
+        </div>
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-[hsl(220,90%,56%,0.08)] text-[var(--brand-primary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-bg)] hover:text-[var(--text-primary)]",
+                  ? "text-white"
+                  : "hover:text-[var(--text-primary)]",
               )}
+              style={active ? {
+                background: "hsl(220 90% 62% / 0.15)",
+                color: "var(--brand-primary)",
+                boxShadow: "inset 0 0 0 1px hsl(220 90% 62% / 0.2)",
+              } : {
+                color: "var(--text-secondary)",
+              }}
             >
-              <Icon className="w-4 h-4 shrink-0" />
+              <Icon className="w-4 h-4 shrink-0" strokeWidth={active ? 2 : 1.75} />
               {label}
             </Link>
           );
@@ -58,8 +82,13 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-[var(--surface-border)]">
-        <div className="text-xs text-[var(--text-muted)]">NexoFlow OS v0.1</div>
+      <div
+        className="p-4"
+        style={{ borderTop: "1px solid var(--surface-border)" }}
+      >
+        <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+          NexoFlow OS · v1.0
+        </div>
       </div>
     </aside>
   );

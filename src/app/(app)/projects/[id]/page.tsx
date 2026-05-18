@@ -5,12 +5,12 @@ import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import {
   ArrowLeft, FileText, Code2, Loader2,
-  CheckCircle2, Circle, ArrowRight, Zap,
+  CheckCircle2, Circle, ArrowRight, Zap, Terminal,
 } from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-const SCORE_DIMENSIONS: Array<{ key: string; label: string }> = [
+const SCORE_DIMENSIONS = [
   { key: "marketSize", label: "Market Size" },
   { key: "problemClarity", label: "Problem Clarity" },
   { key: "competitiveGap", label: "Competitive Gap" },
@@ -19,13 +19,6 @@ const SCORE_DIMENSIONS: Array<{ key: string; label: string }> = [
   { key: "timeToValue", label: "Time to Value" },
   { key: "strategicAlignment", label: "Strategic Alignment" },
 ];
-
-const DECISION_STYLES: Record<string, string> = {
-  prioritise: "bg-green-50 text-green-700 border-green-200",
-  build: "bg-blue-50 text-blue-700 border-blue-200",
-  conditional: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  pass: "bg-red-50 text-red-700 border-red-200",
-};
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -36,7 +29,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--text-muted)]" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--text-muted)" }} />
       </div>
     );
   }
@@ -44,8 +37,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   if (!project) {
     return (
       <div className="p-8">
-        <p className="text-[var(--text-secondary)]">Project not found.</p>
-        <Link href="/projects" className="text-[var(--brand-primary)] text-sm hover:underline mt-2 inline-block">← Back</Link>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Project not found.</p>
+        <Link href="/projects" className="text-sm mt-2 inline-block hover:underline" style={{ color: "var(--brand-primary)" }}>
+          ← Back to projects
+        </Link>
       </div>
     );
   }
@@ -54,38 +49,40 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const scopeArtifact = project.artifacts.find((a) => a.artifactType === "scope_doc");
   const archArtifact = project.artifacts.find((a) => a.artifactType === "architecture");
   const codeArtifact = project.artifacts.find((a) => a.artifactType === "code_bundle");
-  const decisionStyle = project.scoreDecision ? DECISION_STYLES[project.scoreDecision] : "";
 
   const steps = [
     {
       label: "Scope Document",
-      description: "Client-ready scope + pricing",
+      description: "Client-ready scope with deliverables, timeline & pricing",
       icon: <FileText className="w-4 h-4" />,
       done: !!scopeArtifact,
       href: scopeArtifact ? `/projects/${id}/scope` : undefined,
       action: () => generateScope.mutate({ projectId: id }),
       loading: generateScope.isPending,
       disabled: false,
+      step: "01",
     },
     {
       label: "Architecture",
-      description: "System design + tech stack",
+      description: "Full system design, stack, DB schema & infrastructure",
       icon: <Code2 className="w-4 h-4" />,
       done: !!archArtifact,
       href: archArtifact ? `/projects/${id}/architecture` : undefined,
       action: () => generateArch.mutate({ projectId: id }),
       loading: generateArch.isPending,
       disabled: !scopeArtifact,
+      step: "02",
     },
     {
       label: "Generate Code",
-      description: "Production-ready boilerplate",
-      icon: <Zap className="w-4 h-4" />,
+      description: "Production-ready boilerplate from NexoFlow engineering standards",
+      icon: <Terminal className="w-4 h-4" />,
       done: !!codeArtifact,
       href: `/projects/${id}/generate`,
       action: undefined,
       loading: false,
       disabled: !archArtifact,
+      step: "03",
     },
   ];
 
@@ -93,26 +90,36 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <div className="p-8 max-w-5xl mx-auto">
       <Link
         href="/projects"
-        className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6"
+        className="flex items-center gap-1.5 text-sm mb-6 w-fit transition-colors hover:opacity-80"
+        style={{ color: "var(--text-secondary)" }}
       >
-        <ArrowLeft className="w-4 h-4" /> Projects
+        <ArrowLeft className="w-3.5 h-3.5" /> Projects
       </Link>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{project.name}</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            {project.name}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             {formatProjectType(project.projectType)}
             {project.industry ? ` · ${project.industry}` : ""}
             {" · "}Created {formatDate(project.createdAt)}
           </p>
         </div>
+
         {scoreInfo && project.scoreDecision && (
-          <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-semibold", decisionStyle)}>
-            <span className="text-xl font-bold">{project.opportunityScore}</span>
-            <span className="text-xs opacity-70">/70</span>
-            <span className="capitalize">{project.scoreDecision}</span>
+          <div
+            className={cn("flex items-baseline gap-2 px-4 py-2.5 rounded-xl border", scoreInfo.bgColor, scoreInfo.borderColor)}
+          >
+            <span className={cn("text-2xl font-bold tabular-nums", scoreInfo.color)}>
+              {project.opportunityScore}
+            </span>
+            <span className="text-xs opacity-60" style={{ color: "inherit" }}>/70</span>
+            <span className={cn("text-sm font-semibold capitalize ml-1", scoreInfo.color)}>
+              {project.scoreDecision}
+            </span>
           </div>
         )}
       </div>
@@ -120,35 +127,46 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <div className="grid grid-cols-3 gap-6">
         {/* Left column */}
         <div className="space-y-5">
+
           {/* Score breakdown */}
           {project.score && (
-            <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-              <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Opportunity Score</h2>
-              <div className="space-y-2.5">
+            <div
+              className="rounded-xl p-5"
+              style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
+                Opportunity Score
+              </h2>
+              <div className="space-y-3">
                 {SCORE_DIMENSIONS.map(({ key, label }) => {
                   const scoreObj = project.score as unknown as Record<string, unknown>;
                   const val = typeof scoreObj[key] === "number" ? (scoreObj[key] as number) : 0;
+                  const barColor = val >= 7 ? "var(--status-success)" : val >= 5 ? "var(--brand-primary)" : "var(--status-warning)";
                   return (
                     <div key={key}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[var(--text-secondary)]">{label}</span>
-                        <span className="font-semibold text-[var(--text-primary)]">{val}/10</span>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+                        <span className="font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>{val}/10</span>
                       </div>
-                      <div className="h-1.5 bg-[var(--surface-border)] rounded-full overflow-hidden">
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface-border)" }}>
                         <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${val * 10}%`,
-                            background: val >= 7 ? "var(--status-success)" : val >= 5 ? "var(--brand-primary)" : "var(--status-warning)",
-                          }}
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${val * 10}%`, background: barColor }}
                         />
                       </div>
                     </div>
                   );
                 })}
               </div>
+
               {project.score.aiRationale && (
-                <p className="text-xs text-[var(--text-secondary)] mt-4 pt-4 border-t border-[var(--surface-border)] leading-relaxed">
+                <p
+                  className="text-xs mt-4 pt-4 leading-relaxed"
+                  style={{
+                    color: "var(--text-secondary)",
+                    borderTop: "1px solid var(--surface-border)",
+                  }}
+                >
                   {project.score.aiRationale}
                 </p>
               )}
@@ -156,19 +174,27 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           )}
 
           {/* Build phases */}
-          <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-            <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Build Phases</h2>
-            <div className="space-y-2.5">
+          <div
+            className="rounded-xl p-5"
+            style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
+              Build Phases
+            </h2>
+            <div className="space-y-2">
               {[...project.phases]
                 .sort((a, b) => a.phaseOrder - b.phaseOrder)
                 .map((phase) => (
-                  <div key={phase.id} className="flex items-center gap-3">
+                  <div key={phase.id} className="flex items-center gap-2.5">
                     {phase.status === "completed" ? (
-                      <CheckCircle2 className="w-4 h-4 text-[var(--status-success)] shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--status-success)" }} />
                     ) : (
-                      <Circle className="w-4 h-4 text-[var(--surface-border)] shrink-0" />
+                      <Circle className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--surface-border)" }} />
                     )}
-                    <span className={cn("text-sm", phase.status === "completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text-secondary)]")}>
+                    <span
+                      className={cn("text-xs", phase.status === "completed" && "line-through opacity-50")}
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {phase.phaseName}
                     </span>
                   </div>
@@ -179,21 +205,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
         {/* Right column */}
         <div className="col-span-2 space-y-5">
-          {/* AI generation steps */}
-          <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-            <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Build Pipeline</h2>
-            <div className="space-y-3">
+          {/* Build Pipeline */}
+          <div
+            className="rounded-xl p-5"
+            style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
+              Build Pipeline
+            </h2>
+            <div className="space-y-2.5">
               {steps.map((step, i) => (
                 <BuildStep key={i} {...step} />
               ))}
             </div>
           </div>
 
-          {/* Brief */}
+          {/* Client Brief */}
           {project.brief && (
-            <div className="bg-white rounded-xl border border-[var(--surface-border)] p-5">
-              <h2 className="font-semibold text-sm text-[var(--text-primary)] mb-4">Client Brief</h2>
-              <dl className="space-y-3">
+            <div
+              className="rounded-xl p-5"
+              style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
+                Client Brief
+              </h2>
+              <dl className="space-y-4">
                 {[
                   ["Target User", project.brief.targetUser],
                   ["Job To Be Done", project.brief.coreJobToBeDone],
@@ -205,8 +241,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   .filter(([, v]) => v)
                   .map(([label, value]) => (
                     <div key={label as string}>
-                      <dt className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-0.5">{label}</dt>
-                      <dd className="text-sm text-[var(--text-primary)] leading-relaxed">{value}</dd>
+                      <dt
+                        className="text-[10px] font-semibold uppercase tracking-widest mb-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {label}
+                      </dt>
+                      <dd className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                        {value}
+                      </dd>
                     </div>
                   ))}
               </dl>
@@ -219,7 +262,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 }
 
 function BuildStep({
-  label, description, icon, done, href, action, loading, disabled,
+  label, description, icon, done, href, action, loading, disabled, step,
 }: {
   label: string;
   description: string;
@@ -229,30 +272,70 @@ function BuildStep({
   action?: () => void;
   loading: boolean;
   disabled: boolean;
+  step: string;
 }) {
   const inner = (
     <div
       className={cn(
-        "flex items-center gap-4 p-4 rounded-lg border transition-all",
-        done
-          ? "border-green-200 bg-green-50 cursor-pointer hover:bg-green-100"
-          : disabled
-          ? "border-[var(--surface-border)] bg-[var(--surface-bg)] opacity-50"
-          : "border-[var(--surface-border)] hover:border-[var(--brand-primary)] hover:bg-[hsl(220,90%,56%,0.03)] cursor-pointer",
+        "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-default",
+        done ? "cursor-pointer" : disabled ? "opacity-40" : "cursor-pointer",
       )}
+      style={
+        done
+          ? { borderColor: "hsl(142 68% 52% / 0.3)", background: "hsl(142 68% 52% / 0.07)" }
+          : disabled
+          ? { borderColor: "var(--surface-border)", background: "var(--surface-elevated)" }
+          : { borderColor: "var(--surface-border)", background: "var(--surface-elevated)" }
+      }
+      onMouseEnter={(e) => {
+        if (!disabled && !loading) {
+          (e.currentTarget as HTMLElement).style.borderColor = done
+            ? "hsl(142 68% 52% / 0.5)"
+            : "var(--brand-primary)";
+          if (!done) (e.currentTarget as HTMLElement).style.background = "hsl(220 90% 62% / 0.06)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.borderColor = done
+          ? "hsl(142 68% 52% / 0.3)"
+          : disabled ? "var(--surface-border)" : "var(--surface-border)";
+        (e.currentTarget as HTMLElement).style.background = done
+          ? "hsl(142 68% 52% / 0.07)"
+          : "var(--surface-elevated)";
+      }}
       onClick={!disabled && !done && !loading && action ? action : undefined}
     >
-      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", done ? "bg-green-100 text-green-600" : "bg-[hsl(220,90%,56%,0.08)] text-[var(--brand-primary)]")}>
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <CheckCircle2 className="w-4 h-4" /> : icon}
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold"
+        style={
+          done
+            ? { background: "hsl(142 68% 52% / 0.15)", color: "var(--status-success)" }
+            : { background: "hsl(220 90% 62% / 0.12)", color: "var(--brand-primary)" }
+        }
+      >
+        {loading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : done ? (
+          <CheckCircle2 className="w-4 h-4" />
+        ) : (
+          icon
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-[var(--text-primary)]">
-          {loading ? "Generating..." : label}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono opacity-40" style={{ color: "var(--text-muted)" }}>
+            {step}
+          </span>
+          <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            {loading ? "Generating..." : label}
+          </span>
         </div>
-        <div className="text-xs text-[var(--text-secondary)] mt-0.5">{description}</div>
+        <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+          {description}
+        </div>
       </div>
-      {(done || !disabled) && !loading && (
-        <ArrowRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+      {!disabled && !loading && (
+        <ArrowRight className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-muted)" }} />
       )}
     </div>
   );

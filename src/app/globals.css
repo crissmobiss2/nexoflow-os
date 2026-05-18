@@ -1,53 +1,104 @@
 @import "tailwindcss";
 
 :root {
-  --brand-primary: hsl(220, 90%, 56%);
-  --brand-primary-hover: hsl(220, 90%, 48%);
-  --brand-accent: hsl(262, 83%, 58%);
+  /* Brand */
+  --brand-primary: hsl(220, 90%, 62%);
+  --brand-primary-hover: hsl(220, 90%, 70%);
+  --brand-accent: hsl(262, 83%, 68%);
+  --brand-gradient: linear-gradient(135deg, hsl(220, 90%, 62%), hsl(262, 83%, 68%));
 
-  --surface-bg: hsl(220, 20%, 97%);
-  --surface-card: hsl(0, 0%, 100%);
-  --surface-border: hsl(220, 15%, 90%);
+  /* Surfaces — dark navy base */
+  --surface-bg: hsl(222, 30%, 7%);
+  --surface-card: hsl(222, 25%, 10%);
+  --surface-card-hover: hsl(222, 22%, 13%);
+  --surface-elevated: hsl(222, 20%, 14%);
+  --surface-border: hsl(222, 22%, 17%);
+  --surface-border-subtle: hsl(222, 20%, 13%);
 
-  --text-primary: hsl(220, 20%, 10%);
-  --text-secondary: hsl(220, 10%, 45%);
-  --text-muted: hsl(220, 10%, 65%);
+  /* Text */
+  --text-primary: hsl(220, 20%, 94%);
+  --text-secondary: hsl(220, 12%, 60%);
+  --text-muted: hsl(220, 10%, 38%);
 
-  --status-success: hsl(142, 71%, 45%);
-  --status-warning: hsl(38, 92%, 50%);
-  --status-error: hsl(0, 84%, 60%);
+  /* Status (dark-optimised) */
+  --status-success: hsl(142, 68%, 52%);
+  --status-success-bg: hsl(142, 60%, 10%);
+  --status-warning: hsl(38, 92%, 58%);
+  --status-warning-bg: hsl(38, 80%, 10%);
+  --status-error: hsl(0, 80%, 65%);
+  --status-error-bg: hsl(0, 70%, 10%);
+
+  /* Decision colours */
+  --decision-prioritise: hsl(142, 68%, 52%);
+  --decision-prioritise-bg: hsl(142, 60%, 8%);
+  --decision-build: hsl(207, 90%, 62%);
+  --decision-build-bg: hsl(207, 80%, 8%);
+  --decision-conditional: hsl(38, 92%, 58%);
+  --decision-conditional-bg: hsl(38, 80%, 8%);
+  --decision-pass: hsl(0, 80%, 65%);
+  --decision-pass-bg: hsl(0, 70%, 8%);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { color-scheme: dark; }
+
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: 16px;
+  font-family: var(--font-inter, ui-sans-serif), system-ui, -apple-system, sans-serif;
+  font-size: 15px;
   line-height: 1.6;
   background: var(--surface-bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(222, 18%, 28%); }
+
+/* ─── Form inputs ────────────────────────────────────────────────────────────── */
+.nf-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.nf-input::placeholder { color: var(--text-muted); }
+.nf-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px hsl(220 90% 62% / 0.15);
+}
+select.nf-input { cursor: pointer; }
+select.nf-input option { background: hsl(222, 25%, 14%); }
 
 /* ─── Prose / Markdown ──────────────────────────────────────────────────────── */
 .prose-nexoflow { max-width: 72ch; }
 .prose-nexoflow h1 { font-size: 1.728rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.75rem; color: var(--text-primary); }
-.prose-nexoflow h2 { font-size: 1.44rem; font-weight: 600; line-height: 1.3; margin-top: 2.5rem; margin-bottom: 0.75rem; color: var(--text-primary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.4rem; }
-.prose-nexoflow h3 { font-size: 1.2rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 0.5rem; color: var(--text-primary); }
-.prose-nexoflow h4 { font-size: 1rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.4rem; }
-.prose-nexoflow p { margin-bottom: 1rem; color: var(--text-primary); line-height: 1.75; }
+.prose-nexoflow h2 { font-size: 1.35rem; font-weight: 600; line-height: 1.3; margin-top: 2.5rem; margin-bottom: 0.75rem; color: var(--text-primary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; }
+.prose-nexoflow h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+.prose-nexoflow h4 { font-size: 0.95rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.4rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; }
+.prose-nexoflow p { margin-bottom: 1rem; color: var(--text-secondary); line-height: 1.8; }
 .prose-nexoflow ul, .prose-nexoflow ol { padding-left: 1.5rem; margin-bottom: 1rem; }
-.prose-nexoflow li { margin-bottom: 0.35rem; line-height: 1.7; }
-.prose-nexoflow li > ul { margin-top: 0.35rem; margin-bottom: 0; }
-.prose-nexoflow strong { font-weight: 600; }
+.prose-nexoflow li { margin-bottom: 0.4rem; line-height: 1.75; color: var(--text-secondary); }
+.prose-nexoflow li > ul { margin-top: 0.4rem; margin-bottom: 0; }
+.prose-nexoflow strong { font-weight: 600; color: var(--text-primary); }
 .prose-nexoflow em { font-style: italic; }
-.prose-nexoflow a { color: var(--brand-primary); text-decoration: underline; }
-.prose-nexoflow blockquote { border-left: 3px solid var(--brand-primary); padding-left: 1rem; margin: 1.25rem 0; color: var(--text-secondary); font-style: italic; }
-.prose-nexoflow code { font-family: ui-monospace, 'JetBrains Mono', monospace; font-size: 0.85em; background: hsl(220, 15%, 94%); padding: 0.15em 0.4em; border-radius: 4px; color: var(--text-primary); }
-.prose-nexoflow pre { background: hsl(220, 20%, 10%); color: hsl(220, 10%, 88%); padding: 1.25rem 1.5rem; border-radius: 10px; overflow-x: auto; margin: 1.25rem 0; font-size: 0.875rem; line-height: 1.6; }
-.prose-nexoflow pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
-.prose-nexoflow table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.9rem; }
-.prose-nexoflow th { background: hsl(220, 15%, 95%); font-weight: 600; text-align: left; padding: 0.6rem 1rem; border: 1px solid var(--surface-border); }
-.prose-nexoflow td { padding: 0.55rem 1rem; border: 1px solid var(--surface-border); }
-.prose-nexoflow tr:nth-child(even) td { background: hsl(220, 20%, 98%); }
+.prose-nexoflow a { color: var(--brand-primary); text-decoration: underline; text-underline-offset: 2px; }
+.prose-nexoflow blockquote { border-left: 3px solid var(--brand-primary); padding-left: 1rem; margin: 1.5rem 0; color: var(--text-secondary); background: hsl(220 90% 62% / 0.05); padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; }
+.prose-nexoflow code { font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.83em; background: var(--surface-elevated); padding: 0.15em 0.45em; border-radius: 4px; color: hsl(220, 90%, 75%); border: 1px solid var(--surface-border); }
+.prose-nexoflow pre { background: hsl(222, 30%, 6%); color: hsl(220, 15%, 85%); padding: 1.25rem 1.5rem; border-radius: 10px; overflow-x: auto; margin: 1.25rem 0; font-size: 0.875rem; line-height: 1.7; border: 1px solid var(--surface-border); }
+.prose-nexoflow pre code { background: none; padding: 0; font-size: inherit; color: inherit; border: none; }
+.prose-nexoflow table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.875rem; }
+.prose-nexoflow th { background: var(--surface-elevated); font-weight: 600; text-align: left; padding: 0.65rem 1rem; border: 1px solid var(--surface-border); color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.prose-nexoflow td { padding: 0.6rem 1rem; border: 1px solid var(--surface-border); color: var(--text-secondary); }
+.prose-nexoflow tr:nth-child(even) td { background: hsl(222, 22%, 9%); }
 .prose-nexoflow hr { border: none; border-top: 1px solid var(--surface-border); margin: 2rem 0; }

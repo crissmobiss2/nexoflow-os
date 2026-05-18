@@ -5,15 +5,52 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatScore(score: number): { label: string; color: string } {
-  if (score >= 56) return { label: "Prioritise", color: "text-green-600" };
-  if (score >= 45) return { label: "Build", color: "text-blue-600" };
-  if (score >= 31) return { label: "Conditional", color: "text-yellow-600" };
-  return { label: "Pass", color: "text-red-600" };
+export function formatScore(score: number): {
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+} {
+  if (score >= 56) return {
+    label: "Prioritise",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-400/10",
+    borderColor: "border-emerald-400/30",
+  };
+  if (score >= 45) return {
+    label: "Build",
+    color: "text-sky-400",
+    bgColor: "bg-sky-400/10",
+    borderColor: "border-sky-400/30",
+  };
+  if (score >= 31) return {
+    label: "Conditional",
+    color: "text-amber-400",
+    bgColor: "bg-amber-400/10",
+    borderColor: "border-amber-400/30",
+  };
+  return {
+    label: "Pass",
+    color: "text-red-400",
+    bgColor: "bg-red-400/10",
+    borderColor: "border-red-400/30",
+  };
 }
 
 export function formatProjectType(type: string): string {
-  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const map: Record<string, string> = {
+    website: "Website",
+    web_app: "Web App",
+    mobile_app: "Mobile App",
+    desktop_app: "Desktop App",
+    saas: "SaaS Product",
+    marketplace: "Marketplace",
+    internal_tool: "Internal Tool",
+    ai_product: "AI Product",
+    ecommerce: "eCommerce",
+    portal: "Portal",
+  };
+  return map[type] ?? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function formatDate(date: Date | string): string {
@@ -35,5 +72,7 @@ export function formatRelativeTime(date: Date | string): string {
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return formatDate(date);
 }

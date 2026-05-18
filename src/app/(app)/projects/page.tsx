@@ -5,22 +5,17 @@ import { db } from "@/server/db";
 import { desc } from "drizzle-orm";
 import { projects } from "@/server/db/schema";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
-import { Plus, ArrowRight } from "lucide-react";
+import { Plus, ArrowRight, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const STATUS_BADGES: Record<string, string> = {
-  brief: "bg-gray-100 text-gray-600",
-  scored: "bg-blue-50 text-blue-700",
-  scoped: "bg-purple-50 text-purple-700",
-  architected: "bg-indigo-50 text-indigo-700",
-  generating: "bg-yellow-50 text-yellow-700",
-  ready: "bg-green-50 text-green-700",
-  archived: "bg-gray-50 text-gray-400",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  brief: "Brief", scored: "Scored", scoped: "Scoped",
-  architected: "Architected", generating: "Generating", ready: "Ready", archived: "Archived",
+const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  brief: { label: "Brief", color: "text-slate-400", dot: "bg-slate-500" },
+  scored: { label: "Scored", color: "text-sky-400", dot: "bg-sky-400" },
+  scoped: { label: "Scoped", color: "text-violet-400", dot: "bg-violet-400" },
+  architected: { label: "Architected", color: "text-indigo-400", dot: "bg-indigo-400" },
+  generating: { label: "Generating", color: "text-amber-400", dot: "bg-amber-400" },
+  ready: { label: "Ready", color: "text-emerald-400", dot: "bg-emerald-400" },
+  archived: { label: "Archived", color: "text-slate-600", dot: "bg-slate-600" },
 };
 
 export default async function ProjectsPage() {
@@ -31,68 +26,127 @@ export default async function ProjectsPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Projects</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5">
-            {allProjects.length} project{allProjects.length !== 1 ? "s" : ""}
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1.5 h-5 rounded-full" style={{ background: "var(--brand-gradient)" }} />
+            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Projects</h1>
+          </div>
+          <p className="text-sm pl-3.5" style={{ color: "var(--text-secondary)" }}>
+            {allProjects.length} project{allProjects.length !== 1 ? "s" : ""} in pipeline
           </p>
         </div>
         <Link
           href="/projects/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brand-primary)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ background: "var(--brand-gradient)" }}
         >
-          <Plus className="w-4 h-4" /> New Project
+          <Plus className="w-3.5 h-3.5" /> New Project
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-[var(--surface-border)]">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+      >
         {allProjects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="font-medium text-[var(--text-primary)] mb-2">No projects yet</p>
-            <p className="text-sm text-[var(--text-secondary)] mb-6">Submit your first client brief</p>
-            <Link href="/projects/new" className="px-4 py-2 bg-[var(--brand-primary)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors">
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+              style={{ background: "hsl(220 90% 62% / 0.1)" }}
+            >
+              <FolderKanban className="w-5 h-5" style={{ color: "var(--brand-primary)" }} />
+            </div>
+            <p className="text-sm font-medium mb-1" style={{ color: "var(--text-primary)" }}>
+              No projects yet
+            </p>
+            <p className="text-xs mb-5" style={{ color: "var(--text-secondary)" }}>
+              Submit your first client brief
+            </p>
+            <Link
+              href="/projects/new"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: "var(--brand-gradient)" }}
+            >
               New Project
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--surface-border)]">
+          <>
+            {/* Table header */}
+            <div
+              className="grid items-center px-6 py-3"
+              style={{
+                borderBottom: "1px solid var(--surface-border)",
+                gridTemplateColumns: "1fr 130px 80px 100px 24px",
+                gap: "1rem",
+              }}
+            >
+              {["Project", "Status", "Score", "Created", ""].map((h) => (
+                <div key={h} className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+
             {allProjects.map((project) => {
               const scoreInfo = project.opportunityScore ? formatScore(project.opportunityScore) : null;
-              const badge = STATUS_BADGES[project.status] ?? STATUS_BADGES.brief;
-              const label = STATUS_LABELS[project.status] ?? project.status;
+              const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brief!;
+
               return (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-[var(--surface-bg)] transition-colors"
+                  className="grid items-center px-6 py-3.5 transition-colors group"
+                  style={{
+                    borderBottom: "1px solid var(--surface-border-subtle)",
+                    gridTemplateColumns: "1fr 130px 80px 100px 24px",
+                    gap: "1rem",
+                    color: "inherit",
+                    textDecoration: "none",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-card-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                 >
-                  <div>
-                    <div className="font-medium text-sm text-[var(--text-primary)]">{project.name}</div>
-                    <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                      {project.name}
+                    </div>
+                    <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
                       {formatProjectType(project.projectType)}
                       {project.industry ? ` · ${project.industry}` : ""}
                       {project.client?.company ? ` · ${project.client.company}` : ""}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className={cn("text-xs font-medium px-2.5 py-1 rounded-full", badge)}>
-                      {label}
-                    </span>
-                    {scoreInfo && (
-                      <span className={cn("text-sm font-semibold", scoreInfo.color)}>
+
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", status.dot)} />
+                    <span className={cn("text-xs font-medium", status.color)}>{status.label}</span>
+                  </div>
+
+                  <div>
+                    {scoreInfo ? (
+                      <span className={cn("text-sm font-semibold tabular-nums", scoreInfo.color)}>
                         {project.opportunityScore}/70
                       </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>—</span>
                     )}
-                    <span className="text-xs text-[var(--text-muted)] w-24 text-right">
-                      {formatDate(project.createdAt)}
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-[var(--text-muted)]" />
                   </div>
+
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {formatDate(project.createdAt)}
+                  </div>
+
+                  <ArrowRight
+                    className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ color: "var(--text-muted)" }}
+                  />
                 </Link>
               );
             })}
-          </div>
+          </>
         )}
       </div>
     </div>

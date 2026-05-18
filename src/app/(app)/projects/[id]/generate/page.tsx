@@ -69,8 +69,8 @@ function FileTree({
             className={cn(
               "w-full text-left flex items-center gap-1.5 py-1 px-2 rounded text-xs transition-colors",
               selected === child.path
-                ? "bg-[hsl(220,90%,56%,0.12)] text-[var(--brand-primary)]"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-bg)]",
+                ? "bg-[hsl(220,90%,62%,0.15)] text-[var(--brand-primary)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]",
             )}
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
           >
@@ -229,7 +229,7 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--surface-border)] bg-white shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--surface-border)", background: "var(--surface-card)" }}>
         <div className="flex items-center gap-4">
           <Link
             href={`/projects/${id}`}
@@ -246,7 +246,8 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
           {status === "done" && files.length > 0 && (
             <button
               onClick={() => void downloadZip()}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-[var(--surface-border)] text-[var(--text-secondary)] rounded-lg hover:bg-[var(--surface-bg)] transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border rounded-lg transition-colors"
+              style={{ borderColor: "var(--surface-border)", color: "var(--text-secondary)", background: "var(--surface-elevated)" }}
             >
               <Download className="w-4 h-4" />
               Download ZIP ({files.length} files)
@@ -257,7 +258,8 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
             <button
               onClick={() => void startGeneration()}
               disabled={!hasArch}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--brand-primary)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--brand-primary-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "var(--brand-gradient)" }}
             >
               <Zap className="w-4 h-4" />
               Generate Code
@@ -274,7 +276,8 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
           {status === "done" && (
             <button
               onClick={() => { setStatus("idle"); setFiles([]); setRawOutput(""); setSelectedFile(""); }}
-              className="flex items-center gap-2 px-4 py-2 border border-[var(--surface-border)] text-[var(--text-secondary)] rounded-lg text-sm font-medium hover:bg-[var(--surface-bg)] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors"
+              style={{ borderColor: "var(--surface-border)", color: "var(--text-secondary)", background: "var(--surface-elevated)" }}
             >
               Regenerate
             </button>
@@ -357,7 +360,7 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
       {(status === "done" || (status === "generating" && files.length > 0)) && (
         <div className="flex flex-1 overflow-hidden">
           {/* File tree sidebar */}
-          <aside className="w-56 shrink-0 border-r border-[var(--surface-border)] bg-white overflow-auto">
+          <aside className="w-56 shrink-0 overflow-auto" style={{ borderRight: "1px solid var(--surface-border)", background: "var(--surface-card)" }}>
             <div className="px-3 py-2.5 border-b border-[var(--surface-border)]">
               <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                 {files.length} file{files.length !== 1 ? "s" : ""} generated
