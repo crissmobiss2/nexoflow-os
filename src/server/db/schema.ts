@@ -32,39 +32,32 @@ export const scoreDecisionEnum = pgEnum("nf_score_decision", [
   "pass", "conditional", "build", "prioritise",
 ]);
 
+export const aiModeEnum = pgEnum("nf_ai_mode", [
+  "general", "architect", "tech_advisor", "code_review",
+  "security", "performance", "estimator", "scope_writer",
+]);
+
 // ─── Clients ──────────────────────────────────────────────────────────────────
-// Full onboarding profile — collected before any project is created
 
 export const clients = pgTable("nf_clients", {
   id: uuid("id").primaryKey().defaultRandom(),
-
-  // Contact
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
-
-  // Company
   company: varchar("company", { length: 255 }),
   website: varchar("website", { length: 255 }),
   industry: varchar("industry", { length: 255 }),
-  companySize: varchar("company_size", { length: 50 }),   // "1-10" | "11-50" | "51-200" | "201-1000" | "1000+"
+  companySize: varchar("company_size", { length: 50 }),
   region: varchar("region", { length: 100 }),
-
-  // Business context
-  businessDescription: text("business_description"),       // What they do
-  targetCustomers: text("target_customers"),               // Who their customers are
-  currentChallenges: text("current_challenges"),           // Pain points we're solving
-  existingTech: text("existing_tech"),                     // Their current stack / tools
-
-  // Commercial
-  typicalBudget: varchar("typical_budget", { length: 100 }), // Budget expectation
-  urgency: varchar("urgency", { length: 50 }),             // "exploring" | "planning" | "urgent"
+  businessDescription: text("business_description"),
+  targetCustomers: text("target_customers"),
+  currentChallenges: text("current_challenges"),
+  existingTech: text("existing_tech"),
+  typicalBudget: varchar("typical_budget", { length: 100 }),
+  urgency: varchar("urgency", { length: 50 }),
   decisionMakerRole: varchar("decision_maker_role", { length: 100 }),
-
-  // Internal
   notes: text("notes"),
-  onboardedAt: timestamp("onboarded_at"),                  // null = incomplete onboarding
-
+  onboardedAt: timestamp("onboarded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -155,6 +148,50 @@ export const projectPhases = pgTable("nf_project_phases", {
   completedAt: timestamp("completed_at"),
 });
 
+// ─── Knowledge Snippets ───────────────────────────────────────────────────────
+// Seeded from the Second Brain snippets.json (67,607 snippets, 123 categories)
+
+export const knowledgeSnippets = pgTable(
+  "nf_knowledge_snippets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    category: varchar("category", { length: 255 }).notNull(),
+    name: varchar("name", { length: 500 }).notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_snippets_category_idx").on(t.category),
+    index("nf_snippets_name_idx").on(t.name),
+  ],
+);
+
+// ─── AI Conversations ─────────────────────────────────────────────────────────
+
+export const aiConversations = pgTable("nf_ai_conversations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  title: varchar("title", { length: 500 }),
+  mode: aiModeEnum("mode").default("general").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const aiMessages = pgTable(
+  "nf_ai_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .references(() => aiConversations.id, { onDelete: "cascade" })
+      .notNull(),
+    role: varchar("role", { length: 20 }).notNull(),
+    content: text("content").notNull(),
+    contextSnippets: integer("context_snippets").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_messages_conv_idx").on(t.conversationId)],
+);
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const clientRelations = relations(clients, ({ many }) => ({
@@ -167,6 +204,7 @@ export const projectRelations = relations(projects, ({ one, many }) => ({
   score: one(opportunityScores, { fields: [projects.id], references: [opportunityScores.projectId] }),
   artifacts: many(projectArtifacts),
   phases: many(projectPhases),
+  conversations: many(aiConversations),
 }));
 
 export const briefRelations = relations(projectBriefs, ({ one }) => ({
@@ -179,4 +217,13 @@ export const artifactRelations = relations(projectArtifacts, ({ one }) => ({
 
 export const phaseRelations = relations(projectPhases, ({ one }) => ({
   project: one(projects, { fields: [projectPhases.projectId], references: [projects.id] }),
+}));
+
+export const conversationRelations = relations(aiConversations, ({ one, many }) => ({
+  project: one(projects, { fields: [aiConversations.projectId], references: [projects.id] }),
+  messages: many(aiMessages),
+}));
+
+export const messageRelations = relations(aiMessages, ({ one }) => ({
+  conversation: one(aiConversations, { fields: [aiMessages.conversationId], references: [aiConversations.id] }),
 }));
