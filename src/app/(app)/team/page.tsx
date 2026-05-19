@@ -20,7 +20,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; colo
 const ALL_ROLES = ["owner", "admin", "pm", "developer", "viewer"] as const;
 
 function RoleBadge({ role, size = "sm" }: { role: string; size?: "sm" | "md" }) {
-  const cfg = ROLE_CONFIG[role] ?? ROLE_CONFIG.viewer;
+  const cfg = (ROLE_CONFIG[role as keyof typeof ROLE_CONFIG] ?? ROLE_CONFIG.viewer)!;
   const Icon = cfg.icon;
   return (
     <span
@@ -262,7 +262,7 @@ export default function TeamPage() {
                 <label className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>Role</label>
                 <div className="space-y-1.5">
                   {ALL_ROLES.map((role) => {
-                    const cfg = ROLE_CONFIG[role] ?? ROLE_CONFIG.viewer;
+                    const cfg = (ROLE_CONFIG[role] ?? ROLE_CONFIG.viewer)!;
                     const Icon = cfg.icon;
                     const selected = inviteRole === role;
                     return (

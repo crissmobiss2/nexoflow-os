@@ -16,7 +16,7 @@ export async function getEmbeddings(texts: string[]): Promise<number[][]> {
     model: "claude-3-haiku-20240307",
     input: texts,
   });
-  return response.embeddings.map((e) => e.embedding);
+  return (embeddings as any).data.map((e: any) => e.embedding)
 }
 
 export function computeCosineSimilarity(a: number[], b: number[]): number {
