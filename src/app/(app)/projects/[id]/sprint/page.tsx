@@ -140,7 +140,7 @@ export default function SprintPage({ params }: { params: Promise<{ id: string }>
     setDetailDesc(task.description ?? "");
     setDetailPriority(task.priority ?? 0);
     setDetailPoints(task.storyPoints ?? 1);
-    setDetailDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "");
+    setDetailDueDate(task.dueDate ? String(new Date(task.dueDate).toISOString().split("T")[0]) : "");
     setDetailAssignee(task.assigneeId ?? "");
   };
 
