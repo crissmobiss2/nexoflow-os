@@ -27,7 +27,7 @@ export function rateLimitMiddleware(opts: RateLimitOptions) {
     ctx: TRPCContext;
     next: () => Promise<unknown>;
     path: string;
-    type: "query" | "mutation";
+    type: string;
     input: unknown;
   }) => {
     const { limiter: limiterType, identifierType = "user", customIdentifier } = opts;
