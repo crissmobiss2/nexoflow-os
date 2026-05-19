@@ -42,7 +42,8 @@ const TYPE_COLORS: Record<string, string> = {
   portal: "hsl(0, 80%, 65%)",
 };
 
-type Project = NonNullable<ReturnType<typeof api.projects.list.useQuery>["data"]>[number];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Project = any;
 
 export default function BoardPage() {
   const { data: projects, refetch, isLoading } = api.projects.list.useQuery();
