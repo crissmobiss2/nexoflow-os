@@ -71,7 +71,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     );
   }
 
-  const statusBadge = STATUS_BADGE[invoice.status] ?? STATUS_BADGE.draft;
+  const statusBadge = (STATUS_BADGE[invoice.status] ?? STATUS_BADGE.draft)!;
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
