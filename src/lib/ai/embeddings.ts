@@ -4,7 +4,8 @@ import { env } from "@/env";
 const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 export async function getEmbedding(text: string): Promise<number[]> {
-  const response = await anthropic.embeddings.create({
+  const anthropicClient = anthropic as any;
+  const response = await anthropicClient.embeddings.create({
     model: "claude-3-haiku-20240307",
     input: text,
   });
@@ -12,11 +13,11 @@ export async function getEmbedding(text: string): Promise<number[]> {
 }
 
 export async function getEmbeddings(texts: string[]): Promise<number[][]> {
-  const response = await anthropic.embeddings.create({
+  const response = await (anthropic as any).embeddings.create({
     model: "claude-3-haiku-20240307",
     input: texts,
   });
-  return (embeddings as any).data.map((e: any) => e.embedding)
+  return response.data.map((e: any) => e.embedding);
 }
 
 export function computeCosineSimilarity(a: number[], b: number[]): number {
