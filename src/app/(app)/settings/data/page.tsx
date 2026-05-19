@@ -30,7 +30,7 @@ export default function DataPage() {
   const [conflictStrategy, setConflictStrategy] = useState<"skip" | "overwrite" | "merge">("skip");
 
   const [exportLoading, setExportLoading] = useState(false);
-  const utils = api.useUtils();
+  const apiUtils = api.useUtils();
 
   // ─── Export ─────────────────────────────────────────────────────────────────
 
@@ -113,7 +113,7 @@ export default function DataPage() {
           conflictStrategy,
         });
         setImportResult(result);
-        void utils.data.exportAll.invalidate();
+        void apiUtils.data.exportAll.invalidate();
       } catch (err: any) {
         setImportError(err.message ?? "Import failed");
       } finally {
