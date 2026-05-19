@@ -38,7 +38,7 @@ export default function DataPage() {
     setExporting(true);
     setExportDone(false);
     try {
-      const data = await exportMutation.mutateAsync();
+      const data = await api.data.exportAll.fetch();
 
       const zip = new JSZip();
       zip.file("clients.json", JSON.stringify(data.clients, null, 2));
@@ -122,7 +122,7 @@ export default function DataPage() {
     } catch {
       setImportError("Invalid ZIP file. Please upload a valid NexoFlow export.");
     }
-  }, [importMutation, conflictStrategy, utils]);
+  }, [importMutation, conflictStrategy]);
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
