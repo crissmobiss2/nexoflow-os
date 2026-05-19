@@ -29,7 +29,7 @@ export default function DataPage() {
   const [preview, setPreview] = useState<Record<string, number> | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<"skip" | "overwrite" | "merge">("skip");
 
-  const [exportLoading, setExportLoading] = useState(false);
+  const { data: exportData, refetch: doExport } = api.data.exportAll.useQuery(undefined, { enabled: false });
   const apiUtils = api.useUtils();
 
   // ─── Export ─────────────────────────────────────────────────────────────────
@@ -38,7 +38,8 @@ export default function DataPage() {
     setExporting(true);
     setExportDone(false);
     try {
-      const data = await api.data.exportAll.fetch();
+      const result = await doExport();
+      const data = result.data!;
 
       const zip = new JSZip();
       zip.file("clients.json", JSON.stringify(data.clients, null, 2));
@@ -65,7 +66,7 @@ export default function DataPage() {
     } finally {
       setExporting(false);
     }
-  }, [exportMutation]);
+  }, [doExport]);
 
   // ─── Import ─────────────────────────────────────────────────────────────────
 
