@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { signOut } from "@/lib/auth";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
   BookOpen, Brain, Sparkles, LogOut, BarChart2,
