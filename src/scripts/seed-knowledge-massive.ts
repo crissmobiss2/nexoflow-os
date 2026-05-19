@@ -21,9 +21,40 @@ import { knowledgeSnippets } from "../server/db/schema";
 import fs from "fs";
 import path from "path";
 
+// Manually load .env.local (Next.js convention) since tsx doesn't auto-load it
+function loadEnvFile(): void {
+  const possible = [
+    path.resolve(__dirname, "../../.env.local"),
+    path.resolve(__dirname, "../../.env"),
+  ];
+  for (const envPath of possible) {
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, "utf-8");
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+      break;
+    }
+  }
+}
+loadEnvFile();
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const SECOND_BRAIN_PATH = "/opt/data/second-brain";
+// Accept --vault-path argument for custom vault location, or default to Windows path
+const vaultArgIndex = process.argv.indexOf("--vault-path");
+const SECOND_BRAIN_PATH =
+  vaultArgIndex !== -1 && process.argv[vaultArgIndex + 1]
+    ? process.argv[vaultArgIndex + 1]
+    : process.env.SECOND_BRAIN_PATH || path.resolve("C:\\NexoFlow Second-Brain\\second-brain");
 const BATCH_SIZE = 50;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
