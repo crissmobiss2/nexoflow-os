@@ -525,7 +525,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={statusData} onClick={(e) => e?.activePayload?.[0] && handleStatusBarClick(e.activePayload[0].payload)}>
+              <BarChart data={statusData} onClick={(e: any) => { const payload = e?.activePayload?.[0]?.payload; if (payload) handleStatusBarClick(payload); }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
                 <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
