@@ -93,7 +93,7 @@ export default function InvoicesPage() {
           </div>
 
           {invoices.map((invoice) => {
-            const statusStyle = STATUS_STYLE[invoice.status] ?? STATUS_STYLE.draft;
+            const statusStyle = STATUS_STYLE[invoice.status] ?? STATUS_STYLE.draft!;
             return (
               <Link
                 key={invoice.id}
