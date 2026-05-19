@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { teams, teamMembers, invitations, users } from "../db/schema";
 import crypto from "crypto";
+import { createNotification } from "@/lib/notifications";
 
 const ROLE_HIERARCHY: Record<string, number> = {
   owner: 5,
@@ -161,6 +162,16 @@ export const teamRouter = createTRPCRouter({
           expiresAt,
         })
         .returning();
+
+      try {
+        createNotification({
+          userId: "system",
+          type: "team_invite",
+          title: `Invitation sent to ${input.email}`,
+          message: `Role: ${input.role}`,
+          link: `/settings/team`,
+        });
+      } catch { /* best-effort */ }
 
       return ctx.db.query.invitations.findFirst({
         where: eq(invitations.id, invitation.id),

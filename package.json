@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npx drizzle-kit push && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -13,7 +13,10 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "knowledge:seed": "tsx scripts/seed-knowledge.ts",
-    "knowledge:seed-massive": "tsx src/scripts/seed-knowledge-massive.ts"
+    "knowledge:seed-massive": "tsx src/scripts/seed-knowledge-massive.ts",
+    "knowledge:embed": "tsx src/scripts/embed-existing-snippets.ts",
+    "sync:vault": "tsx src/scripts/sync-vault-to-os.ts",
+    "sync:vault:watch": "tsx src/scripts/sync-vault-to-os.ts --watch"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
@@ -39,15 +42,19 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/jszip": "^3.4.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "drizzle-kit": "^0.29.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.1.0",
     "postcss": "^8.4.0",
+    "recharts": "^3.8.1",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.22.2",
     "typescript": "^5.7.0"

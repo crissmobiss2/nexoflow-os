@@ -11,6 +11,12 @@ import { apiKeysRouter } from "./apiKeys";
 import { auditLogRouter } from "./auditLog";
 import { templatesRouter } from "./templates";
 import { searchRouter } from "./search";
+import { analyticsRouter } from "./analytics";
+import { notificationsRouter } from "./notifications";
+import { dataRouter } from "./data";
+import { syncRouter } from "./sync";
+import { decisionLogRouter } from "./decisionLog";
+import { playbookRouter } from "./playbooks";
 
 export const appRouter = createTRPCRouter({
   projects: projectsRouter,
@@ -25,6 +31,12 @@ export const appRouter = createTRPCRouter({
   auditLog: auditLogRouter,
   templates: templatesRouter,
   search: searchRouter,
+  analytics: analyticsRouter,
+  notifications: notificationsRouter,
+  data: dataRouter,
+  sync: syncRouter,
+  decisionLog: decisionLogRouter,
+  playbooks: playbookRouter,
 });
 
 export type AppRouter = typeof appRouter;

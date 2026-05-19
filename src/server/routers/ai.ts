@@ -1,6 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
+import { rateLimitMiddleware } from "../middleware/rateLimit";
 import { aiConversations, aiMessages } from "../db/schema";
 
 const AI_MODE_LABELS: Record<string, string> = {
@@ -14,9 +15,15 @@ const AI_MODE_LABELS: Record<string, string> = {
   scope_writer: "Scope Writer",
 };
 
+// ─── Rate-limited procedures for AI endpoints ─────────────────────────────────
+// AI endpoints get a stricter rate limit (20 req/min) vs standard API (100 req/min)
+
+const aiQuery = publicProcedure.use(rateLimitMiddleware({ limiter: "ai", identifierType: "ip" }));
+const aiMutation = publicProcedure.use(rateLimitMiddleware({ limiter: "ai", identifierType: "ip" }));
+
 export const aiRouter = createTRPCRouter({
   // List all conversations
-  listConversations: publicProcedure.query(async ({ ctx }) => {
+  listConversations: aiQuery.query(async ({ ctx }) => {
     return ctx.db.query.aiConversations.findMany({
       orderBy: [desc(aiConversations.updatedAt)],
       with: {
@@ -29,7 +36,7 @@ export const aiRouter = createTRPCRouter({
   }),
 
   // Get a single conversation with all messages
-  getConversation: publicProcedure
+  getConversation: aiQuery
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.aiConversations.findFirst({
@@ -43,7 +50,7 @@ export const aiRouter = createTRPCRouter({
     }),
 
   // Create a new conversation
-  createConversation: publicProcedure
+  createConversation: aiMutation
     .input(
       z.object({
         mode: z.enum(["general", "architect", "tech_advisor", "code_review", "security", "performance", "estimator", "scope_writer"]).default("general"),
@@ -64,7 +71,7 @@ export const aiRouter = createTRPCRouter({
     }),
 
   // Update conversation title
-  updateTitle: publicProcedure
+  updateTitle: aiMutation
     .input(z.object({ id: z.string().uuid(), title: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const [convo] = await ctx.db
@@ -76,14 +83,14 @@ export const aiRouter = createTRPCRouter({
     }),
 
   // Delete a conversation
-  deleteConversation: publicProcedure
+  deleteConversation: aiMutation
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(aiConversations).where(eq(aiConversations.id, input.id));
     }),
 
   // Save a message (called after streaming completes)
-  saveMessage: publicProcedure
+  saveMessage: aiMutation
     .input(
       z.object({
         conversationId: z.string().uuid(),

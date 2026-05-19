@@ -63,6 +63,16 @@ RULES:
 - Scope tightly — everything outside scope is a future upsell.
 - Write like a senior product manager who codes.`;
 
+/**
+ * Injects vault context into a system prompt string.
+ * Only injects if context is non-empty.
+ * Format: "## Relevant Knowledge from Your Second Brain\n\n{formattedContext}"
+ */
+export function injectVaultContext(systemPrompt: string, vaultContext: string): string {
+  if (!vaultContext?.trim()) return systemPrompt;
+  return `${systemPrompt}\n\n${vaultContext}`;
+}`;
+
 export const SCORING_PROMPT = (brief: string, context: string) => `
 ${SYSTEM_BASE}
 

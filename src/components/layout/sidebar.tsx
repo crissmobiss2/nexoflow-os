@@ -7,9 +7,11 @@ import { signOut } from "@/lib/auth";
 import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
   BookOpen, Brain, Sparkles, LogOut, BarChart2,
-  Key, Search, LayoutTemplate, ScrollText,
+  Key, Search, LayoutTemplate, ScrollText, Database,
 } from "lucide-react";
 import type { Session } from "next-auth";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { SyncStatus } from "@/components/sync/SyncStatus";
 
 const NAV_SECTIONS = [
   {
@@ -28,6 +30,7 @@ const NAV_SECTIONS = [
       { href: "/analytics", label: "Analytics",      icon: BarChart2,       badge: null },
       { href: "/clients",   label: "Clients",        icon: Users,           badge: null },
       { href: "/projects",  label: "Projects",       icon: FolderKanban,    badge: null },
+      { href: "/projects/board", label: "Board",     icon: LayoutDashboard, badge: null },
       { href: "/templates", label: "Templates",      icon: LayoutTemplate,  badge: null },
     ],
   },
@@ -73,13 +76,16 @@ export function Sidebar({ session }: { session: Session | null }) {
         >
           <Plus className="w-3.5 h-3.5" /> Onboard Client
         </Link>
-        <Link
-          href="/ai"
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90"
-          style={{ background: "hsl(262 83% 68% / 0.15)", color: "hsl(262, 83%, 68%)" }}
-        >
-          <Brain className="w-3.5 h-3.5" /> Ask AI Studio
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/ai"
+            className="flex items-center gap-2 flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90"
+            style={{ background: "hsl(262 83% 68% / 0.15)", color: "hsl(262, 83%, 68%)" }}
+          >
+            <Brain className="w-3.5 h-3.5" /> Ask AI Studio
+          </Link>
+          <NotificationDropdown />
+        </div>
       </div>
 
       {/* Nav sections */}
@@ -139,6 +145,11 @@ export function Sidebar({ session }: { session: Session | null }) {
             New Project
           </Link>
         </div>
+
+        {/* Sync Status */}
+        <div className="px-2.5">
+          <SyncStatus />
+        </div>
       </nav>
 
       {/* Settings */}
@@ -159,6 +170,14 @@ export function Sidebar({ session }: { session: Session | null }) {
           >
             <ScrollText className="w-4 h-4 shrink-0" strokeWidth={pathname.startsWith("/settings") ? 2 : 1.75} />
             Audit Log
+          </Link>
+          <Link
+            href="/settings/data"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
+            style={{ color: pathname.startsWith("/settings") ? "var(--brand-primary)" : "var(--text-secondary)" }}
+          >
+            <Database className="w-4 h-4 shrink-0" strokeWidth={pathname.startsWith("/settings") ? 2 : 1.75} />
+            Data Export
           </Link>
         </div>
       </div>

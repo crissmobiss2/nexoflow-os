@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/trpc/client";
-import { Search, BookOpen, Copy, Check, ChevronRight, Loader2, Hash, Sparkles } from "lucide-react";
+import { Search, BookOpen, Copy, Check, ChevronRight, Loader2, Hash, Sparkles, Brain, Type, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderMarkdown } from "@/lib/markdown";
+import { getEmbedding } from "@/lib/ai/embeddings";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Architecture:        "hsl(220, 90%, 62%)",
@@ -142,6 +143,9 @@ export default function KnowledgePage() {
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [offset, setOffset] = useState(0);
+  const [searchMode, setSearchMode] = useState<"text" | "semantic" | "hybrid">("text");
+  const [semanticEmbedding, setSemanticEmbedding] = useState<number[] | null>(null);
+  const [isEmbedding, setIsEmbedding] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -151,14 +155,65 @@ export default function KnowledgePage() {
 
   useEffect(() => { setOffset(0); }, [activeCategory]);
 
+  // Generate embedding when switching to semantic/hybrid mode or when query changes
+  useEffect(() => {
+    if ((searchMode === "semantic" || searchMode === "hybrid") && debouncedQuery.trim()) {
+      setIsEmbedding(true);
+      getEmbedding(debouncedQuery)
+        .then((emb) => setSemanticEmbedding(emb))
+        .catch(() => setSemanticEmbedding(null))
+        .finally(() => setIsEmbedding(false));
+    } else {
+      setSemanticEmbedding(null);
+    }
+  }, [searchMode, debouncedQuery]);
+
   const { data: stats } = api.knowledge.stats.useQuery();
   const { data: categoriesData } = api.knowledge.categories.useQuery();
-  const { data: results, isLoading } = api.knowledge.search.useQuery({
+
+  // Text search
+  const textSearch = api.knowledge.search.useQuery({
     query: debouncedQuery,
     category: activeCategory || undefined,
     limit: 30,
     offset,
+  }, {
+    enabled: searchMode === "text",
   });
+
+  // Semantic search
+  const semanticSearch = api.knowledge.semanticSearch.useQuery({
+    embedding: semanticEmbedding ?? [],
+    category: activeCategory || undefined,
+    limit: 30,
+    offset,
+  }, {
+    enabled: searchMode === "semantic" && !!semanticEmbedding && debouncedQuery.trim().length > 0,
+  });
+
+  // Hybrid search
+  const hybridSearch = api.knowledge.hybridSearch.useQuery({
+    query: debouncedQuery,
+    embedding: semanticEmbedding ?? [],
+    category: activeCategory || undefined,
+    limit: 30,
+    offset,
+  }, {
+    enabled: searchMode === "hybrid" && !!semanticEmbedding && debouncedQuery.trim().length > 0,
+  });
+
+  // Determine which results to show
+  const isLoading = searchMode === "text"
+    ? textSearch.isLoading
+    : searchMode === "semantic"
+      ? semanticSearch.isLoading || isEmbedding
+      : hybridSearch.isLoading || isEmbedding;
+
+  const results = searchMode === "text"
+    ? textSearch.data
+    : searchMode === "semantic"
+      ? semanticSearch.data
+      : hybridSearch.data;
 
   const handleAskClaude = useCallback((snippet: { category: string; name: string }) => {
     const params = new URLSearchParams({
@@ -237,7 +292,7 @@ export default function KnowledgePage() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Search bar */}
-        <div className="p-4 shrink-0" style={{ borderBottom: "1px solid var(--surface-border)" }}>
+        <div className="p-4 shrink-0 space-y-3" style={{ borderBottom: "1px solid var(--surface-border)" }}>
           <div className="relative max-w-2xl">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
             <input
@@ -257,10 +312,41 @@ export default function KnowledgePage() {
               </button>
             )}
           </div>
+
+          {/* Search mode toggle */}
+          <div className="flex items-center gap-1.5">
+            {([
+              { mode: "text" as const, icon: Type, label: "Text Search" },
+              { mode: "semantic" as const, icon: Brain, label: "Semantic" },
+              { mode: "hybrid" as const, icon: Layers, label: "Hybrid" },
+            ]).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setSearchMode(mode)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                style={
+                  searchMode === mode
+                    ? { background: "hsl(262 83% 68% / 0.15)", color: "hsl(262, 83%, 68%)" }
+                    : { background: "var(--surface-elevated)", color: "var(--text-muted)" }
+                }
+              >
+                <Icon className="w-3 h-3" />
+                {label}
+              </button>
+            ))}
+            {isEmbedding && (
+              <span className="text-[10px] flex items-center gap-1 ml-1" style={{ color: "var(--text-muted)" }}>
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                Generating embedding…
+              </span>
+            )}
+          </div>
+
           {(debouncedQuery || activeCategory) && (
-            <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-              {isLoading ? "Searching…" : `${total.toLocaleString()} results`}
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {isLoading ? "Searching…" : `${(results?.total ?? 0).toLocaleString()} results`}
               {activeCategory && ` in ${activeCategory}`}
+              {searchMode !== "text" && " · semantic search"}
             </p>
           )}
         </div>

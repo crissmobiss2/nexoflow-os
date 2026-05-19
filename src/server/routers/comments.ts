@@ -1,19 +1,20 @@
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
 import { comments } from "../db/schema";
+import { createNotification } from "@/lib/notifications";
 
 export const commentsRouter = createTRPCRouter({
-  list: publicProcedure
+  list: teamProcedure
     .input(z.object({ projectId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.comments.findMany({
-        where: eq(comments.projectId, input.projectId),
+        where: (t, { and, eq }) => and(eq(t.projectId, input.projectId), eq(t.teamId, ctx.teamId)),
         orderBy: [desc(comments.createdAt)],
       });
     }),
 
-  create: publicProcedure
+  create: teamProcedure
     .input(
       z.object({
         projectId: z.string().uuid(),
@@ -23,7 +24,16 @@ export const commentsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const [comment] = await ctx.db.insert(comments).values(input).returning();
+      const [comment] = await ctx.db.insert(comments).values({ ...input, teamId: ctx.teamId }).returning();
+      try {
+        createNotification({
+          userId: "system",
+          type: "comment",
+          title: `New comment by ${input.authorName}`,
+          message: input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content,
+          link: `/projects/${input.projectId}`,
+        });
+      } catch { /* best-effort */ }
       return comment;
     }),
 

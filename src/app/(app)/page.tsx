@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 import { db } from "@/server/db";
 import { projects, clients, aiConversations, knowledgeSnippets } from "@/server/db/schema";

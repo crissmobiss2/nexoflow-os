@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
 import { clients } from "../db/schema";
 
 const onboardingInput = z.object({
@@ -23,18 +23,19 @@ const onboardingInput = z.object({
 });
 
 export const clientsRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: teamProcedure.query(async ({ ctx }) => {
     return ctx.db.query.clients.findMany({
+      where: (t, { eq }) => eq(t.teamId, ctx.teamId),
       with: { projects: true },
       orderBy: (c, { desc }) => [desc(c.createdAt)],
     });
   }),
 
-  get: publicProcedure
+  get: teamProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.clients.findFirst({
-        where: eq(clients.id, input.id),
+        where: (t, { and, eq }) => and(eq(t.id, input.id), eq(t.teamId, ctx.teamId)),
         with: { projects: { with: { score: true } } },
       });
     }),

@@ -10,6 +10,7 @@ export const env = createEnv({
     // Optional: path to local Obsidian vault for richer AI context.
     // Falls back to bundled knowledge files when not set.
     SECOND_BRAIN_PATH: z.string().optional(),
+    OBSIDIAN_LOCAL_API_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -21,6 +22,7 @@ export const env = createEnv({
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_RESEND_KEY: process.env.AUTH_RESEND_KEY,
     SECOND_BRAIN_PATH: process.env.SECOND_BRAIN_PATH,
+    OBSIDIAN_LOCAL_API_URL: process.env.OBSIDIAN_LOCAL_API_URL,
     NODE_ENV: process.env.NODE_ENV,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

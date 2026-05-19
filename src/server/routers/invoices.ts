@@ -1,7 +1,8 @@
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
 import { invoices, invoiceLineItems, clients, users } from "../db/schema";
+import { createNotification } from "@/lib/notifications";
 
 const lineItemSchema = z.object({
   description: z.string().min(1),
@@ -24,18 +25,19 @@ const invoiceInput = z.object({
 });
 
 export const invoicesRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: teamProcedure.query(async ({ ctx }) => {
     return ctx.db.query.invoices.findMany({
+      where: (t, { eq }) => eq(t.teamId, ctx.teamId),
       with: { client: true, lineItems: true },
       orderBy: [desc(invoices.createdAt)],
     });
   }),
 
-  get: publicProcedure
+  get: teamProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.invoices.findFirst({
-        where: eq(invoices.id, input.id),
+        where: (t, { and, eq }) => and(eq(t.id, input.id), eq(t.teamId, ctx.teamId)),
         with: { client: true, lineItems: true, author: true },
       });
     }),
@@ -87,6 +89,19 @@ export const invoicesRouter = createTRPCRouter({
             items.map((item) => ({ ...item, invoiceId: id })),
           );
         }
+      }
+
+      // Notify on status change
+      if (data.status) {
+        try {
+          createNotification({
+            userId: "system",
+            type: "invoice",
+            title: `Invoice status updated to ${data.status}`,
+            message: `Invoice status changed to ${data.status}`,
+            link: `/invoices/${id}`,
+          });
+        } catch { /* best-effort */ }
       }
 
       return ctx.db.query.invoices.findFirst({

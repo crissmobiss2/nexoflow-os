@@ -6,10 +6,11 @@ import { api } from "@/lib/trpc/client";
 import {
   Send, Plus, Loader2, Sparkles, ChevronRight,
   Brain, Shield, Zap, Code, BarChart2, DollarSign, FileText,
-  Trash2, MessageSquare, Bot,
+  Trash2, MessageSquare, Bot, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderMarkdown } from "@/lib/markdown";
+import { CodeSandbox, splitMarkdownIntoSegments } from "@/components/ai/CodeSandbox";
 
 const MODES = [
   { id: "general",      label: "General",      icon: Brain,       desc: "Ask anything — full second brain context",           color: "hsl(220, 90%, 62%)" },
@@ -24,8 +25,15 @@ const MODES = [
 
 type Mode = (typeof MODES)[number]["id"];
 
-function MessageBubble({ role, content, snippets }: { role: string; content: string; snippets?: number }) {
+function MessageBubble({ role, content, snippets, vaultSnippets, sandboxEnabled }: {
+  role: string;
+  content: string;
+  snippets?: number;
+  vaultSnippets?: number;
+  sandboxEnabled?: boolean;
+}) {
   const isUser = role === "user";
+
   return (
     <div className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
       <div
@@ -45,7 +53,12 @@ function MessageBubble({ role, content, snippets }: { role: string; content: str
             style={{ background: "hsl(262 83% 68% / 0.1)", color: "hsl(262, 83%, 68%)" }}
           >
             <Sparkles className="w-2.5 h-2.5" />
-            {snippets} second brain snippets used
+            {snippets} context sources
+            {vaultSnippets != null && vaultSnippets > 0 && (
+              <span className="ml-1 opacity-75">
+                · {vaultSnippets} from vault
+              </span>
+            )}
           </div>
         )}
         <div
@@ -62,14 +75,44 @@ function MessageBubble({ role, content, snippets }: { role: string; content: str
           {isUser ? (
             <p style={{ whiteSpace: "pre-wrap" }}>{content}</p>
           ) : (
-            <div
-              className="prose-nexoflow"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-            />
+            <div className="prose-nexoflow">
+              {sandboxEnabled ? (
+                <SandboxedMarkdown content={content} sandboxEnabled={sandboxEnabled} />
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+              )}
+            </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function SandboxedMarkdown({ content, sandboxEnabled }: { content: string; sandboxEnabled: boolean }) {
+  const segments = splitMarkdownIntoSegments(content);
+
+  return (
+    <>
+      {segments.map((segment, i) => {
+        if (segment.type === "text") {
+          return (
+            <div
+              key={i}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(segment.content) }}
+            />
+          );
+        }
+        return (
+          <CodeSandbox
+            key={`code-${i}`}
+            code={segment.code ?? ""}
+            language={segment.language ?? "text"}
+            sandboxEnabled={sandboxEnabled}
+          />
+        );
+      })}
+    </>
   );
 }
 
@@ -84,7 +127,9 @@ function AiStudioInner() {
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [streamSnippets, setStreamSnippets] = useState(0);
-  const [localMessages, setLocalMessages] = useState<Array<{ role: string; content: string; snippets?: number }>>([]);
+  const [streamVaultSnippets, setStreamVaultSnippets] = useState(0);
+  const [localMessages, setLocalMessages] = useState<Array<{ role: string; content: string; snippets?: number; vaultSnippets?: number }>>([]);
+  const [sandboxEnabled, setSandboxEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -142,6 +187,7 @@ function AiStudioInner() {
     setStreaming(true);
     setStreamText("");
     setStreamSnippets(0);
+    setStreamVaultSnippets(0);
 
     try {
       const res = await fetch(`/api/ai/${convoId}`, {
@@ -158,6 +204,7 @@ function AiStudioInner() {
 
       let accumulated = "";
       let snippetCount = 0;
+      let vaultSnippetCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -166,12 +213,13 @@ function AiStudioInner() {
         for (const line of chunk.split("\n")) {
           if (!line.startsWith("data: ")) continue;
           try {
-            const data = JSON.parse(line.slice(6)) as { text?: string; done?: boolean; error?: string; snippets?: number };
+            const data = JSON.parse(line.slice(6)) as { text?: string; done?: boolean; error?: string; snippets?: number; vaultSnippets?: number };
             if (data.error) throw new Error(data.error);
             if (data.snippets != null) { snippetCount = data.snippets; setStreamSnippets(data.snippets); }
+            if (data.vaultSnippets != null) { vaultSnippetCount = data.vaultSnippets; setStreamVaultSnippets(data.vaultSnippets); }
             if (data.text) { accumulated += data.text; setStreamText(accumulated); }
             if (data.done) {
-              setLocalMessages((prev) => [...prev, { role: "assistant", content: accumulated, snippets: snippetCount }]);
+              setLocalMessages((prev) => [...prev, { role: "assistant", content: accumulated, snippets: snippetCount, vaultSnippets: vaultSnippetCount }]);
               setStreamText("");
               void utils.ai.getConversation.invalidate({ id: convoId });
               void utils.ai.listConversations.invalidate();
@@ -284,7 +332,7 @@ function AiStudioInner() {
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mode indicator */}
+        {/* Mode indicator + Sandbox toggle */}
         <div
           className="flex items-center gap-3 px-5 py-3 shrink-0"
           style={{ borderBottom: "1px solid var(--surface-border)", background: "var(--surface-card)" }}
@@ -299,9 +347,28 @@ function AiStudioInner() {
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{activeMode.label}</div>
             <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>{activeMode.desc}</div>
           </div>
-          <div className="ml-auto flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full" style={{ background: "hsl(262 83% 68% / 0.1)", color: "hsl(262, 83%, 68%)" }}>
-            <Sparkles className="w-2.5 h-2.5" />
-            67,607 snippets in context
+          <div className="ml-auto flex items-center gap-3">
+            {/* Sandbox toggle */}
+            <button
+              onClick={() => setSandboxEnabled(!sandboxEnabled)}
+              className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full transition-all"
+              style={{
+                background: sandboxEnabled ? "hsl(142, 68%, 52%, 0.15)" : "var(--surface-elevated)",
+                color: sandboxEnabled ? "hsl(142, 68%, 52%)" : "var(--text-muted)",
+                border: `1px solid ${sandboxEnabled ? "hsl(142, 68%, 52%, 0.3)" : "var(--surface-border)"}`,
+              }}
+            >
+              {sandboxEnabled ? (
+                <ToggleRight className="w-3 h-3" />
+              ) : (
+                <ToggleLeft className="w-3 h-3" />
+              )}
+              Sandbox
+            </button>
+            <div className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full" style={{ background: "hsl(262 83% 68% / 0.1)", color: "hsl(262, 83%, 68%)" }}>
+              <Sparkles className="w-2.5 h-2.5" />
+              67,607 snippets in context
+            </div>
           </div>
         </div>
 
@@ -319,7 +386,7 @@ function AiStudioInner() {
                 {activeMode.label}
               </h2>
               <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-                {activeMode.desc}. Backed by NexoFlow's complete second brain — 67,607 snippets across 123 categories.
+                {activeMode.desc}. Backed by NexoFlow&apos;s complete second brain &mdash; 67,607 snippets across 123 categories.
               </p>
               {/* Suggested prompts */}
               <div className="grid grid-cols-1 gap-2 w-full">
@@ -345,7 +412,7 @@ function AiStudioInner() {
           ) : (
             <>
               {displayMessages.map((msg, i) => (
-                <MessageBubble key={i} role={msg.role} content={msg.content} snippets={msg.snippets} />
+                <MessageBubble key={i} role={msg.role} content={msg.content} snippets={msg.snippets} sandboxEnabled={sandboxEnabled} />
               ))}
               {streamText && (
                 <div className="flex gap-3">
@@ -366,7 +433,11 @@ function AiStudioInner() {
                       className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm"
                       style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
                     >
-                      <div className="prose-nexoflow" dangerouslySetInnerHTML={{ __html: renderMarkdown(streamText) }} />
+                      {sandboxEnabled ? (
+                        <SandboxedMarkdown content={streamText} sandboxEnabled={sandboxEnabled} />
+                      ) : (
+                        <div className="prose-nexoflow" dangerouslySetInnerHTML={{ __html: renderMarkdown(streamText) }} />
+                      )}
                       <span className="inline-block w-1.5 h-4 bg-current opacity-70 ml-0.5 animate-pulse align-middle" />
                     </div>
                   </div>

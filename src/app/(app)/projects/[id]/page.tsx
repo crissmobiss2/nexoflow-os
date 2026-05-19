@@ -1,12 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import {
   ArrowLeft, FileText, Code2, Loader2,
   CheckCircle2, Circle, ArrowRight, Zap, Terminal, FileSignature,
-  Eye, Globe, Copy, MessageSquare, Send,
+  Eye, Globe, Copy, MessageSquare, Send, FileSearch,
 } from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -323,6 +323,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </div>
             )}
           </div>
+
+          {/* Related Decisions */}
+          <RelatedDecisions projectType={project.projectType} industry={project.industry} />
         </div>
 
         {/* Right column */}
@@ -535,4 +538,95 @@ function BuildStep({
     return <Link href={href as string}>{inner}</Link>;
   }
   return inner;
+}
+
+// ─── Related Decisions Panel ─────────────────────────────────────────────────
+
+function RelatedDecisions({ projectType, industry }: { projectType: string; industry?: string | null }) {
+  const categories = [projectType, industry].filter(Boolean) as string[];
+  const { data: decisions, isLoading } = api.decisionLog.byAffected.useQuery(
+    { categories, limit: 5 },
+    { enabled: categories.length > 0 },
+  );
+
+  if (isLoading) {
+    return (
+      <div
+        className="rounded-xl p-5"
+        style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+      >
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "var(--text-muted)" }} />
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>Loading related decisions...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!decisions || decisions.length === 0) return null;
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "accepted": return { bg: "hsl(142, 68%, 52%, 0.12)", color: "var(--status-success)", border: "hsl(142, 68%, 52%, 0.25)" };
+      case "proposed": return { bg: "hsl(220, 90%, 62%, 0.12)", color: "var(--brand-primary)", border: "hsl(220, 90%, 62%, 0.25)" };
+      case "deprecated": return { bg: "hsl(38, 92%, 50%, 0.12)", color: "var(--status-warning)", border: "hsl(38, 92%, 50%, 0.25)" };
+      case "superseded": return { bg: "hsl(0, 84%, 60%, 0.12)", color: "var(--status-error)", border: "hsl(0, 84%, 60%, 0.25)" };
+      default: return { bg: "var(--surface-elevated)", color: "var(--text-muted)", border: "var(--surface-border)" };
+    }
+  };
+
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+    >
+      <h2 className="text-xs font-semibold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+        <FileSearch className="w-3.5 h-3.5" />
+        Related Decisions ({decisions.length})
+      </h2>
+      <div className="space-y-2.5">
+        {decisions.map((decl) => {
+          const sc = statusColor(decl.status);
+          return (
+            <div
+              key={decl.id}
+              className="p-3 rounded-lg transition-colors cursor-pointer hover:opacity-80"
+              style={{
+                background: "var(--surface-elevated)",
+                border: "1px solid var(--surface-border-subtle)",
+              }}
+              onClick={() => window.open(`/projects?decl=${decl.declNumber}`, "_blank")}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+                  style={{
+                    background: sc.bg,
+                    color: sc.color,
+                    border: `1px solid ${sc.border}`,
+                  }}
+                >
+                  {decl.declNumber}
+                </span>
+                <span
+                  className="text-[9px] font-semibold uppercase tracking-wider"
+                  style={{ color: sc.color }}
+                >
+                  {decl.status}
+                </span>
+              </div>
+              <p className="text-xs font-medium leading-snug" style={{ color: "var(--text-primary)" }}>
+                {decl.title}
+              </p>
+              {decl.decision && (
+                <p className="text-[11px] mt-1 line-clamp-2 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  {decl.decision.slice(0, 150)}{decl.decision.length > 150 ? "..." : ""}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

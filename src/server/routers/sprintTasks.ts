@@ -1,15 +1,15 @@
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
 import { sprintTasks, projects, projectArtifacts } from "../db/schema";
 import { generateSprintTasks } from "@/lib/ai/generate";
 
 export const sprintTasksRouter = createTRPCRouter({
-  list: publicProcedure
+  list: teamProcedure
     .input(z.object({ projectId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.sprintTasks.findMany({
-        where: eq(sprintTasks.projectId, input.projectId),
+        where: (t, { and, eq }) => and(eq(t.projectId, input.projectId), eq(t.teamId, ctx.teamId)),
         orderBy: [asc(sprintTasks.order), asc(sprintTasks.createdAt)],
         with: { assignee: true },
       });
@@ -24,6 +24,9 @@ export const sprintTasksRouter = createTRPCRouter({
         description: z.string().optional(),
         storyPoints: z.number().int().min(1).max(13).optional().default(1),
         priority: z.number().int().min(0).max(3).optional().default(0),
+        status: z.enum(["backlog", "todo", "in_progress", "review", "done", "cancelled"]).optional().default("backlog"),
+        assigneeId: z.string().optional(),
+        dueDate: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -50,6 +53,8 @@ export const sprintTasksRouter = createTRPCRouter({
         storyPoints: z.number().int().min(1).max(13).optional(),
         status: z.enum(["backlog", "todo", "in_progress", "review", "done", "cancelled"]).optional(),
         priority: z.number().int().min(0).max(3).optional(),
+        assigneeId: z.string().optional(),
+        dueDate: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -93,6 +98,34 @@ export const sprintTasksRouter = createTRPCRouter({
         )
         .returning();
       return task;
+    }),
+
+  bulkReorder: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        tasks: z.array(
+          z.object({
+            id: z.string().uuid(),
+            status: z.enum(["backlog", "todo", "in_progress", "review", "done", "cancelled"]),
+            order: z.number().int().min(0),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      for (const t of input.tasks) {
+        await ctx.db
+          .update(sprintTasks)
+          .set({ status: t.status, order: t.order, updatedAt: new Date() })
+          .where(
+            and(
+              eq(sprintTasks.id, t.id),
+              eq(sprintTasks.projectId, input.projectId),
+            ),
+          );
+      }
+      return { success: true };
     }),
 
   generateFromScope: publicProcedure

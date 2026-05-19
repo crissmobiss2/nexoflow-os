@@ -76,6 +76,7 @@ export const clients = pgTable("nf_clients", {
   urgency: varchar("urgency", { length: 50 }),
   decisionMakerRole: varchar("decision_maker_role", { length: 100 }),
   notes: text("notes"),
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
   onboardedAt: timestamp("onboarded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -98,6 +99,7 @@ export const projects = pgTable(
     timelineWeeks: integer("timeline_weeks"),
     portalToken: text("portal_token").unique(),
     portalEnabled: boolean("portal_enabled").default(false).notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -180,6 +182,7 @@ export const knowledgeSnippets = pgTable(
     name: varchar("name", { length: 500 }).notNull(),
     content: text("content").notNull(),
     embedding: vector("embedding", { dimensions: 1024 }),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
@@ -224,6 +227,7 @@ export const users = pgTable("nf_user", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   role: varchar("role", { length: 20 }).default("viewer").notNull(),
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -281,6 +285,8 @@ export const sprintTasks = pgTable(
     assigneeId: text("assignee_id").references(() => users.id, { onDelete: "set null" }),
     priority: integer("priority").default(0),
     order: integer("order_val").default(0),
+    dueDate: timestamp("due_date"),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -303,6 +309,7 @@ export const invoices = pgTable(
     paidDate: timestamp("paid_date"),
     notes: text("notes"),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -377,6 +384,7 @@ export const comments = pgTable(
     authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
     authorName: varchar("author_name", { length: 255 }).notNull(),
     content: text("content").notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -398,6 +406,7 @@ export const projectRelations = relations(projects, ({ one, many }) => ({
   conversations: many(aiConversations),
   comments: many(comments),
   sprintTasks: many(sprintTasks),
+  playbook: one(projectPlaybooks, { fields: [projects.id], references: [projectPlaybooks.projectId] }),
 }));
 
 export const briefRelations = relations(projectBriefs, ({ one }) => ({
@@ -558,6 +567,86 @@ export const projectTemplateItemRelations = relations(projectTemplateItems, ({ o
     fields: [projectTemplateItems.templateId],
     references: [projectTemplates.id],
   }),
+}));
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notificationTypeEnum = pgEnum("nf_notification_type", [
+  "project_status", "sprint_task", "comment", "invoice", "team_invite", "ai_conversation", "client_onboarding",
+]);
+
+export const notifications = pgTable(
+  "nf_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    message: text("message"),
+    link: text("link"),
+    read: boolean("read").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_notifications_user_read_idx").on(t.userId, t.read),
+    index("nf_notifications_created_idx").on(t.createdAt),
+  ],
+);
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}));
+
+// ─── Sync Metadata ────────────────────────────────────────────────────────────
+
+export const syncMetadata = pgTable("nf_sync_metadata", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  lastSyncAt: timestamp("last_sync_at").defaultNow().notNull(),
+  filesCount: integer("files_count").default(0).notNull(),
+  status: varchar("status", { length: 50 }).default("idle").notNull(), // idle | syncing | error
+  errorMessage: text("error_message"),
+});
+
+// ─── Decision Log ────────────────────────────────────────────────────────────
+
+export const decisionLogStatusEnum = pgEnum("nf_decl_status", [
+  "proposed", "accepted", "deprecated", "superseded",
+]);
+
+export const decisionLog = pgTable("nf_decision_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  declNumber: varchar("decl_number", { length: 50 }).unique().notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  status: decisionLogStatusEnum("status").default("proposed").notNull(),
+  affectedStandards: text("affected_standards").array(),
+  affectedMocs: text("affected_mocs").array(),
+  context: text("context"),
+  decision: text("decision").notNull(),
+  consequences: text("consequences"),
+  date: timestamp("date").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const decisionLogRelations = relations(decisionLog, () => ({}));
+
+// ─── Project Playbooks ────────────────────────────────────────────────────────
+// Sanitized playbook content from vault, stored for client portal access
+
+export const projectPlaybooks = pgTable("nf_project_playbooks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .references(() => projects.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(),
+  playbookName: varchar("playbook_name", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  version: integer("version").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectPlaybookRelations = relations(projectPlaybooks, ({ one }) => ({
+  project: one(projects, { fields: [projectPlaybooks.projectId], references: [projects.id] }),
 }));
 
 // ─── Relations for new tables added above ─────────────────────────────────────

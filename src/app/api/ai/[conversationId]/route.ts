@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/server/db";
 import { aiConversations, aiMessages, knowledgeSnippets } from "@/server/db/schema";
 import { eq, ilike, or, sql } from "drizzle-orm";
+import { getVaultContext, formatVaultContext } from "@/lib/ai/vault-context";
 
 const client = new Anthropic();
 
@@ -61,7 +62,7 @@ function sse(data: object): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-async function getRelevantContext(conversationId: string, userMessage: string, mode: string): Promise<{ context: string; count: number }> {
+async function getRelevantContext(conversationId: string, userMessage: string, mode: string): Promise<{ context: string; count: number; vaultSnippets: { name: string; category: string }[] }> {
   const modeCategories = MODE_CATEGORIES[mode] ?? MODE_CATEGORIES.general!;
 
   // Pull snippets: prioritise by category match and keyword match in name
@@ -72,34 +73,56 @@ async function getRelevantContext(conversationId: string, userMessage: string, m
     .slice(0, 5);
 
   let snippets: { category: string; name: string; content: string }[] = [];
+  const vaultSnippets: { name: string; category: string }[] = [];
 
-  // First: keyword matches across relevant categories
-  if (keywords.length > 0) {
-    const keyword = keywords[0]!;
-    const nameMatches = await db
-      .select({ category: knowledgeSnippets.category, name: knowledgeSnippets.name, content: knowledgeSnippets.content })
-      .from(knowledgeSnippets)
-      .where(
-        or(
-          ilike(knowledgeSnippets.name, `%${keyword}%`),
-          ...(keywords.slice(1).map((k) =>
-            ilike(knowledgeSnippets.name, `%${k}%`)
-          )),
-        ),
-      )
-      .limit(15);
-    snippets = [...nameMatches];
+  // First: try live vault RAG with semantic search
+  try {
+    const vaultResults = await getVaultContext(userMessage, 10);
+    if (vaultResults.length > 0) {
+      const formattedLive = formatVaultContext(vaultResults);
+      for (const r of vaultResults) {
+        vaultSnippets.push({ name: r.name, category: r.category });
+      }
+      snippets = vaultResults.map((r) => ({
+        category: r.category,
+        name: r.name,
+        content: r.content,
+      }));
+    }
+  } catch {
+    // Fall through to existing context mechanism
   }
 
-  // Then: category-based snippets
-  const catSnippets = await db
-    .select({ category: knowledgeSnippets.category, name: knowledgeSnippets.name, content: knowledgeSnippets.content })
-    .from(knowledgeSnippets)
-    .where(sql`${knowledgeSnippets.category} = ANY(${modeCategories})`)
-    .orderBy(sql`random()`)
-    .limit(20);
+  // Fallback: use existing text-based context mechanism
+  if (snippets.length === 0) {
+    // First: keyword matches across relevant categories
+    if (keywords.length > 0) {
+      const keyword = keywords[0]!;
+      const nameMatches = await db
+        .select({ category: knowledgeSnippets.category, name: knowledgeSnippets.name, content: knowledgeSnippets.content })
+        .from(knowledgeSnippets)
+        .where(
+          or(
+            ilike(knowledgeSnippets.name, `%${keyword}%`),
+            ...(keywords.slice(1).map((k) =>
+              ilike(knowledgeSnippets.name, `%${k}%`)
+            )),
+          ),
+        )
+        .limit(15);
+      snippets = [...nameMatches];
+    }
 
-  snippets = [...snippets, ...catSnippets];
+    // Then: category-based snippets
+    const catSnippets = await db
+      .select({ category: knowledgeSnippets.category, name: knowledgeSnippets.name, content: knowledgeSnippets.content })
+      .from(knowledgeSnippets)
+      .where(sql`${knowledgeSnippets.category} = ANY(${modeCategories})`)
+      .orderBy(sql`random()`)
+      .limit(20);
+
+    snippets = [...snippets, ...catSnippets];
+  }
 
   // Deduplicate by name
   const seen = new Set<string>();
@@ -109,12 +132,12 @@ async function getRelevantContext(conversationId: string, userMessage: string, m
     return true;
   }).slice(0, 25);
 
-  if (unique.length === 0) return { context: "", count: 0 };
+  if (unique.length === 0) return { context: "", count: 0, vaultSnippets };
 
   const context = `## NexoFlow Second Brain Context (${unique.length} relevant snippets)\n\n` +
     unique.map((s) => `### [${s.category}] ${s.name}\n\n${s.content}`).join("\n\n---\n\n");
 
-  return { context, count: unique.length };
+  return { context, count: unique.length, vaultSnippets };
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ conversationId: string }> }) {
@@ -139,7 +162,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
   if (!convo) return new Response("Conversation not found", { status: 404 });
 
   // Get relevant second brain context
-  const { context, count } = await getRelevantContext(conversationId, message, convo.mode);
+  const { context, count, vaultSnippets } = await getRelevantContext(conversationId, message, convo.mode);
 
   // Save user message
   await db.insert(aiMessages).values({
@@ -175,7 +198,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
           stream: true,
         });
 
-        controller.enqueue(encoder.encode(sse({ snippets: count })));
+        controller.enqueue(encoder.encode(sse({ snippets: count, vaultSnippets: vaultSnippets.length })));
 
         for await (const event of apiStream) {
           if (event.type === "content_block_delta" && event.delta.type === "text_delta") {

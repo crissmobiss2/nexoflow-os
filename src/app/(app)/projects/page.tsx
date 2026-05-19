@@ -1,11 +1,11 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 import Link from "next/link";
 import { db } from "@/server/db";
 import { desc } from "drizzle-orm";
 import { projects } from "@/server/db/schema";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
-import { Plus, ArrowRight, FolderKanban } from "lucide-react";
+import { Plus, ArrowRight, FolderKanban, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -37,7 +37,20 @@ export default async function ProjectsPage() {
             {allProjects.length} project{allProjects.length !== 1 ? "s" : ""} in pipeline
           </p>
         </div>
-        <Link
+        <div className="flex items-center gap-2">
+          <Link
+            href="/projects/board"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
+            style={{
+              color: "var(--text-secondary)",
+              borderColor: "var(--surface-border)",
+              background: "var(--surface-elevated)",
+            }}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Board View
+          </Link>
+          <Link
           href="/projects/new"
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
           style={{ background: "var(--brand-gradient)" }}
@@ -45,6 +58,7 @@ export default async function ProjectsPage() {
           <Plus className="w-3.5 h-3.5" /> New Project
         </Link>
       </div>
+    </div>
 
       <div
         className="rounded-xl overflow-hidden"

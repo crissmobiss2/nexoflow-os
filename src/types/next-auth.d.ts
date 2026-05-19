@@ -6,10 +6,12 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      teamId: string | null;
     } & DefaultSession["user"];
   }
 
   interface User extends DefaultUser {
     role?: string;
+    teamId?: string | null;
   }
 }

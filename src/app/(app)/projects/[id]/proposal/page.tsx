@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { useState, use } from "react";
 import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight, FileSignature, Loader2, Printer } from "lucide-react";
@@ -8,6 +8,7 @@ import { formatProjectType, formatDate } from "@/lib/utils";
 
 export default function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [printing, setPrinting] = useState(false);
   const { data: proposal, isLoading } = api.projects.getProposal.useQuery({ id });
 
   if (isLoading) {
@@ -50,7 +51,12 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
   const totalWeeks = proposal.timelineWeeks;
 
   const printPDF = () => {
-    window.print();
+    setPrinting(true);
+    // Small delay for UI feedback, then trigger print
+    setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 300);
   };
 
   return (
@@ -58,10 +64,31 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
       {/* ─── Print styles ──────────────────────────────────────────────── */}
       <style>{`
         @media print {
-          @page { margin: 0.75in 0.85in; size: letter; }
+          @page {
+            margin: 0.75in 0.85in;
+            size: A4;
+            @top-center {
+              content: "NexoFlow OS — Proposal";
+              font-size: 8px;
+              color: #999;
+              font-family: system-ui, sans-serif;
+            }
+            @bottom-center {
+              content: "Page " counter(page) " of " counter(pages);
+              font-size: 8px;
+              color: #999;
+              font-family: system-ui, sans-serif;
+            }
+          }
           body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .proposal-doc { box-shadow: none !important; border: none !important; padding: 0 !important; background: white !important; }
+          .proposal-doc {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            background: white !important;
+            max-width: 100% !important;
+          }
           .proposal-doc * { color: #1a1a2e !important; }
           .proposal-doc h1, .proposal-doc h2, .proposal-doc h3, .proposal-doc h4 { color: #0f0f23 !important; }
           .proposal-doc .section-title { color: #0f0f23 !important; border-bottom-color: #ddd !important; }
@@ -72,6 +99,22 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
           .proposal-doc .payment-card { background: #f8f8fc !important; border-color: #ddd !important; }
           .proposal-doc td, .proposal-doc th { border-color: #ddd !important; }
           .proposal-doc th { background: #f0f0f5 !important; }
+          .proposal-doc section { page-break-inside: avoid; }
+          .proposal-doc section:not(:last-child) { page-break-after: auto; }
+          .proposal-doc table { page-break-inside: avoid; }
+          .proposal-doc .grid { page-break-inside: avoid; }
+          .proposal-doc pre { white-space: pre-wrap !important; overflow: visible !important; max-height: none !important; }
+          .proposal-header-print {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            margin-bottom: 32px !important;
+            padding-bottom: 16px !important;
+            border-bottom: 2px solid #e5e7eb !important;
+          }
+        }
+        @media screen {
+          .proposal-header-print { display: none; }
         }
       `}</style>
 
@@ -99,15 +142,20 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
           </div>
           <button
             onClick={printPDF}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer"
+            disabled={printing}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-60"
             style={{
               color: "var(--text-primary)",
               borderColor: "var(--surface-border)",
               background: "var(--brand-gradient)",
             }}
           >
-            <Printer className="w-4 h-4" />
-            Download PDF
+            {printing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
+            {printing ? "Preparing PDF..." : "Download PDF"}
           </button>
         </div>
 
@@ -116,6 +164,15 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
           className="proposal-doc rounded-xl p-10 md:p-14"
           style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
         >
+          {/* Print-only branding header */}
+          <div className="proposal-header-print">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#6366f1 !important", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              NexoFlow OS
+            </span>
+          </div>
           {/* Header */}
           <div className="text-center mb-10 pb-8" style={{ borderBottom: "2px solid var(--surface-border)" }}>
             <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>

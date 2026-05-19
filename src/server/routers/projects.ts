@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
 import {
   projects,
   projectBriefs,
@@ -10,6 +10,7 @@ import {
   comments,
 } from "../db/schema";
 import { scoreOpportunity, generateScope, generateArchitecture } from "@/lib/ai/generate";
+import { createNotification } from "@/lib/notifications";
 
 const DEFAULT_PHASES = [
   { name: "Discovery", order: 0 },
@@ -20,18 +21,19 @@ const DEFAULT_PHASES = [
 ];
 
 export const projectsRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: teamProcedure.query(async ({ ctx }) => {
     return ctx.db.query.projects.findMany({
+      where: (t, { eq }) => eq(t.teamId, ctx.teamId),
       orderBy: [desc(projects.createdAt)],
       with: { client: true, score: true },
     });
   }),
 
-  get: publicProcedure
+  get: teamProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.projects.findFirst({
-        where: eq(projects.id, input.id),
+        where: (t, { and, eq }) => and(eq(t.id, input.id), eq(t.teamId, ctx.teamId)),
         with: { client: true, brief: true, score: true, artifacts: true, phases: true, comments: true },
       });
     }),
@@ -207,11 +209,11 @@ export const projectsRouter = createTRPCRouter({
       return { content: result.content };
     }),
 
-  getProposal: publicProcedure
+  getProposal: teamProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const project = await ctx.db.query.projects.findFirst({
-        where: eq(projects.id, input.id),
+        where: (t, { and, eq }) => and(eq(t.id, input.id), eq(t.teamId, ctx.teamId)),
         with: { client: true, brief: true, artifacts: true, phases: true },
       });
       if (!project) throw new Error("Project not found");
@@ -252,7 +254,41 @@ export const projectsRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getArtifact: publicProcedure
+  updateStatus: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        status: z.enum(["brief", "scored", "scoped", "architected", "generating", "ready", "archived"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [project] = await ctx.db
+        .update(projects)
+        .set({ status: input.status, updatedAt: new Date() })
+        .where(eq(projects.id, input.id))
+        .returning();
+
+      // Notify project stakeholders about status change
+      if (project) {
+        const statusLabels: Record<string, string> = {
+          brief: "Brief", scored: "Scored", scoped: "Scoped",
+          architected: "Architected", generating: "Generating", ready: "Ready", archived: "Archived",
+        };
+        try {
+          createNotification({
+            userId: "system",
+            type: "project_status",
+            title: `Project "${project.name}" moved to ${statusLabels[input.status] ?? input.status}`,
+            message: `Status changed to ${statusLabels[input.status] ?? input.status}`,
+            link: `/projects/${project.id}`,
+          });
+        } catch { /* notification is best-effort */ }
+      }
+
+      return project;
+    }),
+
+  getArtifact: teamProcedure
     .input(
       z.object({
         projectId: z.string().uuid(),
