@@ -71,7 +71,7 @@ RULES:
 export function injectVaultContext(systemPrompt: string, vaultContext: string): string {
   if (!vaultContext?.trim()) return systemPrompt;
   return `${systemPrompt}\n\n${vaultContext}`;
-}`;
+}
 
 export const SCORING_PROMPT = (brief: string, context: string) => `
 ${SYSTEM_BASE}
