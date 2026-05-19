@@ -29,7 +29,8 @@ export default function DataPage() {
   const [preview, setPreview] = useState<Record<string, number> | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<"skip" | "overwrite" | "merge">("skip");
 
-  const exportMutation = api.data.exportAll.useMutation();
+  const [exportLoading, setExportLoading] = useState(false);
+  const utils = api.useUtils();
 
   // ─── Export ─────────────────────────────────────────────────────────────────
 

@@ -224,7 +224,7 @@ export default function TeamPage() {
                       <div>
                         <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{inv.email}</div>
                         <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                          Expires {formatDate(inv.expiresAt)} · Invited by {inv.inviter?.name ?? "system"}
+                          Expires {formatDate(inv.expiresAt)} · Invited by {inv.invitedBy?.name ?? "system"}
                         </div>
                       </div>
                     </div>

@@ -37,7 +37,7 @@ interface ObsidianRecentFile {
   mtime: number;
 }
 
-export interface ObsidianSearchHit {
+interface ObsidianSearchHit {
   source: "vault";
   type: string;
   title: string;

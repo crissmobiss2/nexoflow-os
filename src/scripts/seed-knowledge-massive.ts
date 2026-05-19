@@ -197,7 +197,7 @@ function getAllMarkdownFiles(rootDir: string): string[] {
   function walk(dir: string) {
     let entries: fs.DirEnt[];
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
+      entries = fs.readdirSync(dir, { withFileTypes: true }) as any;
     } catch {
       return; // permission denied, skip
     }
@@ -390,7 +390,7 @@ async function main() {
   const sortedCategories = Object.entries(categoryCounts).sort(
     (a, b) => b[1] - a[1],
   );
-  for (const [cat, count] of sortedCategories) {
+  for (const [cat, count] of sortedCategories as [string, number][]) {
     console.log(`   ${cat}: ${count}`);
   }
 
