@@ -6,7 +6,7 @@ import { api } from "@/lib/trpc/client";
 import {
   ArrowLeft, ArrowRight, Check, Loader2, Zap, Plus,
   User, Globe, Smartphone, Monitor, Box, ShoppingBag,
-  Wrench, Brain, Store, LayoutDashboard, Search, ChevronRight,
+  Wrench, Brain, Store, LayoutDashboard, Search, ChevronRight, LayoutTemplate,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -42,15 +42,22 @@ function NewProjectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedClientId = searchParams.get("clientId");
+  const templateId = searchParams.get("templateId");
 
   const { data: allClients = [] } = api.clients.list.useQuery();
   const createProject = api.projects.create.useMutation();
   const scoreProject = api.projects.score.useMutation();
+  const { data: template } = api.templates.get.useQuery(
+    { id: templateId! },
+    { enabled: !!templateId },
+  );
 
-  const [step, setStep] = useState<Step>(preselectedClientId ? 2 : 1);
+  const [step, setStep] = useState<Step>(preselectedClientId ? 2 : templateId ? 2 : 1);
   const [clientSearch, setClientSearch] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string>(preselectedClientId ?? "");
-  const [projectType, setProjectType] = useState<ProjectType | "">("");
+  const [projectType, setProjectType] = useState<ProjectType | "">(
+    (template?.projectType as ProjectType) ?? "",
+  );
   const [form, setForm] = useState({
     name: "", industry: "", budgetRange: "", timelineWeeks: "",
     targetUser: "", coreJobToBeDone: "", existingTech: "",
@@ -74,6 +81,17 @@ function NewProjectInner() {
 
   async function submit() {
     if (!projectType) return;
+
+    // If there's a template, pre-fill the brief content from the template's default brief
+    let briefInput = {
+      targetUser: form.targetUser || selectedClient?.targetCustomers || undefined,
+      coreJobToBeDone: form.coreJobToBeDone || selectedClient?.currentChallenges || undefined,
+      existingTech: form.existingTech || selectedClient?.existingTech || undefined,
+      keyIntegrations: form.keyIntegrations || undefined,
+      constraints: form.constraints || undefined,
+      additionalContext: form.additionalContext || (template?.defaultBriefTemplate) || undefined,
+    };
+
     const project = await createProject.mutateAsync({
       name: form.name || `${selectedClient?.company ?? selectedClient?.name ?? "New"} ${PROJECT_TYPES.find((t) => t.value === projectType)?.label ?? "Project"}`,
       projectType: projectType as ProjectType,
@@ -81,14 +99,7 @@ function NewProjectInner() {
       industry: form.industry || selectedClient?.industry || undefined,
       budgetRange: form.budgetRange || selectedClient?.typicalBudget || undefined,
       timelineWeeks: form.timelineWeeks ? parseInt(form.timelineWeeks) : undefined,
-      brief: {
-        targetUser: form.targetUser || selectedClient?.targetCustomers || undefined,
-        coreJobToBeDone: form.coreJobToBeDone || selectedClient?.currentChallenges || undefined,
-        existingTech: form.existingTech || selectedClient?.existingTech || undefined,
-        keyIntegrations: form.keyIntegrations || undefined,
-        constraints: form.constraints || undefined,
-        additionalContext: form.additionalContext || undefined,
-      },
+      brief: briefInput,
     });
     await scoreProject.mutateAsync({ projectId: project.id });
     router.push(`/projects/${project.id}`);
@@ -110,6 +121,31 @@ function NewProjectInner() {
           Link to a client, pick the category, fill in the brief — Claude does the rest.
         </p>
       </div>
+
+      {/* Template banner */}
+      {template && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6"
+          style={{ background: "hsl(220 90% 62% / 0.08)", border: "1px solid hsl(220 90% 62% / 0.2)" }}
+        >
+          <LayoutTemplate className="w-4 h-4 shrink-0" style={{ color: "var(--brand-primary)" }} />
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+              Template: {template.name}
+            </span>
+            {template.description && (
+              <span className="text-xs ml-2" style={{ color: "var(--text-muted)" }}>
+                · {template.description}
+              </span>
+            )}
+            {template.phases && template.phases.length > 0 && (
+              <span className="text-xs ml-2" style={{ color: "var(--text-muted)" }}>
+                · {template.phases.length} phases
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Step indicators */}
       <div className="flex items-center gap-2 mb-8">

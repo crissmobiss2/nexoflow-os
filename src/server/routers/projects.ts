@@ -7,6 +7,7 @@ import {
   opportunityScores,
   projectArtifacts,
   projectPhases,
+  comments,
 } from "../db/schema";
 import { scoreOpportunity, generateScope, generateArchitecture } from "@/lib/ai/generate";
 
@@ -31,7 +32,7 @@ export const projectsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.query.projects.findFirst({
         where: eq(projects.id, input.id),
-        with: { client: true, brief: true, score: true, artifacts: true, phases: true },
+        with: { client: true, brief: true, score: true, artifacts: true, phases: true, comments: true },
       });
     }),
 

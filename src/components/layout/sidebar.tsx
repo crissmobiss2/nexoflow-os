@@ -7,6 +7,7 @@ import { signOut } from "@/lib/auth";
 import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
   BookOpen, Brain, Sparkles, LogOut, BarChart2,
+  Key, Search, LayoutTemplate, ScrollText,
 } from "lucide-react";
 import type { Session } from "next-auth";
 
@@ -23,9 +24,11 @@ const NAV_SECTIONS = [
     label: "Workspace",
     items: [
       { href: "/",          label: "Dashboard",      icon: LayoutDashboard, badge: null },
+      { href: "/search",    label: "Search",         icon: Search,          badge: null },
       { href: "/analytics", label: "Analytics",      icon: BarChart2,       badge: null },
       { href: "/clients",   label: "Clients",        icon: Users,           badge: null },
       { href: "/projects",  label: "Projects",       icon: FolderKanban,    badge: null },
+      { href: "/templates", label: "Templates",      icon: LayoutTemplate,  badge: null },
     ],
   },
 ];
@@ -137,6 +140,28 @@ export function Sidebar({ session }: { session: Session | null }) {
           </Link>
         </div>
       </nav>
+
+      {/* Settings */}
+      <div className="shrink-0 px-2.5 pb-2">
+        <div className="space-y-0.5">
+          <Link
+            href="/settings/api-keys"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
+            style={{ color: pathname.startsWith("/settings") ? "var(--brand-primary)" : "var(--text-secondary)" }}
+          >
+            <Key className="w-4 h-4 shrink-0" strokeWidth={pathname.startsWith("/settings") ? 2 : 1.75} />
+            API Keys
+          </Link>
+          <Link
+            href="/settings/audit-log"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
+            style={{ color: pathname.startsWith("/settings") ? "var(--brand-primary)" : "var(--text-secondary)" }}
+          >
+            <ScrollText className="w-4 h-4 shrink-0" strokeWidth={pathname.startsWith("/settings") ? 2 : 1.75} />
+            Audit Log
+          </Link>
+        </div>
+      </div>
 
       {/* User section */}
       <div className="shrink-0" style={{ borderTop: "1px solid var(--surface-border)" }}>

@@ -1,12 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import {
   ArrowLeft, FileText, Code2, Loader2,
   CheckCircle2, Circle, ArrowRight, Zap, Terminal, FileSignature,
-  Eye, Globe, Copy,
+  Eye, Globe, Copy, MessageSquare, Send,
 } from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const generateArch = api.projects.generateArchitecture.useMutation({ onSuccess: () => void refetch() });
   const enablePortal = api.projects.enablePortal.useMutation({ onSuccess: () => void refetch() });
   const disablePortal = api.projects.disablePortal.useMutation({ onSuccess: () => void refetch() });
+  const [newComment, setNewComment] = useState("");
+  const addComment = api.comments.create.useMutation({ onSuccess: () => { void refetch(); setNewComment(""); } });
 
   if (isLoading) {
     return (
@@ -375,6 +377,75 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </dl>
             </div>
           )}
+
+          {/* Comments */}
+          <div
+            className="rounded-xl p-5"
+            style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+              <MessageSquare className="w-3.5 h-3.5" />
+              Comments ({project.comments?.length ?? 0})
+            </h2>
+
+            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+              {(project.comments ?? []).length === 0 && (
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>No comments yet. Add one below.</p>
+              )}
+              {(project.comments ?? []).map((comment) => (
+                <div
+                  key={comment.id}
+                  className="p-3 rounded-lg"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border-subtle)" }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
+                      {comment.authorName}
+                    </span>
+                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      {new Date(comment.createdAt).toLocaleDateString("en-GB", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    {comment.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Add comment */}
+            <div className="flex gap-2">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment…"
+                rows={2}
+                className="nf-input resize-none flex-1 text-sm"
+                style={{ background: "var(--surface-elevated)" }}
+              />
+              <button
+                type="button"
+                disabled={!newComment.trim() || addComment.isPending}
+                onClick={() =>
+                  addComment.mutate({
+                    projectId: id,
+                    authorName: "You",
+                    content: newComment,
+                  })
+                }
+                className="self-end p-2.5 rounded-lg text-white transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                style={{ background: "var(--brand-gradient)" }}
+              >
+                {addComment.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

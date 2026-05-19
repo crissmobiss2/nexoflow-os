@@ -39,6 +39,18 @@ export const sprintTaskStatusEnum = pgEnum("nf_sprint_status", [
   "backlog", "todo", "in_progress", "review", "done", "cancelled",
 ]);
 
+export const invoiceStatusEnum = pgEnum("nf_invoice_status", [
+  "draft", "sent", "paid", "overdue", "cancelled",
+]);
+
+export const teamRoleEnum = pgEnum("nf_team_role", [
+  "owner", "admin", "pm", "developer", "viewer",
+]);
+
+export const invitationStatusEnum = pgEnum("nf_invitation_status", [
+  "pending", "accepted", "expired", "cancelled",
+]);
+
 export const aiModeEnum = pgEnum("nf_ai_mode", [
   "general", "architect", "tech_advisor", "code_review",
   "security", "performance", "estimator", "scope_writer",
@@ -275,6 +287,102 @@ export const sprintTasks = pgTable(
   (t) => [index("nf_sprint_tasks_project_idx").on(t.projectId)],
 );
 
+// ─── Invoices ─────────────────────────────────────────────────────────────────
+
+export const invoices = pgTable(
+  "nf_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+    status: invoiceStatusEnum("status").default("draft").notNull(),
+    subtotal: integer("subtotal").notNull().default(0),
+    tax: integer("tax").notNull().default(0),
+    total: integer("total").notNull().default(0),
+    dueDate: timestamp("due_date"),
+    paidDate: timestamp("paid_date"),
+    notes: text("notes"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_invoices_client_idx").on(t.clientId),
+    index("nf_invoices_status_idx").on(t.status),
+  ],
+);
+
+export const invoiceLineItems = pgTable(
+  "nf_invoice_line_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    rate: integer("rate").notNull().default(0),
+    amount: integer("amount").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_line_items_invoice_idx").on(t.invoiceId)],
+);
+
+// ─── Teams ────────────────────────────────────────────────────────────────────
+
+export const teams = pgTable("nf_teams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const teamMembers = pgTable(
+  "nf_team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    role: teamRoleEnum("role").default("developer").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_team_members_team_idx").on(t.teamId),
+    index("nf_team_members_user_idx").on(t.userId),
+  ],
+);
+
+export const invitations = pgTable(
+  "nf_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: teamRoleEnum("role").default("developer").notNull(),
+    status: invitationStatusEnum("status").default("pending").notNull(),
+    invitedBy: text("invited_by").references(() => users.id, { onDelete: "set null" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_invitations_team_idx").on(t.teamId)],
+);
+
+// ─── Project Comments ─────────────────────────────────────────────────────────
+
+export const comments = pgTable(
+  "nf_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+    authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+    authorName: varchar("author_name", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_comments_project_idx").on(t.projectId)],
+);
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const clientRelations = relations(clients, ({ many }) => ({
@@ -288,6 +396,8 @@ export const projectRelations = relations(projects, ({ one, many }) => ({
   artifacts: many(projectArtifacts),
   phases: many(projectPhases),
   conversations: many(aiConversations),
+  comments: many(comments),
+  sprintTasks: many(sprintTasks),
 }));
 
 export const briefRelations = relations(projectBriefs, ({ one }) => ({
@@ -319,7 +429,138 @@ export const messageRelations = relations(aiMessages, ({ one }) => ({
 export const userRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
+  sprintTasks: many(sprintTasks),
+  teamMemberships: many(teamMembers),
+  invitedInvitations: many(invitations, { relationName: "invitedBy" }),
+  createdInvoices: many(invoices, { relationName: "createdBy" }),
 }));
+
+export const invoiceRelations = relations(invoices, ({ one, many }) => ({
+  client: one(clients, { fields: [invoices.clientId], references: [clients.id] }),
+  author: one(users, { fields: [invoices.createdBy], references: [users.id], relationName: "createdBy" }),
+  lineItems: many(invoiceLineItems),
+}));
+
+export const invoiceLineItemRelations = relations(invoiceLineItems, ({ one }) => ({
+  invoice: one(invoices, { fields: [invoiceLineItems.invoiceId], references: [invoices.id] }),
+}));
+
+export const teamRelations = relations(teams, ({ many }) => ({
+  members: many(teamMembers),
+  invitations: many(invitations),
+}));
+
+export const teamMemberRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, { fields: [teamMembers.teamId], references: [teams.id] }),
+  user: one(users, { fields: [teamMembers.userId], references: [users.id] }),
+}));
+
+export const invitationRelations = relations(invitations, ({ one }) => ({
+  team: one(teams, { fields: [invitations.teamId], references: [teams.id] }),
+  inviter: one(users, { fields: [invitations.invitedBy], references: [users.id], relationName: "invitedBy" }),
+}));
+
+export const commentRelations = relations(comments, ({ one }) => ({
+  project: one(projects, { fields: [comments.projectId], references: [projects.id] }),
+}));
+
+// ─── API Keys ─────────────────────────────────────────────────────────────────
+
+export const apiKeys = pgTable(
+  "nf_api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    keyPrefix: varchar("key_prefix", { length: 8 }).notNull(),
+    keyHash: text("key_hash").notNull(),
+    keyLastChars: varchar("key_last_chars", { length: 4 }).notNull(),
+    permissions: text("permissions").notNull().default("read"), // comma-separated scopes
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    lastUsedAt: timestamp("last_used_at"),
+    expiresAt: timestamp("expires_at"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_api_keys_prefix_idx").on(t.keyPrefix)],
+);
+
+export const apiKeyRelations = relations(apiKeys, ({ one }) => ({
+  creator: one(users, { fields: [apiKeys.createdBy], references: [users.id] }),
+}));
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+export const auditLogs = pgTable(
+  "nf_audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    userName: varchar("user_name", { length: 255 }),
+    action: varchar("action", { length: 100 }).notNull(), // e.g. "create", "update", "delete"
+    targetType: varchar("target_type", { length: 100 }).notNull(), // e.g. "project", "client", "api_key"
+    targetId: varchar("target_id", { length: 255 }),
+    details: text("details"), // JSON string
+    ipAddress: varchar("ip_address", { length: 45 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_audit_logs_action_idx").on(t.action),
+    index("nf_audit_logs_user_idx").on(t.userId),
+    index("nf_audit_logs_target_idx").on(t.targetType, t.targetId),
+    index("nf_audit_logs_created_idx").on(t.createdAt),
+  ],
+);
+
+export const auditLogRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
+}));
+
+// ─── Project Templates ────────────────────────────────────────────────────────
+
+export const projectTemplates = pgTable(
+  "nf_project_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    projectType: projectTypeEnum("project_type").notNull(),
+    defaultBriefTemplate: text("default_brief_template"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    isBuiltIn: boolean("is_built_in").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_templates_type_idx").on(t.projectType)],
+);
+
+export const projectTemplateItems = pgTable(
+  "nf_project_template_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    templateId: uuid("template_id")
+      .references(() => projectTemplates.id, { onDelete: "cascade" })
+      .notNull(),
+    phaseName: varchar("phase_name", { length: 100 }).notNull(),
+    phaseOrder: integer("phase_order").notNull(),
+    description: text("description"),
+  },
+  (t) => [index("nf_template_items_template_idx").on(t.templateId)],
+);
+
+export const projectTemplateRelations = relations(projectTemplates, ({ one, many }) => ({
+  creator: one(users, { fields: [projectTemplates.createdBy], references: [users.id] }),
+  phases: many(projectTemplateItems),
+}));
+
+export const projectTemplateItemRelations = relations(projectTemplateItems, ({ one }) => ({
+  template: one(projectTemplates, {
+    fields: [projectTemplateItems.templateId],
+    references: [projectTemplates.id],
+  }),
+}));
+
+// ─── Relations for new tables added above ─────────────────────────────────────
 
 export const accountRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
