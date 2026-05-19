@@ -120,7 +120,7 @@ export default function TeamPage() {
                   <RoleBadge role={user.role ?? "viewer"} size="md" />
                   <select
                     value={user.role ?? "viewer"}
-                    onChange={(e) => updateUserRole.mutate({ userId: user.id, role: e.target.value })}
+                    onChange={(e) =>                updateUserRole.mutate({ userId: user.id, role: e.target.value as any })}
                     className="text-xs px-2 py-1 rounded-lg border bg-transparent"
                     style={{ color: "var(--text-secondary)", borderColor: "var(--surface-border)" }}
                     disabled={updateUserRole.isPending}
