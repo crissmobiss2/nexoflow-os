@@ -29,7 +29,7 @@ export function rateLimitMiddleware(opts: RateLimitOptions) {
     path: string;
     type: string;
     input: unknown;
-  }) => {
+  }): Promise<any> => {
     const { limiter: limiterType, identifierType = "user", customIdentifier } = opts;
     const ratelimit = getLimiter();
 
