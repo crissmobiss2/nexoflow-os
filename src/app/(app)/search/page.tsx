@@ -169,7 +169,7 @@ export default function SearchPage() {
       {debouncedQuery && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           {SOURCE_FILTERS.map((f) => {
-            const Icon = f.icon;
+            const Icon = (f as any).icon;
             const active = sourceFilter === f.id;
             return (
               <button
