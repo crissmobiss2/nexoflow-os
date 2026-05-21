@@ -30,3 +30,4 @@ drizzle/
 # Sync state (local machine only)
 tmp/
 logs/
+.env.production
