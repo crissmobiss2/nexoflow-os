@@ -12,11 +12,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "knowledge:seed": "tsx scripts/seed-knowledge.ts",
-    "knowledge:seed-massive": "tsx src/scripts/seed-knowledge-massive.ts",
-    "knowledge:embed": "tsx src/scripts/embed-existing-snippets.ts",
-    "sync:vault": "tsx src/scripts/sync-vault-to-os.ts",
-    "sync:vault:watch": "tsx src/scripts/sync-vault-to-os.ts --watch"
+    "knowledge:seed": "tsx --env-file .env.local scripts/seed-knowledge.ts",
+    "knowledge:seed-massive": "tsx --env-file .env.local src/scripts/seed-knowledge-massive.ts",
+    "knowledge:embed": "tsx --env-file .env.local src/scripts/embed-existing-snippets.ts",
+    "sync:vault": "tsx --env-file .env.local src/scripts/sync-vault-to-os.ts",
+    "sync:vault:watch": "tsx --env-file .env.local src/scripts/sync-vault-to-os.ts --watch"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
