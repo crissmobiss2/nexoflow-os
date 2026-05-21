@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/server/db";
 import { aiConversations, aiMessages, knowledgeSnippets } from "@/server/db/schema";
-import { eq, ilike, or, sql } from "drizzle-orm";
+import { eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getVaultContext, formatVaultContext } from "@/lib/ai/vault-context";
 
 const client = new Anthropic();
@@ -117,7 +117,7 @@ async function getRelevantContext(conversationId: string, userMessage: string, m
     const catSnippets = await db
       .select({ category: knowledgeSnippets.category, name: knowledgeSnippets.name, content: knowledgeSnippets.content })
       .from(knowledgeSnippets)
-      .where(sql`${knowledgeSnippets.category} = ANY(${modeCategories})`)
+      .where(inArray(knowledgeSnippets.category, modeCategories))
       .orderBy(sql`random()`)
       .limit(20);
 

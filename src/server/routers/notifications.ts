@@ -12,12 +12,13 @@ export const notificationsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return ctx.db.query.notifications.findMany({
-        where: eq(notifications.read, false),
-        orderBy: [desc(notifications.createdAt)],
-        limit: input.limit,
-        offset: input.offset,
-      });
+      return ctx.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.read, false))
+        .orderBy(desc(notifications.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
     }),
 
   unreadCount: publicProcedure.query(async ({ ctx }) => {
