@@ -304,6 +304,8 @@ export default function AnalyticsPage() {
   const { data: revenue } = api.analytics.revenue.useQuery(filterInput);
   const { data: volume } = api.analytics.volume.useQuery(filterInput);
   const { data: leadFunnel } = api.analytics.leadFunnel.useQuery();
+  const { data: leadSources } = api.analytics.leadSources.useQuery();
+  const { data: revenuePipeline } = api.analytics.revenuePipeline.useQuery();
 
   const statusData = byStatus ?? [];
   const typeData = byType ?? [];
@@ -699,6 +701,82 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           )}
         </ChartCard>
+      </div>
+
+      {/* ── Lead Source Attribution + Revenue Pipeline ──────────────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Lead Source Attribution */}
+        <div className="rounded-2xl p-5" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>Lead Source Attribution</h3>
+          {!leadSources || leadSources.total === 0 ? (
+            <div className="text-xs py-8 text-center" style={{ color: "var(--text-muted)" }}>No lead data yet</div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{leadSources.total}</span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>total leads</span>
+              </div>
+              {leadSources.bySource.slice(0, 8).map((s, i) => {
+                const colors = ["hsl(220,90%,62%)", "hsl(262,83%,68%)", "hsl(142,68%,52%)", "hsl(35,90%,60%)", "hsl(0,70%,60%)", "hsl(207,70%,60%)", "hsl(40,90%,58%)", "hsl(180,60%,55%)"];
+                const color = colors[i % colors.length]!;
+                return (
+                  <div key={s.source}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium capitalize" style={{ color: "var(--text-secondary)" }}>
+                        {s.source.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{s.count} ({s.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-elevated)" }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${s.pct}%`, background: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Revenue Pipeline */}
+        <div className="rounded-2xl p-5" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>Revenue Pipeline (Invoices)</h3>
+          {!revenuePipeline ? (
+            <div className="text-xs py-8 text-center" style={{ color: "var(--text-muted)" }}>No invoice data yet</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Collected", value: revenuePipeline.totalCollected, color: "hsl(142, 68%, 52%)" },
+                  { label: "Pipeline", value: revenuePipeline.totalPipeline, color: "hsl(207, 70%, 60%)" },
+                  { label: "Overdue", value: revenuePipeline.overdue, color: "hsl(0, 70%, 60%)" },
+                  { label: "Draft", value: revenuePipeline.draft, color: "hsl(220, 14%, 55%)" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-xl p-3" style={{ background: "var(--surface-elevated)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{label}</div>
+                    <div className="text-lg font-bold" style={{ color }}>${(value / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}</div>
+                  </div>
+                ))}
+              </div>
+              {revenuePipeline.totalCollected + revenuePipeline.totalPipeline > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Collection Rate</div>
+                  <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "var(--surface-elevated)" }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.round((revenuePipeline.totalCollected / (revenuePipeline.totalCollected + revenuePipeline.totalPipeline + revenuePipeline.overdue)) * 100)}%`,
+                        background: "hsl(142, 68%, 52%)",
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {Math.round((revenuePipeline.totalCollected / (revenuePipeline.totalCollected + revenuePipeline.totalPipeline + revenuePipeline.overdue)) * 100)}% of total invoiced collected
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

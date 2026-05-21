@@ -1,13 +1,13 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/trpc/client";
 import { formatDate } from "@/lib/utils";
 import {
   ArrowLeft, Download, Trash2, Loader2, Banknote,
-  Clock, CheckCircle2, Send,
+  Clock, CheckCircle2, Send, CreditCard, ExternalLink, Copy,
 } from "lucide-react";
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -51,6 +51,19 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
   const updateStatus = api.invoices.update.useMutation({
     onSuccess: () => void refetch(),
   });
+  const createPaymentLink = api.invoices.createStripePaymentLink.useMutation({
+    onSuccess: () => void refetch(),
+  });
+  const markPaid = api.invoices.markPaid.useMutation({
+    onSuccess: () => void refetch(),
+  });
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  function copyPaymentLink(url: string) {
+    void navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  }
 
   if (isLoading) {
     return (
@@ -100,13 +113,47 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           )}
           {invoice.status === "sent" && (
             <button
-              onClick={() => updateStatus.mutate({ id, status: "paid", paidDate: new Date().toISOString() })}
-              disabled={updateStatus.isPending}
+              onClick={() => markPaid.mutate({ id })}
+              disabled={markPaid.isPending}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80"
               style={{ background: "hsl(142, 68%, 52%, 0.12)", color: "hsl(142, 68%, 52%)", border: "1px solid hsl(142, 68%, 52%, 0.25)" }}
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> Mark Paid
             </button>
+          )}
+          {/* Stripe payment link */}
+          {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+            (invoice as any).stripePaymentUrl ? (
+              <div className="flex items-center gap-1">
+                <a
+                  href={(invoice as any).stripePaymentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                  style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)", border: "1px solid hsl(262 83% 68% / 0.25)" }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Pay Link
+                </a>
+                <button
+                  onClick={() => copyPaymentLink((invoice as any).stripePaymentUrl)}
+                  className="p-2 rounded-lg transition-opacity hover:opacity-70"
+                  style={{ color: copiedLink ? "hsl(142, 68%, 52%)" : "var(--text-muted)", border: "1px solid var(--surface-border)" }}
+                  title="Copy payment link"
+                >
+                  {copiedLink ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => createPaymentLink.mutate({ id })}
+                disabled={createPaymentLink.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)", border: "1px solid hsl(262 83% 68% / 0.25)" }}
+              >
+                {createPaymentLink.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                {createPaymentLink.isPending ? "Creating…" : "Create Pay Link"}
+              </button>
+            )
           )}
           <button
             onClick={() => generatePdf.mutate({ id })}

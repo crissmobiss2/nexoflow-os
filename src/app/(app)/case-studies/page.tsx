@@ -24,6 +24,25 @@ type CS = {
   sortOrder: number;
 };
 
+function cleanForm(f: typeof BLANK) {
+  return {
+    clientName: f.clientName,
+    testimonial: f.testimonial,
+    clientTitle: f.clientTitle || undefined,
+    clientCompany: f.clientCompany || undefined,
+    clientIndustry: f.clientIndustry || undefined,
+    avatarInitials: f.avatarInitials || undefined,
+    metric1Label: f.metric1Label || undefined,
+    metric1Value: f.metric1Value || undefined,
+    metric2Label: f.metric2Label || undefined,
+    metric2Value: f.metric2Value || undefined,
+    metric3Label: f.metric3Label || undefined,
+    metric3Value: f.metric3Value || undefined,
+    linkedProjectId: undefined as string | undefined,
+    linkedClientId: undefined as string | undefined,
+  };
+}
+
 const BLANK: Omit<CS, "id" | "published" | "sortOrder"> = {
   clientName: "", clientTitle: "", clientCompany: "", clientIndustry: "", avatarInitials: "",
   testimonial: "", metric1Label: "", metric1Value: "", metric2Label: "", metric2Value: "",
@@ -68,9 +87,9 @@ export default function CaseStudiesPage() {
       return;
     }
     if (isNew) {
-      createMutation.mutate(form);
+      createMutation.mutate(cleanForm(form));
     } else if (editing) {
-      updateMutation.mutate({ id: editing.id, ...form });
+      updateMutation.mutate({ id: editing.id, ...cleanForm(form) });
     }
   }
 

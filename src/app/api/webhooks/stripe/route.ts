@@ -17,18 +17,18 @@ export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature");
   const rawBody = await req.text();
 
-  let event: { type: string; data: { object: Record<string, unknown> } };
+  let event: { type: string; data: { object: { metadata?: Record<string, string> } } };
   try {
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    event = stripe.webhooks.constructEvent(rawBody, sig ?? "", process.env.STRIPE_WEBHOOK_SECRET) as typeof event;
+    event = stripe.webhooks.constructEvent(rawBody, sig ?? "", process.env.STRIPE_WEBHOOK_SECRET) as unknown as typeof event;
   } catch (err) {
     return NextResponse.json({ error: `Webhook signature invalid: ${String(err)}` }, { status: 400 });
   }
 
   if (event.type === "checkout.session.completed" || event.type === "payment_intent.succeeded") {
     const obj = event.data.object;
-    const invoiceId = (obj.metadata as Record<string, string>)?.invoiceId;
+    const invoiceId = obj.metadata?.invoiceId;
 
     if (invoiceId) {
       await db
