@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/client";
 import {
   ArrowLeft, ChevronRight, Globe, Mail, Phone, Building2, MapPin,
   Linkedin, Loader2, Sparkles, Zap, Send, ExternalLink, Tag, FolderKanban,
-  ChevronDown, CheckCircle2, AlertCircle, Target, Trash2,
+  ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -61,12 +61,18 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const { data: lead, isLoading, refetch } = api.leads.get.useQuery({ id });
   const updateMutation = api.leads.update.useMutation({ onSuccess: () => refetch() });
   const generateInsights = api.leads.generateInsights.useMutation({ onSuccess: () => refetch() });
+  const [copied, setCopied] = useState(false);
   const generateDemo = api.leads.generateDemo.useMutation({
-    onSuccess: (result) => {
+    onSuccess: () => {
       refetch();
-      if (result.projectId) router.push(`/projects/${result.projectId}`);
     },
   });
+
+  function copyDemoLink(url: string) {
+    void navigator.clipboard.writeText(window.location.origin + url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
   const deleteMutation = api.leads.delete.useMutation({ onSuccess: () => router.push("/leads") });
 
   if (isLoading) {
@@ -345,10 +351,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           )}
 
           {/* Outreach history */}
-          {lead.outreach.length > 0 && (
-            <Section title={`Outreach History (${lead.outreach.length})`}>
+          {(lead.outreach?.length ?? 0) > 0 && (
+            <Section title={`Outreach History (${lead.outreach?.length ?? 0})`}>
               <div className="space-y-2">
-                {lead.outreach.map((o) => (
+                {(lead.outreach ?? []).map((o) => (
                   <div
                     key={o.id}
                     className="px-4 py-3 rounded-xl"
@@ -401,8 +407,39 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 style={{ background: "var(--brand-gradient)", color: "white" }}
               >
                 {generateDemo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                {generateDemo.isPending ? "Creating…" : "Generate Demo Project"}
+                {generateDemo.isPending ? "Building demo website…" : lead.demoUrl ? "Regenerate Demo" : "Build Demo Website"}
               </button>
+              {lead.demoUrl && (
+                <div
+                  className="rounded-xl px-3 py-2.5 space-y-2"
+                  style={{ background: "hsl(142 68% 52% / 0.06)", border: "1px solid hsl(142 68% 52% / 0.2)" }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Monitor className="w-3 h-3" style={{ color: "hsl(142, 68%, 52%)" }} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "hsl(142, 68%, 52%)" }}>Demo Ready</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={lead.demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs hover:underline flex-1 min-w-0"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      <span className="truncate">View Live Demo</span>
+                    </a>
+                    <button
+                      onClick={() => copyDemoLink(lead.demoUrl!)}
+                      className="shrink-0 p-1 rounded-lg transition-opacity hover:opacity-70"
+                      style={{ color: copied ? "hsl(142, 68%, 52%)" : "var(--text-muted)" }}
+                      title="Copy demo link"
+                    >
+                      {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              )}
               <Link
                 href={`/leads/${id}/outreach`}
                 className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors"

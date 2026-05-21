@@ -115,6 +115,7 @@ async function main() {
   await run("nf_leads status idx",  `CREATE INDEX IF NOT EXISTS nf_leads_status_idx ON nf_leads (status)`);
   await run("nf_leads team idx",    `CREATE INDEX IF NOT EXISTS nf_leads_team_idx ON nf_leads (team_id)`);
   await run("nf_leads email idx",   `CREATE INDEX IF NOT EXISTS nf_leads_email_idx ON nf_leads (email)`);
+  await run("nf_leads.demo_html",   `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_html TEXT`);
 
   // ── nf_lead_outreach table ────────────────────────────────────────────────
   await run("nf_lead_outreach table", `

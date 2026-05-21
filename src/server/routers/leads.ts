@@ -1,4 +1,4 @@
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
@@ -39,11 +39,11 @@ export const leadsRouter = createTRPCRouter({
       if (input?.status) conditions.push(eq(leads.status, input.status));
       if (input?.teamId) conditions.push(eq(leads.teamId, input.teamId));
 
-      return ctx.db.query.leads.findMany({
-        where: conditions.length > 0 ? and(...conditions) : undefined,
-        with: { outreach: true },
-        orderBy: [desc(leads.createdAt)],
-      });
+      return ctx.db
+        .select()
+        .from(leads)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(leads.createdAt));
     }),
 
   get: publicProcedure
@@ -163,12 +163,53 @@ Respond in JSON with this exact structure:
       });
       if (!lead) throw new Error("Lead not found");
 
-      // Create a project in NexoFlow for this lead
       const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Lead";
       const companyName = lead.company ?? name;
 
+      // Parse existing AI insights if available
+      let insights: Record<string, unknown> = {};
+      if (lead.aiInsights) {
+        try { insights = JSON.parse(lead.aiInsights); } catch { /* ignore */ }
+      }
+
+      // Generate a real demo website using Claude
+      const demoPrompt = `You are a world-class web developer creating a personalized demo website for a sales prospect.
+
+Generate a COMPLETE, single-file HTML page that serves as a stunning demo/proposal for:
+
+Company: ${companyName}
+Industry: ${lead.industry ?? "Technology"}
+Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
+Website: ${lead.website ?? "N/A"}
+Tech Stack: ${lead.techStack ?? "Not specified"}
+Pain Points: ${lead.painPoints ?? "Not specified"}
+What we'd build: ${(insights.whatWeBuild as string) ?? "A custom software solution"}
+Tech recommendation: ${(insights.techRecommendation as string) ?? "Modern web stack"}
+Scraped context: ${lead.scrapedData ? lead.scrapedData.slice(0, 500) : "None"}
+
+Requirements:
+- Complete single-file HTML (all CSS in <style>, no external dependencies except Google Fonts CDN)
+- Professional, modern design with dark theme (#0a0a0f background, purple/blue accents)
+- Use CSS variables and smooth animations
+- Sections: Hero (company name + tagline), Problem (their pain points), Solution (what we'd build for them), Features (3-4 key capabilities), Tech stack visualization, CTA ("Get Your Custom Build" button)
+- Personalized to their specific industry and use case
+- Footer with "Built by NexoFlow" branding
+- Mobile-responsive
+- Compelling, specific copy — not generic
+
+Return ONLY the complete HTML document, starting with <!DOCTYPE html>. No markdown, no explanation.`;
+
+      const demoResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
+        messages: [{ role: "user", content: demoPrompt }],
+      });
+
+      const demoHtml = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
+
+      // Create or reuse client record
       let client = lead.clientId
-        ? await ctx.db.query.clients.findFirst({ where: eq(clients.id, lead.clientId) })
+        ? (await ctx.db.select().from(clients).where(eq(clients.id, lead.clientId)).limit(1))[0] ?? null
         : null;
 
       if (!client) {
@@ -203,11 +244,15 @@ Respond in JSON with this exact structure:
         })
         .returning();
 
+      const demoUrl = `/api/demo/${input.id}`;
+
       const [updated] = await ctx.db
         .update(leads)
         .set({
           clientId: client?.id ?? null,
           projectId: project?.id ?? null,
+          demoHtml,
+          demoUrl,
           status: "demo_generated",
           demoGeneratedAt: new Date(),
           updatedAt: new Date(),
@@ -215,7 +260,7 @@ Respond in JSON with this exact structure:
         .where(eq(leads.id, input.id))
         .returning();
 
-      return { lead: updated, projectId: project?.id };
+      return { lead: updated, projectId: project?.id, demoUrl };
     }),
 
   sendOutreach: protectedProcedure

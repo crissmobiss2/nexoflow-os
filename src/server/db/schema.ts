@@ -684,6 +684,7 @@ export const leads = pgTable(
     status: leadStatusEnum("status").default("new").notNull(),
     source: leadSourceEnum("source").default("manual").notNull(),
     aiInsights: text("ai_insights"),
+    demoHtml: text("demo_html"),
     demoUrl: varchar("demo_url", { length: 500 }),
     demoGeneratedAt: timestamp("demo_generated_at"),
     projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
