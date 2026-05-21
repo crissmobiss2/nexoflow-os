@@ -1,7 +1,7 @@
 import { count, sql, and, isNotNull, gte, lte, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
-import { projects, clients, aiConversations, opportunityScores, leads } from "../db/schema";
+import { projects, clients, aiConversations, opportunityScores, leads, invoices } from "../db/schema";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -308,6 +308,44 @@ export const analyticsRouter = createTRPCRouter({
         demoConversionRate: (byStatus.get("demo_generated") ?? 0) > 0
           ? Math.round(((byStatus.get("won") ?? 0) / (byStatus.get("demo_generated") ?? 1)) * 100)
           : 0,
+      };
+    }),
+
+  // Lead source attribution
+  leadSources: publicProcedure
+    .query(async ({ ctx }) => {
+      const rows = await ctx.db
+        .select({ source: leads.source, sourceDetail: leads.sourceDetail, count: count() })
+        .from(leads)
+        .groupBy(leads.source, leads.sourceDetail);
+
+      const total = rows.reduce((s, r) => s + r.count, 0);
+      return {
+        total,
+        bySource: rows.map((r) => ({
+          source: r.sourceDetail ?? r.source,
+          count: r.count,
+          pct: total > 0 ? Math.round((r.count / total) * 100) : 0,
+        })).sort((a, b) => b.count - a.count),
+      };
+    }),
+
+  // Revenue pipeline (invoice totals by status)
+  revenuePipeline: publicProcedure
+    .query(async ({ ctx }) => {
+      const rows = await ctx.db
+        .select({ status: invoices.status, total: sql<number>`sum(${invoices.total})` })
+        .from(invoices)
+        .groupBy(invoices.status);
+
+      const byStatus = Object.fromEntries(rows.map((r) => [r.status, Number(r.total ?? 0)]));
+      return {
+        draft: byStatus.draft ?? 0,
+        sent: byStatus.sent ?? 0,
+        paid: byStatus.paid ?? 0,
+        overdue: byStatus.overdue ?? 0,
+        totalPipeline: (byStatus.draft ?? 0) + (byStatus.sent ?? 0),
+        totalCollected: byStatus.paid ?? 0,
       };
     }),
 

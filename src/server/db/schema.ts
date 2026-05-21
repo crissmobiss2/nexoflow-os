@@ -310,6 +310,8 @@ export const invoices = pgTable(
     dueDate: timestamp("due_date"),
     paidDate: timestamp("paid_date"),
     notes: text("notes"),
+    stripePaymentUrl: varchar("stripe_payment_url", { length: 1000 }),
+    stripePaymentLinkId: varchar("stripe_payment_link_id", { length: 255 }),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -698,6 +700,9 @@ export const leads = pgTable(
     assignedTo: text("assigned_to").references(() => users.id, { onDelete: "set null" }),
     notes: text("notes"),
     tags: text("tags").array(),
+    sourceDetail: varchar("source_detail", { length: 255 }),
+    affiliateCode: varchar("affiliate_code", { length: 32 }),
+    bookingRef: varchar("booking_ref", { length: 255 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -718,6 +723,7 @@ export const leadOutreach = pgTable(
     message: text("message").notNull(),
     shareLink: varchar("share_link", { length: 500 }),
     openedAt: timestamp("opened_at"),
+    clickedAt: timestamp("clicked_at"),
     repliedAt: timestamp("replied_at"),
     sentBy: text("sent_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -730,11 +736,137 @@ export const leadRelations = relations(leads, ({ one, many }) => ({
   client: one(clients, { fields: [leads.clientId], references: [clients.id] }),
   assignee: one(users, { fields: [leads.assignedTo], references: [users.id] }),
   outreach: many(leadOutreach),
+  calls: many(leadCalls),
 }));
 
 export const leadOutreachRelations = relations(leadOutreach, ({ one }) => ({
   lead: one(leads, { fields: [leadOutreach.leadId], references: [leads.id] }),
   sender: one(users, { fields: [leadOutreach.sentBy], references: [users.id] }),
+}));
+
+// ─── Affiliates ───────────────────────────────────────────────────────────────
+
+export const affiliateStatusEnum = pgEnum("nf_affiliate_status", [
+  "pending", "approved", "rejected", "suspended",
+]);
+
+export const affiliateTierEnum = pgEnum("nf_affiliate_tier", [
+  "base", "silver", "gold",
+]);
+
+export const affiliates = pgTable(
+  "nf_affiliates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    website: varchar("website", { length: 500 }),
+    promoMethod: varchar("promo_method", { length: 100 }),
+    status: affiliateStatusEnum("status").default("pending").notNull(),
+    tier: affiliateTierEnum("tier").default("base").notNull(),
+    referralCode: varchar("referral_code", { length: 32 }).notNull().unique(),
+    paypalEmail: varchar("paypal_email", { length: 255 }),
+    totalReferrals: integer("total_referrals").default(0).notNull(),
+    totalEarningsCents: integer("total_earnings_cents").default(0).notNull(),
+    paidOutCents: integer("paid_out_cents").default(0).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_affiliates_email_idx").on(t.email), index("nf_affiliates_code_idx").on(t.referralCode)],
+);
+
+export const affiliateReferralStatusEnum = pgEnum("nf_affiliate_referral_status", [
+  "pending", "converted", "paid", "cancelled",
+]);
+
+export const affiliateReferrals = pgTable(
+  "nf_affiliate_referrals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    affiliateId: uuid("affiliate_id").references(() => affiliates.id, { onDelete: "cascade" }).notNull(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    status: affiliateReferralStatusEnum("status").default("pending").notNull(),
+    commissionPct: integer("commission_pct").notNull().default(10),
+    projectValueCents: integer("project_value_cents").default(0),
+    commissionCents: integer("commission_cents").default(0),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_affiliate_refs_affiliate_idx").on(t.affiliateId)],
+);
+
+export const affiliateRelations = relations(affiliates, ({ many }) => ({
+  referrals: many(affiliateReferrals),
+}));
+
+export const affiliateReferralRelations = relations(affiliateReferrals, ({ one }) => ({
+  affiliate: one(affiliates, { fields: [affiliateReferrals.affiliateId], references: [affiliates.id] }),
+  lead: one(leads, { fields: [affiliateReferrals.leadId], references: [leads.id] }),
+  project: one(projects, { fields: [affiliateReferrals.projectId], references: [projects.id] }),
+}));
+
+// ─── Case Studies ─────────────────────────────────────────────────────────────
+
+export const caseStudies = pgTable(
+  "nf_case_studies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientName: varchar("client_name", { length: 255 }).notNull(),
+    clientTitle: varchar("client_title", { length: 255 }),
+    clientCompany: varchar("client_company", { length: 255 }),
+    clientIndustry: varchar("client_industry", { length: 255 }),
+    avatarInitials: varchar("avatar_initials", { length: 4 }),
+    testimonial: text("testimonial").notNull(),
+    metric1Label: varchar("metric1_label", { length: 100 }),
+    metric1Value: varchar("metric1_value", { length: 50 }),
+    metric2Label: varchar("metric2_label", { length: 100 }),
+    metric2Value: varchar("metric2_value", { length: 50 }),
+    metric3Label: varchar("metric3_label", { length: 100 }),
+    metric3Value: varchar("metric3_value", { length: 50 }),
+    published: boolean("published").default(false).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    linkedProjectId: uuid("linked_project_id").references(() => projects.id, { onDelete: "set null" }),
+    linkedClientId: uuid("linked_client_id").references(() => clients.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_case_studies_published_idx").on(t.published)],
+);
+
+export const caseStudyRelations = relations(caseStudies, ({ one }) => ({
+  project: one(projects, { fields: [caseStudies.linkedProjectId], references: [projects.id] }),
+  client: one(clients, { fields: [caseStudies.linkedClientId], references: [clients.id] }),
+}));
+
+// ─── Lead Calls ───────────────────────────────────────────────────────────────
+
+export const callOutcomeEnum = pgEnum("nf_call_outcome", [
+  "no_show", "won", "lost", "follow_up", "not_interested", "rescheduled",
+]);
+
+export const leadCalls = pgTable(
+  "nf_lead_calls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    scheduledAt: timestamp("scheduled_at"),
+    completedAt: timestamp("completed_at"),
+    outcome: callOutcomeEnum("outcome"),
+    notes: text("notes"),
+    calledBy: text("called_by").references(() => users.id, { onDelete: "set null" }),
+    bookingRef: varchar("booking_ref", { length: 255 }),
+    durationMinutes: integer("duration_minutes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_lead_calls_lead_idx").on(t.leadId)],
+);
+
+export const leadCallRelations = relations(leadCalls, ({ one }) => ({
+  lead: one(leads, { fields: [leadCalls.leadId], references: [leads.id] }),
+  caller: one(users, { fields: [leadCalls.calledBy], references: [users.id] }),
 }));
 
 // ─── Relations for new tables added above ─────────────────────────────────────

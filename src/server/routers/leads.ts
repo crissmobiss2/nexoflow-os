@@ -3,7 +3,7 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
-import { leads, leadOutreach, projects, clients } from "../db/schema";
+import { leads, leadOutreach, leadCalls, projects, clients } from "../db/schema";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY);
@@ -53,7 +53,12 @@ export const leadsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.query.leads.findFirst({
         where: eq(leads.id, input.id),
-        with: { outreach: { orderBy: [desc(leadOutreach.createdAt)] }, project: true, client: true },
+        with: {
+          outreach: { orderBy: [desc(leadOutreach.createdAt)] },
+          calls: { orderBy: [desc(leadCalls.createdAt)] },
+          project: true,
+          client: true,
+        },
       });
     }),
 
@@ -373,6 +378,58 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       }
 
       return { subject, message };
+    }),
+
+  // ─── Call Log ──────────────────────────────────────────────────────────────
+
+  addCall: publicProcedure
+    .input(z.object({
+      leadId: z.string().uuid(),
+      scheduledAt: z.string().optional(),
+      completedAt: z.string().optional(),
+      outcome: z.enum(["no_show", "won", "lost", "follow_up", "not_interested", "rescheduled"]).optional(),
+      notes: z.string().optional(),
+      bookingRef: z.string().optional(),
+      durationMinutes: z.number().int().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { leadId, scheduledAt, completedAt, ...rest } = input;
+      const [call] = await ctx.db
+        .insert(leadCalls)
+        .values({
+          leadId,
+          scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+          completedAt: completedAt ? new Date(completedAt) : null,
+          calledBy: ctx.user?.id ?? null,
+          ...rest,
+        })
+        .returning();
+
+      if (input.outcome === "won") {
+        await ctx.db.update(leads).set({ status: "won", updatedAt: new Date() }).where(eq(leads.id, leadId));
+      } else if (input.outcome === "lost" || input.outcome === "not_interested") {
+        await ctx.db.update(leads).set({ status: "lost", updatedAt: new Date() }).where(eq(leads.id, leadId));
+      }
+
+      return call;
+    }),
+
+  updateCall: publicProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      outcome: z.enum(["no_show", "won", "lost", "follow_up", "not_interested", "rescheduled"]).optional(),
+      notes: z.string().optional(),
+      completedAt: z.string().optional(),
+      durationMinutes: z.number().int().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, completedAt, ...rest } = input;
+      const [updated] = await ctx.db
+        .update(leadCalls)
+        .set({ ...rest, completedAt: completedAt ? new Date(completedAt) : undefined, updatedAt: new Date() })
+        .where(eq(leadCalls.id, id))
+        .returning();
+      return updated;
     }),
 
   generateProposal: protectedProcedure

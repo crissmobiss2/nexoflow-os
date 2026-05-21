@@ -8,6 +8,7 @@ import {
   ArrowLeft, ChevronRight, Globe, Mail, Phone, Building2, MapPin,
   Linkedin, Loader2, Sparkles, Zap, Send, ExternalLink, Tag, FolderKanban,
   ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor, FileText,
+  PhoneCall, Plus, Clock,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -397,17 +398,28 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                     {o.subject && <div className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{o.subject}</div>}
                     <p className="text-xs leading-relaxed line-clamp-3" style={{ color: "var(--text-secondary)" }}>{o.message}</p>
-                    {o.openedAt && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <CheckCircle2 className="w-3 h-3" style={{ color: "hsl(142, 68%, 52%)" }} />
-                        <span className="text-[11px]" style={{ color: "hsl(142, 68%, 52%)" }}>Opened {new Date(o.openedAt).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      {o.openedAt && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" style={{ color: "hsl(142, 68%, 52%)" }} />
+                          <span className="text-[11px]" style={{ color: "hsl(142, 68%, 52%)" }}>Opened {new Date(o.openedAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {(o as any).clickedAt && (
+                        <div className="flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" style={{ color: "hsl(207, 90%, 60%)" }} />
+                          <span className="text-[11px]" style={{ color: "hsl(207, 90%, 60%)" }}>Clicked {new Date((o as any).clickedAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </Section>
           )}
+
+          {/* Call Log */}
+          <CallLogSection leadId={lead.id} calls={(lead as any).calls ?? []} onRefetch={refetch} />
         </div>
 
         {/* Right sidebar */}
@@ -566,5 +578,121 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
     </div>
+  );
+}
+
+
+// ─── Call Log Section ─────────────────────────────────────────────────────────
+
+const OUTCOME_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  won:            { label: "Won",            color: "hsl(142, 80%, 45%)", bg: "hsl(142, 80%, 45%, 0.15)" },
+  lost:           { label: "Lost",           color: "hsl(0, 70%, 60%)",   bg: "hsl(0, 70%, 60%, 0.12)"   },
+  follow_up:      { label: "Follow Up",      color: "hsl(35, 90%, 60%)",  bg: "hsl(35, 90%, 60%, 0.12)"  },
+  no_show:        { label: "No Show",        color: "hsl(220, 14%, 55%)", bg: "hsl(220, 14%, 55%, 0.12)" },
+  not_interested: { label: "Not Interested", color: "hsl(0, 60%, 65%)",   bg: "hsl(0, 60%, 65%, 0.1)"    },
+  rescheduled:    { label: "Rescheduled",    color: "hsl(262, 83%, 68%)", bg: "hsl(262, 83%, 68%, 0.12)" },
+};
+
+type CallLog = {
+  id: string;
+  scheduledAt?: Date | string | null;
+  completedAt?: Date | string | null;
+  outcome?: string | null;
+  notes?: string | null;
+  durationMinutes?: number | null;
+  bookingRef?: string | null;
+  createdAt: Date | string;
+};
+
+function CallLogSection({ leadId, calls, onRefetch }: { leadId: string; calls: CallLog[]; onRefetch: () => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ scheduledAt: "", outcome: "", notes: "", durationMinutes: "" });
+
+  const addCall = api.leads.addCall.useMutation({
+    onSuccess: () => { onRefetch(); setShowForm(false); setForm({ scheduledAt: "", outcome: "", notes: "", durationMinutes: "" }); },
+  });
+
+  return (
+    <Section title={`Discovery Calls (${calls.length})`}>
+      <div className="space-y-2">
+        {calls.map((c) => {
+          const outcomeCfg = c.outcome ? OUTCOME_CONFIG[c.outcome] : null;
+          return (
+            <div key={c.id} className="px-3 py-3 rounded-xl" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border-subtle)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <PhoneCall className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
+                  <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
+                    {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Call logged"}
+                  </span>
+                  {c.durationMinutes && (
+                    <span className="flex items-center gap-0.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                      <Clock className="w-3 h-3" />{c.durationMinutes}m
+                    </span>
+                  )}
+                </div>
+                {outcomeCfg && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: outcomeCfg.bg, color: outcomeCfg.color }}>
+                    {outcomeCfg.label}
+                  </span>
+                )}
+              </div>
+              {c.notes && <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{c.notes}</p>}
+            </div>
+          );
+        })}
+
+        {!showForm ? (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ border: "1px dashed var(--surface-border)", color: "var(--text-muted)" }}
+          >
+            <Plus className="w-3.5 h-3.5" /> Log a call
+          </button>
+        ) : (
+          <div className="space-y-2.5 px-3 py-3 rounded-xl" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)" }}>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Scheduled At</label>
+                <input type="datetime-local" value={form.scheduledAt} onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value }))}
+                  className="w-full px-2.5 py-2 rounded-lg text-xs outline-none" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Duration (min)</label>
+                <input type="number" value={form.durationMinutes} onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))} placeholder="30"
+                  className="w-full px-2.5 py-2 rounded-lg text-xs outline-none" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Outcome</label>
+              <select value={form.outcome} onChange={(e) => setForm((f) => ({ ...f, outcome: e.target.value }))}
+                className="w-full px-2.5 py-2 rounded-lg text-xs outline-none" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}>
+                <option value="">Select outcome…</option>
+                {Object.entries(OUTCOME_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Notes</label>
+              <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="What was discussed…"
+                className="w-full px-2.5 py-2 rounded-lg text-xs outline-none resize-none" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }} />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => addCall.mutate({ leadId, scheduledAt: form.scheduledAt || undefined, outcome: form.outcome as any || undefined, notes: form.notes || undefined, durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : undefined })}
+                disabled={addCall.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                style={{ background: "var(--brand-gradient)" }}
+              >
+                {addCall.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />} Save Call
+              </button>
+              <button onClick={() => setShowForm(false)} className="px-3 py-2 rounded-lg text-xs font-semibold" style={{ background: "var(--surface-card)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }

@@ -205,4 +205,57 @@ export const invoicesRouter = createTRPCRouter({
 
       return { pdf, invoice };
     }),
+
+  createStripePaymentLink: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to your environment.");
+      }
+
+      const invoice = await ctx.db.query.invoices.findFirst({
+        where: eq(invoices.id, input.id),
+        with: { client: true, lineItems: true },
+      });
+      if (!invoice) throw new Error("Invoice not found");
+      if (invoice.total <= 0) throw new Error("Invoice total must be greater than 0");
+
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+      const baseUrl = process.env.NEXTAUTH_URL ?? "https://nexoflow.tech";
+      const description = invoice.lineItems.map((i) => i.description).join(", ") || `Invoice ${invoice.invoiceNumber}`;
+
+      const paymentLink = await stripe.paymentLinks.create({
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: { name: description, metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber } },
+            unit_amount: invoice.total,
+          },
+          quantity: 1,
+        }],
+        after_completion: { type: "redirect", redirect: { url: `${baseUrl}/invoices/${invoice.id}?paid=1` } },
+        metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+      });
+
+      const [updated] = await ctx.db
+        .update(invoices)
+        .set({ stripePaymentUrl: paymentLink.url, stripePaymentLinkId: paymentLink.id, updatedAt: new Date() })
+        .where(eq(invoices.id, input.id))
+        .returning();
+
+      return { invoice: updated, paymentUrl: paymentLink.url };
+    }),
+
+  markPaid: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(invoices)
+        .set({ status: "paid", paidDate: new Date(), updatedAt: new Date() })
+        .where(eq(invoices.id, input.id))
+        .returning();
+      return updated;
+    }),
 });

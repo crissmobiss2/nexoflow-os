@@ -63,11 +63,15 @@ export async function POST(
   const allowedSources = ["csv_import", "manual", "api", "web_scraper"] as const;
   const source = allowedSources.includes(body.source as any) ? (body.source as typeof allowedSources[number]) : "api";
 
+  // Map the contact form's "whatWeBuild" field to painPoints
+  const painPoints = (body.painPoints ?? body.projectDescription ?? body.message) as string | undefined;
+  const sourceDetail = (body.sourceDetail ?? body.formName ?? "api") as string;
+
   const [lead] = await db
     .insert(leads)
     .values({
-      firstName: (body.firstName as string) || null,
-      lastName: (body.lastName as string) || null,
+      firstName: (body.firstName as string) || (body.name as string)?.split(" ")[0] || null,
+      lastName: (body.lastName as string) || (body.name as string)?.split(" ").slice(1).join(" ") || null,
       email: (body.email as string) || null,
       phone: (body.phone as string) || null,
       company: (body.company as string) || null,
@@ -77,11 +81,13 @@ export async function POST(
       region: (body.region as string) || null,
       jobTitle: (body.jobTitle as string) || null,
       techStack: (body.techStack as string) || null,
-      painPoints: (body.painPoints as string) || null,
+      painPoints: painPoints || null,
       scrapedData: (body.scrapedData as string) || null,
       notes: (body.notes as string) || null,
       tags: Array.isArray(body.tags) ? (body.tags as string[]) : null,
       source,
+      sourceDetail,
+      affiliateCode: (body.affiliateCode as string) || null,
       teamId: null,
     })
     .returning({ id: leads.id, status: leads.status, createdAt: leads.createdAt });

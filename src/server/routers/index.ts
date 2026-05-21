@@ -18,6 +18,8 @@ import { syncRouter } from "./sync";
 import { decisionLogRouter } from "./decisionLog";
 import { playbookRouter } from "./playbooks";
 import { leadsRouter } from "./leads";
+import { affiliatesRouter } from "./affiliates";
+import { caseStudiesRouter } from "./caseStudies";
 
 export const appRouter = createTRPCRouter({
   projects: projectsRouter,
@@ -39,6 +41,8 @@ export const appRouter = createTRPCRouter({
   decisionLog: decisionLogRouter,
   playbooks: playbookRouter,
   leads: leadsRouter,
+  affiliates: affiliatesRouter,
+  caseStudies: caseStudiesRouter,
 });
 
 export type AppRouter = typeof appRouter;
