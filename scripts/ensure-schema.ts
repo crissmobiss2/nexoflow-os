@@ -185,6 +185,20 @@ async function main() {
   await run("nf_leads.tech_stack",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS tech_stack TEXT`);
   await run("nf_leads.pain_points",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS pain_points TEXT`);
   await run("nf_leads.scraped_data",    `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS scraped_data TEXT`);
+  // Fix: scraped_data was created as JSONB by old drizzle-kit; Drizzle schema expects TEXT
+  await run("nf_leads.scraped_data jsonb->text", `
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='nf_leads'
+          AND column_name='scraped_data' AND udt_name='jsonb'
+      ) THEN
+        ALTER TABLE nf_leads ALTER COLUMN scraped_data TYPE TEXT USING scraped_data::text;
+        RAISE NOTICE 'Converted scraped_data from JSONB to TEXT';
+      END IF;
+    END $$;
+  `);
   await run("nf_leads.ai_insights",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS ai_insights TEXT`);
   await run("nf_leads.demo_url",        `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_url VARCHAR(500)`);
   await run("nf_leads.demo_generated_at", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_generated_at TIMESTAMPTZ`);
