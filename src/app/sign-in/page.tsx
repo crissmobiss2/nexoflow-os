@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,14 +16,15 @@ export default function SignInPage() {
     setError("");
 
     try {
-      const result = await signIn("resend", {
+      const result = await signIn("credentials", {
         email,
         redirect: false,
       });
       if (result?.error) {
-        setError(result.error);
+        setError("Sign-in failed. Please try again.");
       } else {
-        setSubmitted(true);
+        router.push("/");
+        router.refresh();
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -59,84 +59,50 @@ export default function SignInPage() {
             NexoFlow OS
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted, #8888a0)" }}>
-            Sign in with your email
+            Enter your email to sign in
           </p>
         </div>
 
-        {submitted ? (
-          <div className="text-center">
-            <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary, #f1f1f7)" }}>
-              Check your email
-            </h2>
-            <p className="text-sm mb-6" style={{ color: "var(--text-muted, #8888a0)" }}>
-              A magic link has been sent to <br />
-              <span className="font-medium" style={{ color: "var(--text-primary, #f1f1f7)" }}>{email}</span>
-            </p>
-            <button
-              onClick={() => { setSubmitted(false); setEmail(""); }}
-              className="text-sm font-medium transition-opacity hover:opacity-80"
-              style={{ color: "var(--brand-primary, #6366f1)" }}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+              style={{ color: "var(--text-muted, #8888a0)" }}
             >
-              Use a different email
-            </button>
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all duration-150"
+              style={{
+                background: "var(--surface-ground, #0a0a0f)",
+                color: "var(--text-primary, #f1f1f7)",
+                border: "1px solid var(--surface-border, #22222e)",
+              }}
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
-                style={{ color: "var(--text-muted, #8888a0)" }}
-              >
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all duration-150"
-                style={{
-                  background: "var(--surface-ground, #0a0a0f)",
-                  color: "var(--text-primary, #f1f1f7)",
-                  border: "1px solid var(--surface-border, #22222e)",
-                }}
-              />
+
+          {error && (
+            <div className="text-sm font-medium" style={{ color: "var(--color-red-400, #f87171)" }}>
+              {error}
             </div>
+          )}
 
-            {error && (
-              <div className="text-sm font-medium" style={{ color: "var(--color-red-400, #f87171)" }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-              style={{ background: "var(--brand-gradient, linear-gradient(135deg, #6366f1, #a855f7))" }}
-            >
-              {loading ? "Sending..." : "Send magic link"}
-            </button>
-
-            <div className="text-center pt-2">
-              <a
-                href="/"
-                className="text-xs font-medium transition-opacity hover:opacity-80"
-                style={{ color: "var(--text-muted, #8888a0)" }}
-              >
-                &larr; Back to home
-              </a>
-            </div>
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+            style={{ background: "var(--brand-gradient, linear-gradient(135deg, #6366f1, #a855f7))" }}
+          >
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
       </div>
     </div>
   );
