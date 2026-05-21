@@ -18,9 +18,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import Anthropic from "@anthropic-ai/sdk";
 import { sql, eq, desc } from "drizzle-orm";
 import * as schema from "../server/db/schema";
-import { getEmbedding } from "../lib/ai/embeddings";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,26 @@ if (!DATABASE_URL) {
 
 const client = postgres(DATABASE_URL, { max: 5 });
 const db = drizzle(client, { schema });
+
+// ─── Embeddings (self-contained, no @/env dependency) ────────────────────────
+
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
+
+async function getEmbedding(text: string): Promise<number[] | null> {
+  if (!anthropic) return null;
+  try {
+    const client = anthropic as any;
+    const response = await client.embeddings.create({
+      model: "claude-3-haiku-20240307",
+      input: text,
+    });
+    return response.embedding ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -156,13 +176,8 @@ async function syncFile(relativePath: string, action: "upsert" | "delete", conte
   const cleanContent = content.replace(/^---[\s\S]*?---\n/, "").trim();
   if (!cleanContent) return;
 
-  // Generate embedding (best-effort — continues if API key is missing/invalid)
-  let embedding: number[] | null = null;
-  try {
-    embedding = await getEmbedding(`${name}\n\n${cleanContent}`.slice(0, 8000));
-  } catch {
-    // Silently skip — content still syncs without semantic search
-  }
+  // Generate embedding (best-effort — content syncs even without it)
+  const embedding = await getEmbedding(`${name}\n\n${cleanContent}`.slice(0, 8000));
 
   // Upsert by name + category
   const [existing] = await db
@@ -174,17 +189,16 @@ async function syncFile(relativePath: string, action: "upsert" | "delete", conte
     .limit(1);
 
   if (existing) {
+    const updateData: Record<string, unknown> = { content: cleanContent };
+    if (embedding) updateData.embedding = embedding;
     await db
       .update(schema.knowledgeSnippets)
-      .set({ content: cleanContent, embedding: embedding as any })
+      .set(updateData as any)
       .where(eq(schema.knowledgeSnippets.id, existing.id));
   } else {
-    await db.insert(schema.knowledgeSnippets).values({
-      category,
-      name,
-      content: cleanContent,
-      embedding: embedding as any,
-    });
+    const insertData: Record<string, unknown> = { category, name, content: cleanContent };
+    if (embedding) insertData.embedding = embedding;
+    await db.insert(schema.knowledgeSnippets).values(insertData as any);
   }
 }
 

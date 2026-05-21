@@ -69,6 +69,20 @@ async function main() {
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
 
+  // ── pgvector extension ────────────────────────────────────────────────────────
+  await run("extension vector", `CREATE EXTENSION IF NOT EXISTS vector`);
+
+  // ── nf_knowledge_snippets — add embedding column if missing ──────────────────
+  await run("nf_knowledge_snippets.embedding", `
+    ALTER TABLE nf_knowledge_snippets
+      ADD COLUMN IF NOT EXISTS embedding vector(1024)
+  `);
+  await run("nf_snippets_embedding_idx", `
+    CREATE INDEX IF NOT EXISTS nf_snippets_embedding_idx
+      ON nf_knowledge_snippets
+      USING hnsw (embedding vector_cosine_ops)
+  `);
+
   // ── nf_api_keys — add missing columns ────────────────────────────────────
   await run("nf_api_keys.key_prefix",    `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS key_prefix VARCHAR(8) NOT NULL DEFAULT ''`);
   await run("nf_api_keys.key_hash",      `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS key_hash TEXT NOT NULL DEFAULT ''`);
