@@ -1,4 +1,4 @@
-import { ilike, or, eq, sql, desc } from "drizzle-orm";
+import { ilike, or, eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { knowledgeSnippets } from "../db/schema";
@@ -46,11 +46,7 @@ export const knowledgeRouter = createTRPCRouter({
         conditions.push(eq(knowledgeSnippets.category, category));
       }
 
-      const where = conditions.length > 0
-        ? conditions.length === 1
-          ? conditions[0]
-          : sql`${conditions[0]} AND ${conditions[1]}`
-        : undefined;
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
 
       const [results, countResult] = await Promise.all([
         ctx.db
@@ -85,17 +81,10 @@ export const knowledgeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { embedding, category, limit, offset } = input;
 
-      const conditions: string[] = [];
-      if (category) {
-        conditions.push(`${knowledgeSnippets.category.name} = ${sql`${category}`}`);
-      }
+      const whereClause = category ? eq(knowledgeSnippets.category, category) : undefined;
 
       // Use pgvector <-> distance operator for cosine distance
       const orderBySql = sql`${knowledgeSnippets.embedding} <-> ${embedding}::vector`;
-
-      const whereClause = conditions.length > 0
-        ? sql`${conditions.join(" AND ")}`
-        : undefined;
 
       const [results, countResult] = await Promise.all([
         ctx.db
@@ -138,13 +127,7 @@ export const knowledgeRouter = createTRPCRouter({
       const poolLimit = Math.max(limit * 3, 50);
 
       // 1. Get semantic candidates
-      const semanticConditions: string[] = [];
-      if (category) {
-        semanticConditions.push(`${knowledgeSnippets.category.name} = ${sql`${category}`}`);
-      }
-      const semanticWhere = semanticConditions.length > 0
-        ? sql`${semanticConditions.join(" AND ")}`
-        : undefined;
+      const semanticWhere = category ? eq(knowledgeSnippets.category, category) : undefined;
 
       const semanticResults = await ctx.db
         .select({
@@ -172,11 +155,7 @@ export const knowledgeRouter = createTRPCRouter({
       if (category) {
         textConditions.push(eq(knowledgeSnippets.category, category));
       }
-      const textWhere = textConditions.length > 0
-        ? textConditions.length === 1
-          ? textConditions[0]
-          : sql`${textConditions[0]} AND ${textConditions[1]}`
-        : undefined;
+      const textWhere = textConditions.length > 0 ? and(...textConditions) : undefined;
 
       const textResults = await ctx.db
         .select()
