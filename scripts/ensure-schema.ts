@@ -93,6 +93,47 @@ async function main() {
   await run("nf_api_keys.is_active",     `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`);
   await run("nf_api_keys index",         `CREATE INDEX IF NOT EXISTS nf_api_keys_prefix_idx ON nf_api_keys (key_prefix)`);
 
+  // ── Diagnostic: log nf_leads column types ────────────────────────────────
+  try {
+    const cols = await sql`
+      SELECT column_name, udt_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'nf_leads'
+      ORDER BY ordinal_position
+    `;
+    if (cols.length > 0) {
+      console.log("nf_leads existing columns:", cols.map((c: any) => `${c.column_name}:${c.udt_name}`).join(', '));
+    }
+  } catch (err: any) {
+    console.log("diagnostic skipped:", err?.message);
+  }
+
+  // ── nf_leads: drop & recreate if table is empty and has schema issues ─────
+  // Safe because all insert attempts have been failing (no leads exist).
+  await run("nf_leads safety recreate", `
+    DO $$
+    DECLARE row_count INTEGER;
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='nf_leads') THEN
+        SELECT COUNT(*) INTO row_count FROM nf_leads;
+        IF row_count = 0 THEN
+          -- Check if status column is NOT the enum type (indicates schema mismatch)
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='nf_leads'
+              AND column_name='status' AND udt_name='nf_lead_status'
+          ) THEN
+            DROP TABLE IF EXISTS nf_affiliate_referrals;
+            DROP TABLE IF EXISTS nf_lead_outreach;
+            DROP TABLE IF EXISTS nf_lead_calls;
+            DROP TABLE IF EXISTS nf_leads;
+            RAISE NOTICE 'Dropped nf_leads (empty table with wrong schema) for clean recreation';
+          END IF;
+        END IF;
+      END IF;
+    END $$;
+  `);
+
   // ── nf_leads table ────────────────────────────────────────────────────────
   await run("nf_leads table", `
     CREATE TABLE IF NOT EXISTS nf_leads (
