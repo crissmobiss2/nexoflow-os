@@ -108,8 +108,9 @@ async function main() {
     console.log("diagnostic skipped:", err?.message);
   }
 
-  // ── nf_leads: drop & recreate if table is empty and has schema issues ─────
+  // ── nf_leads: drop & recreate if table is empty and has legacy schema ──────
   // Safe because all insert attempts have been failing (no leads exist).
+  // Triggers on: wrong status type OR presence of old company_name column (NOT NULL, no default)
   await run("nf_leads safety recreate", `
     DO $$
     DECLARE row_count INTEGER;
@@ -117,17 +118,20 @@ async function main() {
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='nf_leads') THEN
         SELECT COUNT(*) INTO row_count FROM nf_leads;
         IF row_count = 0 THEN
-          -- Check if status column is NOT the enum type (indicates schema mismatch)
           IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_schema='public' AND table_name='nf_leads'
               AND column_name='status' AND udt_name='nf_lead_status'
+          ) OR EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='nf_leads'
+              AND column_name='company_name'
           ) THEN
             DROP TABLE IF EXISTS nf_affiliate_referrals;
             DROP TABLE IF EXISTS nf_lead_outreach;
             DROP TABLE IF EXISTS nf_lead_calls;
             DROP TABLE IF EXISTS nf_leads;
-            RAISE NOTICE 'Dropped nf_leads (empty table with wrong schema) for clean recreation';
+            RAISE NOTICE 'Dropped nf_leads (empty table with legacy schema) for clean recreation';
           END IF;
         END IF;
       END IF;
