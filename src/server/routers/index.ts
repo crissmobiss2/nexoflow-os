@@ -17,6 +17,7 @@ import { dataRouter } from "./data";
 import { syncRouter } from "./sync";
 import { decisionLogRouter } from "./decisionLog";
 import { playbookRouter } from "./playbooks";
+import { leadsRouter } from "./leads";
 
 export const appRouter = createTRPCRouter({
   projects: projectsRouter,
@@ -37,6 +38,7 @@ export const appRouter = createTRPCRouter({
   sync: syncRouter,
   decisionLog: decisionLogRouter,
   playbooks: playbookRouter,
+  leads: leadsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -649,6 +649,88 @@ export const projectPlaybookRelations = relations(projectPlaybooks, ({ one }) =>
   project: one(projects, { fields: [projectPlaybooks.projectId], references: [projects.id] }),
 }));
 
+// ─── Leads / Pipeline ────────────────────────────────────────────────────────
+
+export const leadStatusEnum = pgEnum("nf_lead_status", [
+  "new", "reviewing", "demo_queued", "demo_generated", "sent", "replied", "won", "lost", "archived",
+]);
+
+export const leadSourceEnum = pgEnum("nf_lead_source", [
+  "csv_import", "manual", "api", "web_scraper",
+]);
+
+export const outreachChannelEnum = pgEnum("nf_outreach_channel", [
+  "email", "whatsapp", "sms", "link",
+]);
+
+export const leads = pgTable(
+  "nf_leads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    firstName: varchar("first_name", { length: 255 }),
+    lastName: varchar("last_name", { length: 255 }),
+    email: varchar("email", { length: 255 }),
+    phone: varchar("phone", { length: 50 }),
+    linkedIn: varchar("linkedin", { length: 500 }),
+    company: varchar("company", { length: 255 }),
+    website: varchar("website", { length: 500 }),
+    industry: varchar("industry", { length: 255 }),
+    companySize: varchar("company_size", { length: 50 }),
+    region: varchar("region", { length: 100 }),
+    jobTitle: varchar("job_title", { length: 255 }),
+    techStack: text("tech_stack"),
+    painPoints: text("pain_points"),
+    scrapedData: text("scraped_data"),
+    status: leadStatusEnum("status").default("new").notNull(),
+    source: leadSourceEnum("source").default("manual").notNull(),
+    aiInsights: text("ai_insights"),
+    demoUrl: varchar("demo_url", { length: 500 }),
+    demoGeneratedAt: timestamp("demo_generated_at"),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+    assignedTo: text("assigned_to").references(() => users.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    tags: text("tags").array(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_leads_status_idx").on(t.status),
+    index("nf_leads_team_idx").on(t.teamId),
+    index("nf_leads_email_idx").on(t.email),
+  ],
+);
+
+export const leadOutreach = pgTable(
+  "nf_lead_outreach",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    channel: outreachChannelEnum("channel").notNull(),
+    subject: varchar("subject", { length: 500 }),
+    message: text("message").notNull(),
+    shareLink: varchar("share_link", { length: 500 }),
+    openedAt: timestamp("opened_at"),
+    repliedAt: timestamp("replied_at"),
+    sentBy: text("sent_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_lead_outreach_lead_idx").on(t.leadId)],
+);
+
+export const leadRelations = relations(leads, ({ one, many }) => ({
+  project: one(projects, { fields: [leads.projectId], references: [projects.id] }),
+  client: one(clients, { fields: [leads.clientId], references: [clients.id] }),
+  assignee: one(users, { fields: [leads.assignedTo], references: [users.id] }),
+  outreach: many(leadOutreach),
+}));
+
+export const leadOutreachRelations = relations(leadOutreach, ({ one }) => ({
+  lead: one(leads, { fields: [leadOutreach.leadId], references: [leads.id] }),
+  sender: one(users, { fields: [leadOutreach.sentBy], references: [users.id] }),
+}));
+
 // ─── Relations for new tables added above ─────────────────────────────────────
 
 export const accountRelations = relations(accounts, ({ one }) => ({

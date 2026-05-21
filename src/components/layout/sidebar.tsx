@@ -8,6 +8,7 @@ import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
   BookOpen, Brain, Sparkles, LogOut, BarChart2,
   Key, Search, LayoutTemplate, ScrollText, Database,
+  Target,
 } from "lucide-react";
 import type { Session } from "next-auth";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -20,6 +21,12 @@ const NAV_SECTIONS = [
       { href: "/ai",        label: "AI Studio",      icon: Brain,          badge: "New" as const },
       { href: "/knowledge", label: "Knowledge Hub",  icon: BookOpen,       badge: null },
       { href: "/playbooks", label: "Playbooks",      icon: Sparkles,       badge: null },
+    ],
+  },
+  {
+    label: "Pipeline",
+    items: [
+      { href: "/leads",          label: "Lead Pipeline",  icon: Target,          badge: "New" as const },
     ],
   },
   {
