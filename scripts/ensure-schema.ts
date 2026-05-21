@@ -359,6 +359,12 @@ async function main() {
   `);
   await run("nf_lead_calls_lead_idx", `CREATE INDEX IF NOT EXISTS nf_lead_calls_lead_idx ON nf_lead_calls (lead_id)`);
 
+  // ── nf_notifications — add link column ───────────────────────────────────
+  await run("nf_notifications.link column", `ALTER TABLE nf_notifications ADD COLUMN IF NOT EXISTS link TEXT`);
+
+  // ── nf_invoice_line_items — add rate column ───────────────────────────────
+  await run("nf_invoice_line_items.rate column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS rate INTEGER NOT NULL DEFAULT 0`);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }
