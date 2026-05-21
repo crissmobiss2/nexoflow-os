@@ -1,7 +1,7 @@
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
-import { invoices, invoiceLineItems, clients, users } from "../db/schema";
+import { invoices, invoiceLineItems, clients, users, projects } from "../db/schema";
 import { createNotification } from "@/lib/notifications";
 
 const lineItemSchema = z.object({
@@ -13,6 +13,8 @@ const lineItemSchema = z.object({
 
 const invoiceInput = z.object({
   clientId: z.string().uuid().optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
+  milestoneStep: z.number().int().min(1).max(3).optional().nullable(),
   invoiceNumber: z.string().min(1),
   status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).default("draft"),
   subtotal: z.number().int().default(0),
@@ -114,6 +116,63 @@ export const invoicesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(invoices).where(eq(invoices.id, input.id));
+    }),
+
+  createMilestoneInvoice: publicProcedure
+    .input(z.object({
+      projectId: z.string().uuid(),
+      milestoneStep: z.enum(["1", "2", "3"]).transform(Number),
+      totalBudgetCents: z.number().int().min(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [project] = await ctx.db
+        .select({ id: projects.id, name: projects.name, clientId: projects.clientId, teamId: projects.teamId })
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+
+      if (!project) throw new Error("Project not found");
+
+      const MILESTONE_PCTS: Record<number, { pct: number; label: string }> = {
+        1: { pct: 30, label: "Project Kickoff (30%)" },
+        2: { pct: 40, label: "Project Midpoint (40%)" },
+        3: { pct: 30, label: "Project Delivery (30%)" },
+      };
+      const milestone = MILESTONE_PCTS[input.milestoneStep]!;
+      const amount = Math.round(input.totalBudgetCents * (milestone.pct / 100));
+
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}-M${input.milestoneStep}`;
+
+      const [invoice] = await ctx.db
+        .insert(invoices)
+        .values({
+          clientId: project.clientId ?? null,
+          projectId: project.id,
+          milestoneStep: input.milestoneStep,
+          invoiceNumber,
+          status: "draft",
+          subtotal: amount,
+          total: amount,
+          teamId: project.teamId ?? null,
+          notes: `Milestone ${input.milestoneStep}/3 — ${milestone.label} for project: ${project.name}`,
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+        })
+        .returning({ id: invoices.id });
+
+      if (invoice) {
+        await ctx.db.insert(invoiceLineItems).values({
+          invoiceId: invoice.id,
+          description: milestone.label,
+          quantity: 1,
+          rate: amount,
+          amount,
+        });
+      }
+
+      return ctx.db.query.invoices.findFirst({
+        where: eq(invoices.id, invoice!.id),
+        with: { client: true, lineItems: true },
+      });
     }),
 
   generatePdf: publicProcedure

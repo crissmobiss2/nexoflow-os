@@ -1,10 +1,12 @@
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { Resend } from "resend";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 import { leads, leadOutreach, projects, clients } from "../db/schema";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY);
 
 const leadInput = z.object({
   firstName: z.string().optional(),
@@ -289,6 +291,40 @@ Return ONLY the complete HTML document, starting with <!DOCTYPE html>. No markdo
         .set({ status: "sent", updatedAt: new Date() })
         .where(eq(leads.id, input.leadId));
 
+      // Send real email via Resend when channel is email
+      if (input.channel === "email") {
+        const [lead] = await ctx.db
+          .select({ email: leads.email, demoUrl: leads.demoUrl, proposalUrl: leads.proposalUrl })
+          .from(leads)
+          .where(eq(leads.id, input.leadId))
+          .limit(1);
+
+        if (lead?.email) {
+          const baseUrl = process.env.NEXTAUTH_URL ?? "https://nexoflow.tech";
+          const demoSection = lead.demoUrl
+            ? `<p style="margin-top:24px"><a href="${baseUrl}${lead.demoUrl}" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#7c5cbf,#4f8ef7);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">View Your Demo →</a></p>`
+            : "";
+          const proposalSection = lead.proposalUrl
+            ? `<p style="margin-top:12px"><a href="${baseUrl}${lead.proposalUrl}" style="display:inline-block;padding:12px 24px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;border:1px solid #333;">View Proposal →</a></p>`
+            : "";
+          try {
+            await resend.emails.send({
+              from: "NexoFlow <hello@nexoflow.tech>",
+              to: [lead.email],
+              subject: input.subject ?? "Introduction from NexoFlow",
+              html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;color:#1a1a2e;background:#fff;">
+                <div style="margin-bottom:32px"><img src="${baseUrl}/logo.png" alt="NexoFlow" height="32" style="display:block" /></div>
+                <div style="font-size:15px;line-height:1.7;color:#2d2d44">${input.message.replace(/\n/g, "<br>")}</div>
+                ${demoSection}${proposalSection}
+                <p style="margin-top:48px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:20px">Sent via <a href="${baseUrl}" style="color:#7c5cbf;text-decoration:none">NexoFlow</a></p>
+              </div>`,
+            });
+          } catch (err) {
+            console.error("[leads.sendOutreach] email send failed:", err instanceof Error ? err.message : err);
+          }
+        }
+      }
+
       return outreach;
     }),
 
@@ -337,5 +373,66 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       }
 
       return { subject, message };
+    }),
+
+  generateProposal: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({
+        where: eq(leads.id, input.id),
+      });
+      if (!lead) throw new Error("Lead not found");
+
+      const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Valued Partner";
+      const companyName = lead.company ?? name;
+
+      let insights: Record<string, unknown> = {};
+      if (lead.aiInsights) {
+        try { insights = JSON.parse(lead.aiInsights); } catch { /* ignore */ }
+      }
+
+      const whatWeBuild = (insights.whatWeBuild as string) ?? "A custom software solution tailored to your business";
+      const techRec = (insights.techRecommendation as string) ?? "Modern, scalable web stack";
+      const scope = (insights.estimatedScope as string) ?? "Medium (1-2 months)";
+
+      const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
+
+Create a COMPLETE, single-file HTML proposal document for:
+Company: ${companyName}
+Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
+Industry: ${lead.industry ?? "Technology"}
+What we'd build: ${whatWeBuild}
+Tech stack: ${techRec}
+Estimated scope: ${scope}
+Pain points: ${lead.painPoints ?? "Not specified"}
+
+Requirements:
+- Clean, professional proposal design (white/light background, dark text, purple brand accents #7c5cbf)
+- Sections: Executive Summary, Problem Statement, Our Proposed Solution, Technical Approach, Project Timeline (3 phases), Investment (use 30/40/30 milestone payment structure, calculate from a realistic budget range), Next Steps
+- 30/40/30 payment: 30% to start, 40% at midpoint, 30% on delivery
+- Include NexoFlow company details, prepared for ${companyName}
+- Footer: "Prepared by NexoFlow | nexoflow.tech | hello@nexoflow.tech"
+- Professional typography, subtle borders, clean layout
+- All CSS inline or in <style> tag — no external dependencies
+- Print-friendly (could be converted to PDF)
+
+Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanation.`;
+
+      const proposalResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
+        messages: [{ role: "user", content: proposalPrompt }],
+      });
+
+      const proposalHtml = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
+      const proposalUrl = `/api/proposal/${input.id}`;
+
+      const [updated] = await ctx.db
+        .update(leads)
+        .set({ proposalHtml, proposalUrl, updatedAt: new Date() })
+        .where(eq(leads.id, input.id))
+        .returning();
+
+      return { lead: updated, proposalUrl };
     }),
 });

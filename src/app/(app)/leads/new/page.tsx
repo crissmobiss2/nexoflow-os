@@ -60,7 +60,11 @@ function TextArea({ label, name, value, onChange, placeholder, rows = 3 }: {
 
 export default function NewLeadPage() {
   const router = useRouter();
-  const create = api.leads.create.useMutation({ onSuccess: (lead) => router.push(`/leads/${lead!.id}`) });
+  const [error, setError] = useState<string | null>(null);
+  const create = api.leads.create.useMutation({
+    onSuccess: (lead) => router.push(`/leads/${lead!.id}`),
+    onError: (err) => setError(err.message),
+  });
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "", linkedIn: "",
@@ -84,6 +88,11 @@ export default function NewLeadPage() {
         <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Add Lead</span>
       </div>
 
+      {error && (
+        <div className="rounded-xl px-4 py-3 text-sm mb-4" style={{ background: "hsl(0 72% 58% / 0.1)", border: "1px solid hsl(0 72% 58% / 0.3)", color: "hsl(0 72% 68%)" }}>
+          {error}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Identity */}
         <section

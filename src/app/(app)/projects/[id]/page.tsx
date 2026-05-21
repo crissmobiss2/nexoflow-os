@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, FileText, Code2, Loader2,
   CheckCircle2, Circle, ArrowRight, Zap, Terminal, FileSignature,
-  Eye, Globe, Copy, MessageSquare, Send, FileSearch,
+  Eye, Globe, Copy, MessageSquare, Send, FileSearch, DollarSign,
 } from "lucide-react";
 import { formatScore, formatProjectType, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const disablePortal = api.projects.disablePortal.useMutation({ onSuccess: () => void refetch() });
   const [newComment, setNewComment] = useState("");
   const addComment = api.comments.create.useMutation({ onSuccess: () => { void refetch(); setNewComment(""); } });
+  const [budgetInput, setBudgetInput] = useState("");
+  const [invoiceCreated, setInvoiceCreated] = useState<number | null>(null);
+  const createMilestoneInvoice = api.invoices.createMilestoneInvoice.useMutation({
+    onSuccess: (inv, vars) => setInvoiceCreated(vars.milestoneStep as unknown as number),
+  });
 
   if (isLoading) {
     return (
@@ -226,6 +231,69 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     </span>
                   </div>
                 ))}
+            </div>
+          </div>
+
+          {/* Milestone Payments */}
+          <div
+            className="rounded-xl p-5"
+            style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+              <DollarSign className="w-3.5 h-3.5" />
+              Milestone Invoices
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider mb-1 block" style={{ color: "var(--text-muted)" }}>Total Budget ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={budgetInput}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  placeholder="e.g. 10000"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              {[
+                { step: "1" as const, label: "Kickoff", pct: 30 },
+                { step: "2" as const, label: "Midpoint", pct: 40 },
+                { step: "3" as const, label: "Delivery", pct: 30 },
+              ].map(({ step, label, pct }) => {
+                const amt = budgetInput ? Math.round(Number(budgetInput) * pct / 100) : null;
+                const isThisOne = createMilestoneInvoice.isPending && invoiceCreated === null;
+                return (
+                  <button
+                    key={step}
+                    disabled={!budgetInput || Number(budgetInput) <= 0 || createMilestoneInvoice.isPending}
+                    onClick={() => {
+                      setInvoiceCreated(null);
+                      createMilestoneInvoice.mutate({
+                        projectId: id,
+                        milestoneStep: step,
+                        totalBudgetCents: Math.round(Number(budgetInput) * 100),
+                      });
+                    }}
+                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-xs transition-opacity hover:opacity-80 disabled:opacity-40"
+                    style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-secondary)" }}
+                  >
+                    <span className="font-medium" style={{ color: "var(--text-primary)" }}>
+                      {label} ({pct}%)
+                    </span>
+                    <span style={{ color: "hsl(142, 68%, 52%)" }}>
+                      {amt !== null ? `$${amt.toLocaleString()}` : "—"}
+                    </span>
+                  </button>
+                );
+              })}
+              {invoiceCreated !== null && (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(142, 68%, 52%)" }}>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Invoice created — <Link href="/invoices" className="underline">view invoices</Link>
+                </div>
+              )}
             </div>
           </div>
 

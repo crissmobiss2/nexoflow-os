@@ -1,7 +1,7 @@
 import { count, sql, and, isNotNull, gte, lte, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
-import { projects, clients, aiConversations, opportunityScores } from "../db/schema";
+import { projects, clients, aiConversations, opportunityScores, leads } from "../db/schema";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -274,6 +274,41 @@ export const analyticsRouter = createTRPCRouter({
       return Array.from(byMonth.entries())
         .map(([month, total]) => ({ month, total }))
         .sort((a, b) => a.month.localeCompare(b.month));
+    }),
+
+  // Lead conversion funnel
+  leadFunnel: publicProcedure
+    .query(async ({ ctx }) => {
+      const STAGES = ["new", "reviewing", "demo_queued", "demo_generated", "sent", "replied", "won", "lost"] as const;
+      const STAGE_LABELS: Record<string, string> = {
+        new: "New", reviewing: "Reviewing", demo_queued: "Demo Queued",
+        demo_generated: "Demo Ready", sent: "Sent", replied: "Replied",
+        won: "Won", lost: "Lost",
+      };
+
+      const rows = await ctx.db
+        .select({ status: leads.status, count: count() })
+        .from(leads)
+        .groupBy(leads.status);
+
+      const byStatus = new Map(rows.map((r) => [r.status, r.count]));
+      const total = rows.reduce((s, r) => s + r.count, 0);
+
+      return {
+        total,
+        stages: STAGES.map((s) => ({
+          key: s,
+          label: STAGE_LABELS[s] ?? s,
+          count: byStatus.get(s) ?? 0,
+          pct: total > 0 ? Math.round(((byStatus.get(s) ?? 0) / total) * 100) : 0,
+        })),
+        won: byStatus.get("won") ?? 0,
+        lost: byStatus.get("lost") ?? 0,
+        conversionRate: total > 0 ? Math.round(((byStatus.get("won") ?? 0) / total) * 100) : 0,
+        demoConversionRate: (byStatus.get("demo_generated") ?? 0) > 0
+          ? Math.round(((byStatus.get("won") ?? 0) / (byStatus.get("demo_generated") ?? 1)) * 100)
+          : 0,
+      };
     }),
 
   // Project volume over time

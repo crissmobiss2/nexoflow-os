@@ -300,6 +300,8 @@ export const invoices = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    milestoneStep: integer("milestone_step"), // 1 = kickoff (30%), 2 = midpoint (40%), 3 = delivery (30%)
     invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
     status: invoiceStatusEnum("status").default("draft").notNull(),
     subtotal: integer("subtotal").notNull().default(0),
@@ -446,6 +448,7 @@ export const userRelations = relations(users, ({ many }) => ({
 
 export const invoiceRelations = relations(invoices, ({ one, many }) => ({
   client: one(clients, { fields: [invoices.clientId], references: [clients.id] }),
+  project: one(projects, { fields: [invoices.projectId], references: [projects.id] }),
   author: one(users, { fields: [invoices.createdBy], references: [users.id], relationName: "createdBy" }),
   lineItems: many(invoiceLineItems),
 }));
@@ -687,6 +690,8 @@ export const leads = pgTable(
     demoHtml: text("demo_html"),
     demoUrl: varchar("demo_url", { length: 500 }),
     demoGeneratedAt: timestamp("demo_generated_at"),
+    proposalHtml: text("proposal_html"),
+    proposalUrl: varchar("proposal_url", { length: 500 }),
     projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),

@@ -129,7 +129,14 @@ async function main() {
   await run("nf_leads status idx",  `CREATE INDEX IF NOT EXISTS nf_leads_status_idx ON nf_leads (status)`);
   await run("nf_leads team idx",    `CREATE INDEX IF NOT EXISTS nf_leads_team_idx ON nf_leads (team_id)`);
   await run("nf_leads email idx",   `CREATE INDEX IF NOT EXISTS nf_leads_email_idx ON nf_leads (email)`);
-  await run("nf_leads.demo_html",   `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_html TEXT`);
+  await run("nf_leads.demo_html",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_html TEXT`);
+  await run("nf_leads.proposal_html",  `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_html TEXT`);
+  await run("nf_leads.proposal_url",   `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_url VARCHAR(500)`);
+
+  // ── nf_invoices — add milestone linking columns ────────────────────────────
+  await run("nf_invoices.project_id",    `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL`);
+  await run("nf_invoices.milestone_step",`ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS milestone_step INTEGER`);
+  await run("nf_invoices project idx",   `CREATE INDEX IF NOT EXISTS nf_invoices_project_idx ON nf_invoices (project_id)`);
 
   // ── nf_lead_outreach table ────────────────────────────────────────────────
   await run("nf_lead_outreach table", `

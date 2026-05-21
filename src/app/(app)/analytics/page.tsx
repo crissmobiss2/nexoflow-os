@@ -15,6 +15,7 @@ import {
   Download,
   Filter,
   X,
+  Target,
 } from "lucide-react";
 import {
   BarChart,
@@ -302,6 +303,7 @@ export default function AnalyticsPage() {
   const { data: byType } = api.analytics.byType.useQuery(filterInput);
   const { data: revenue } = api.analytics.revenue.useQuery(filterInput);
   const { data: volume } = api.analytics.volume.useQuery(filterInput);
+  const { data: leadFunnel } = api.analytics.leadFunnel.useQuery();
 
   const statusData = byStatus ?? [];
   const typeData = byType ?? [];
@@ -577,6 +579,52 @@ export default function AnalyticsPage() {
           )}
         </ChartCard>
       </div>
+
+      {/* ── Lead Funnel ─────────────────────────────────────────────────────── */}
+      {(leadFunnel?.total ?? 0) > 0 && (
+        <ChartCard title="Lead Conversion Funnel">
+          <div className="flex items-center gap-6 mb-5">
+            <div className="text-center">
+              <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{leadFunnel?.total ?? 0}</div>
+              <div className="text-xs" style={{ color: "var(--text-muted)" }}>Total Leads</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold" style={{ color: "hsl(142, 68%, 52%)" }}>{leadFunnel?.conversionRate ?? 0}%</div>
+              <div className="text-xs" style={{ color: "var(--text-muted)" }}>Won Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold" style={{ color: "hsl(207, 90%, 62%)" }}>{leadFunnel?.demoConversionRate ?? 0}%</div>
+              <div className="text-xs" style={{ color: "var(--text-muted)" }}>Demo → Won</div>
+            </div>
+            <div className="flex items-center gap-4 ml-auto">
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(142, 68%, 52%)" }}>
+                <Target className="w-3 h-3" /> {leadFunnel?.won ?? 0} won
+              </div>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(0, 70%, 60%)" }}>
+                <X className="w-3 h-3" /> {leadFunnel?.lost ?? 0} lost
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {(leadFunnel?.stages ?? []).map((stage) => (
+              <div key={stage.key} className="flex items-center gap-3">
+                <div className="text-xs w-28 text-right shrink-0" style={{ color: "var(--text-muted)" }}>{stage.label}</div>
+                <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ background: "var(--surface-elevated)" }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.max(stage.pct, 1)}%`,
+                      background: stage.key === "won" ? "hsl(142, 68%, 52%)" : stage.key === "lost" ? "hsl(0, 70%, 60%)" : "hsl(207, 90%, 62%)",
+                      opacity: stage.count === 0 ? 0.2 : 1,
+                    }}
+                  />
+                </div>
+                <div className="text-xs w-16 shrink-0" style={{ color: "var(--text-secondary)" }}>{stage.count} ({stage.pct}%)</div>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+      )}
 
       {/* ── Charts Row 2 ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4">

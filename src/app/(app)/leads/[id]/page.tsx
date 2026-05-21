@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/client";
 import {
   ArrowLeft, ChevronRight, Globe, Mail, Phone, Building2, MapPin,
   Linkedin, Loader2, Sparkles, Zap, Send, ExternalLink, Tag, FolderKanban,
-  ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor,
+  ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor, FileText,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -58,14 +58,25 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
+  const [actionError, setActionError] = useState<string | null>(null);
   const { data: lead, isLoading, refetch } = api.leads.get.useQuery({ id });
-  const updateMutation = api.leads.update.useMutation({ onSuccess: () => refetch() });
-  const generateInsights = api.leads.generateInsights.useMutation({ onSuccess: () => refetch() });
+  const updateMutation = api.leads.update.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => setActionError(err.message),
+  });
+  const generateInsights = api.leads.generateInsights.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
   const [copied, setCopied] = useState(false);
+  const [copiedProposal, setCopiedProposal] = useState(false);
   const generateDemo = api.leads.generateDemo.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const generateProposal = api.leads.generateProposal.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
   });
 
   function copyDemoLink(url: string) {
@@ -73,7 +84,15 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
-  const deleteMutation = api.leads.delete.useMutation({ onSuccess: () => router.push("/leads") });
+  function copyProposalLink(url: string) {
+    void navigator.clipboard.writeText(window.location.origin + url);
+    setCopiedProposal(true);
+    setTimeout(() => setCopiedProposal(false), 2000);
+  }
+  const deleteMutation = api.leads.delete.useMutation({
+    onSuccess: () => router.push("/leads"),
+    onError: (err) => setActionError(err.message),
+  });
 
   if (isLoading) {
     return (
@@ -103,6 +122,11 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
+      {actionError && (
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "hsl(0 72% 58% / 0.1)", border: "1px solid hsl(0 72% 58% / 0.3)", color: "hsl(0 72% 68%)" }}>
+          {actionError}
+        </div>
+      )}
       {/* Breadcrumb + header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
@@ -436,6 +460,46 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                       title="Copy demo link"
                     >
                       {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => generateProposal.mutate({ id: lead.id })}
+                disabled={generateProposal.isPending}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(207 90% 62% / 0.12)", color: "hsl(207, 90%, 62%)" }}
+              >
+                {generateProposal.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                {generateProposal.isPending ? "Writing proposal…" : lead.proposalUrl ? "Regenerate Proposal" : "Generate Proposal"}
+              </button>
+              {lead.proposalUrl && (
+                <div
+                  className="rounded-xl px-3 py-2.5 space-y-2"
+                  style={{ background: "hsl(207 90% 62% / 0.06)", border: "1px solid hsl(207 90% 62% / 0.2)" }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3" style={{ color: "hsl(207, 90%, 62%)" }} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "hsl(207, 90%, 62%)" }}>Proposal Ready</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={lead.proposalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs hover:underline flex-1 min-w-0"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      <span className="truncate">View Proposal</span>
+                    </a>
+                    <button
+                      onClick={() => copyProposalLink(lead.proposalUrl!)}
+                      className="shrink-0 p-1 rounded-lg transition-opacity hover:opacity-70"
+                      style={{ color: copiedProposal ? "hsl(207, 90%, 62%)" : "var(--text-muted)" }}
+                      title="Copy proposal link"
+                    >
+                      {copiedProposal ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
