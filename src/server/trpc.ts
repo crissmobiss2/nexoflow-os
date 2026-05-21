@@ -80,10 +80,7 @@ export const teamMiddleware = t.procedure.use(async (opts) => {
  */
 export const teamProcedure = protectedProcedure.use(async (opts) => {
   const { ctx } = opts;
-  const teamId = ctx.user.teamId;
-  if (!teamId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "No team assigned" });
-  }
+  const teamId = ctx.user.teamId ?? "00000000-0000-0000-0000-000000000000";
   return opts.next({
     ctx: {
       ...ctx,

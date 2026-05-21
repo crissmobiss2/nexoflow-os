@@ -4,33 +4,7 @@ import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
-import { users, accounts, sessions, verificationTokens, teams, teamMembers } from "@/server/db/schema";
-
-async function findOrCreateUser(email: string) {
-  let user = await db.query.users.findFirst({ where: eq(users.email, email) });
-
-  if (!user) {
-    const id = crypto.randomUUID();
-    const name = email.split("@")[0] ?? "User";
-
-    // Create a personal team for this user
-    const [team] = await db.insert(teams).values({ name: `${name}'s Team` }).returning();
-    if (!team) throw new Error("Failed to create team");
-
-    const [created] = await db
-      .insert(users)
-      .values({ id, email, name, role: "admin", teamId: team.id })
-      .returning();
-    if (!created) throw new Error("Failed to create user");
-
-    // Add user as team owner
-    await db.insert(teamMembers).values({ teamId: team.id, userId: id, role: "owner" });
-
-    user = created;
-  }
-
-  return user;
-}
+import { users, accounts, sessions, verificationTokens } from "@/server/db/schema";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -47,13 +21,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string;
+        const email = (credentials?.email ?? "") as string;
         if (!email) return null;
 
         try {
-          const user = await findOrCreateUser(email);
+          // Find existing user
+          let user = await db.query.users.findFirst({ where: eq(users.email, email) });
+
+          // Create new user if not found
+          if (!user) {
+            const id = crypto.randomUUID();
+            const name = email.split("@")[0] ?? "User";
+            const [created] = await db
+              .insert(users)
+              .values({ id, email, name, role: "admin" })
+              .returning();
+            user = created ?? null;
+          }
+
+          if (!user) return null;
           return { id: user.id, email: user.email, name: user.name, role: user.role, teamId: user.teamId };
-        } catch {
+        } catch (err) {
+          console.error("[auth] credentials authorize error:", err);
           return null;
         }
       },
