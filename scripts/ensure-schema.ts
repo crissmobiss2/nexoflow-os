@@ -160,6 +160,126 @@ async function main() {
     EXCEPTION WHEN others THEN NULL; END $$;
   `);
 
+  // ── nf_lead_outreach — new columns ───────────────────────────────────────
+  await run("nf_lead_outreach.opened_at",  `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ`);
+  await run("nf_lead_outreach.clicked_at", `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMPTZ`);
+  await run("nf_lead_outreach.replied_at", `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ`);
+  await run("nf_lead_outreach.subject",    `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS subject VARCHAR(500)`);
+  await run("nf_lead_outreach.share_link", `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS share_link VARCHAR(500)`);
+  await run("nf_lead_outreach.created_at", `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+
+  // ── nf_leads — new columns ────────────────────────────────────────────────
+  await run("nf_leads.source_detail",  `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS source_detail VARCHAR(255)`);
+  await run("nf_leads.affiliate_code", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS affiliate_code VARCHAR(32)`);
+  await run("nf_leads.booking_ref",    `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS booking_ref VARCHAR(255)`);
+
+  // ── nf_invoices — Stripe columns ──────────────────────────────────────────
+  await run("nf_invoices.stripe_payment_url",     `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS stripe_payment_url VARCHAR(1000)`);
+  await run("nf_invoices.stripe_payment_link_id", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS stripe_payment_link_id VARCHAR(255)`);
+
+  // ── nf_affiliates — enums and table ──────────────────────────────────────
+  await run("enum nf_affiliate_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_affiliate_status AS ENUM ('pending','approved','rejected','suspended');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("enum nf_affiliate_tier", `
+    DO $$ BEGIN
+      CREATE TYPE nf_affiliate_tier AS ENUM ('base','silver','gold');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("nf_affiliates table", `
+    CREATE TABLE IF NOT EXISTS nf_affiliates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      website VARCHAR(500),
+      promo_method VARCHAR(100),
+      status nf_affiliate_status NOT NULL DEFAULT 'pending',
+      tier nf_affiliate_tier NOT NULL DEFAULT 'base',
+      referral_code VARCHAR(32) NOT NULL UNIQUE,
+      paypal_email VARCHAR(255),
+      total_referrals INTEGER NOT NULL DEFAULT 0,
+      total_earnings_cents INTEGER NOT NULL DEFAULT 0,
+      paid_out_cents INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_affiliates_email_idx", `CREATE INDEX IF NOT EXISTS nf_affiliates_email_idx ON nf_affiliates (email)`);
+  await run("nf_affiliates_code_idx",  `CREATE INDEX IF NOT EXISTS nf_affiliates_code_idx ON nf_affiliates (referral_code)`);
+
+  await run("enum nf_affiliate_referral_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_affiliate_referral_status AS ENUM ('pending','converted','paid','cancelled');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("nf_affiliate_referrals table", `
+    CREATE TABLE IF NOT EXISTS nf_affiliate_referrals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      affiliate_id UUID NOT NULL REFERENCES nf_affiliates(id) ON DELETE CASCADE,
+      lead_id UUID REFERENCES nf_leads(id) ON DELETE SET NULL,
+      project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
+      status nf_affiliate_referral_status NOT NULL DEFAULT 'pending',
+      commission_pct INTEGER NOT NULL DEFAULT 10,
+      project_value_cents INTEGER DEFAULT 0,
+      commission_cents INTEGER DEFAULT 0,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_affiliate_refs_affiliate_idx", `CREATE INDEX IF NOT EXISTS nf_affiliate_refs_affiliate_idx ON nf_affiliate_referrals (affiliate_id)`);
+
+  // ── nf_case_studies ───────────────────────────────────────────────────────
+  await run("nf_case_studies table", `
+    CREATE TABLE IF NOT EXISTS nf_case_studies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_name VARCHAR(255) NOT NULL,
+      client_title VARCHAR(255),
+      client_company VARCHAR(255),
+      client_industry VARCHAR(255),
+      avatar_initials VARCHAR(4),
+      testimonial TEXT NOT NULL,
+      metric1_label VARCHAR(100),
+      metric1_value VARCHAR(50),
+      metric2_label VARCHAR(100),
+      metric2_value VARCHAR(50),
+      metric3_label VARCHAR(100),
+      metric3_value VARCHAR(50),
+      published BOOLEAN NOT NULL DEFAULT FALSE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      linked_project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
+      linked_client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_case_studies_published_idx", `CREATE INDEX IF NOT EXISTS nf_case_studies_published_idx ON nf_case_studies (published)`);
+
+  // ── nf_lead_calls ─────────────────────────────────────────────────────────
+  await run("enum nf_call_outcome", `
+    DO $$ BEGIN
+      CREATE TYPE nf_call_outcome AS ENUM ('no_show','won','lost','follow_up','not_interested','rescheduled');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("nf_lead_calls table", `
+    CREATE TABLE IF NOT EXISTS nf_lead_calls (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      lead_id UUID NOT NULL REFERENCES nf_leads(id) ON DELETE CASCADE,
+      scheduled_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      outcome nf_call_outcome,
+      notes TEXT,
+      called_by TEXT REFERENCES nf_users(id) ON DELETE SET NULL,
+      booking_ref VARCHAR(255),
+      duration_minutes INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_lead_calls_lead_idx", `CREATE INDEX IF NOT EXISTS nf_lead_calls_lead_idx ON nf_lead_calls (lead_id)`);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }
