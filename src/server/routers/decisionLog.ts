@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, or } from "drizzle-orm";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { decisionLog } from "../db/schema";
 
@@ -31,11 +31,7 @@ export const decisionLogRouter = createTRPCRouter({
         conditions.push(eq(decisionLog.status, status));
       }
 
-      const where = conditions.length > 0
-        ? conditions.length === 1
-          ? conditions[0]
-          : sql`${conditions[0]} AND ${conditions[1]}`
-        : undefined;
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
 
       const [results, countResult] = await Promise.all([
         ctx.db
@@ -130,9 +126,7 @@ export const decisionLogRouter = createTRPCRouter({
       );
       const allConditions = [...conditions, ...mocsConditions];
 
-      const where = allConditions.length > 0
-        ? sql`(${allConditions.join(" OR ")})`
-        : undefined;
+      const where = allConditions.length > 0 ? or(...allConditions) : undefined;
 
       return ctx.db
         .select()

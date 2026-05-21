@@ -28,11 +28,7 @@ export const auditLogRouter = createTRPCRouter({
         conditions.push(eq(auditLogs.targetType, targetType));
       }
 
-      const where = conditions.length > 0
-        ? conditions.length === 1
-          ? conditions[0]
-          : and(...conditions)
-        : undefined;
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
 
       const [results, countResult] = await Promise.all([
         ctx.db
