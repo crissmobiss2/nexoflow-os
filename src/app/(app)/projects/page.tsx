@@ -112,7 +112,7 @@ export default async function ProjectsPage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="grid items-center px-6 py-3.5 transition-colors group"
+                  className="grid items-center px-6 py-3.5 transition-colors group hover:bg-[var(--surface-card-hover)]"
                   style={{
                     borderBottom: "1px solid var(--surface-border-subtle)",
                     gridTemplateColumns: "1fr 130px 80px 100px 24px",
@@ -120,8 +120,6 @@ export default async function ProjectsPage() {
                     color: "inherit",
                     textDecoration: "none",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-card-hover)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
