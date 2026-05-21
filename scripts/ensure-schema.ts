@@ -130,6 +130,7 @@ async function main() {
   await run("nf_leads team idx",    `CREATE INDEX IF NOT EXISTS nf_leads_team_idx ON nf_leads (team_id)`);
   await run("nf_leads email idx",   `CREATE INDEX IF NOT EXISTS nf_leads_email_idx ON nf_leads (email)`);
   // Patch columns that may be missing if table was created by an older schema version
+  await run("nf_leads.email",           `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
   await run("nf_leads.first_name",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS first_name VARCHAR(255)`);
   await run("nf_leads.last_name",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)`);
   await run("nf_leads.phone",           `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
