@@ -87,7 +87,7 @@ async function main() {
   await run("nf_api_keys.key_prefix",    `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS key_prefix VARCHAR(8) NOT NULL DEFAULT ''`);
   await run("nf_api_keys.key_hash",      `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS key_hash TEXT NOT NULL DEFAULT ''`);
   await run("nf_api_keys.key_last_chars",`ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS key_last_chars VARCHAR(4) NOT NULL DEFAULT ''`);
-  await run("nf_api_keys.created_by",    `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS created_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL`);
+  await run("nf_api_keys.created_by",    `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS created_by TEXT`);
   await run("nf_api_keys.last_used_at",  `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ`);
   await run("nf_api_keys.expires_at",    `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
   await run("nf_api_keys.is_active",     `ALTER TABLE nf_api_keys ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`);
@@ -164,7 +164,7 @@ async function main() {
       project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
       client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL,
       team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
-      assigned_to TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      assigned_to TEXT,
       notes TEXT,
       tags TEXT[],
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -212,7 +212,7 @@ async function main() {
   await run("nf_leads.project_id",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL`);
   await run("nf_leads.client_id",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL`);
   await run("nf_leads.team_id",         `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE`);
-  await run("nf_leads.assigned_to",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT REFERENCES nf_user(id) ON DELETE SET NULL`);
+  await run("nf_leads.assigned_to",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT`);
   await run("nf_leads.notes",           `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS notes TEXT`);
   await run("nf_leads.tags",            `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS tags TEXT[]`);
 
@@ -230,7 +230,7 @@ async function main() {
       subject TEXT,
       message TEXT NOT NULL,
       share_link TEXT,
-      sent_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      sent_by TEXT,
       sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -350,7 +350,7 @@ async function main() {
       completed_at TIMESTAMPTZ,
       outcome nf_call_outcome,
       notes TEXT,
-      called_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      called_by TEXT,
       booking_ref VARCHAR(255),
       duration_minutes INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
