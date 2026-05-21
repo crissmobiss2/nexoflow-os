@@ -217,6 +217,7 @@ export const knowledgeRouter = createTRPCRouter({
               name: r.name,
               content: r.content,
               embedding: null,
+              teamId: null,
               createdAt: new Date(),
             },
             score,

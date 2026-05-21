@@ -58,9 +58,10 @@ export const sprintTasksRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { dueDate, ...rest } = input;
       const [task] = await ctx.db
         .update(sprintTasks)
-        .set({ ...input, updatedAt: new Date() })
+        .set({ ...rest, updatedAt: new Date(), ...(dueDate !== undefined ? { dueDate: new Date(dueDate) } : {}) })
         .where(eq(sprintTasks.id, input.id))
         .returning();
       return task;

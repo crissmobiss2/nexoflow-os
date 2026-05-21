@@ -101,18 +101,21 @@ export const searchRouter = createTRPCRouter({
           ...clientResults.map((r) => ({
             source: "os" as const,
             ...r,
+            subtitle: r.subtitle ?? "",
             href: `/clients/${r.id}`,
             score: 0.9,
           })),
           ...projectResults.map((r) => ({
             source: "os" as const,
             ...r,
+            subtitle: r.subtitle ?? "",
             href: `/projects/${r.id}`,
             score: 0.8,
           })),
           ...snippetResults.map((r) => ({
             source: "os" as const,
             ...r,
+            subtitle: r.subtitle ?? "",
             href: `/knowledge?q=${encodeURIComponent(query)}`,
             score: 0.7,
           })),
