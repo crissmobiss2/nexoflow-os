@@ -1,4 +1,4 @@
-import { ilike, or, eq, and, sql } from "drizzle-orm";
+import { ilike, or, eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { knowledgeSnippets } from "../db/schema";
@@ -233,7 +233,7 @@ export const knowledgeRouter = createTRPCRouter({
         .select()
         .from(knowledgeSnippets)
         .where(
-          sql`${knowledgeSnippets.category} = ANY(${input.categories})`,
+          inArray(knowledgeSnippets.category, input.categories),
         )
         .orderBy(knowledgeSnippets.category, knowledgeSnippets.name)
         .limit(input.limit);

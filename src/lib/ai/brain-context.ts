@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { db } from "@/server/db";
 import { knowledgeSnippets } from "@/server/db/schema";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, inArray } from "drizzle-orm";
 
 // Bundled knowledge files (always available, used as fallback)
 const BUNDLED: Record<string, string> = {
@@ -69,7 +69,7 @@ async function loadSnippetsFromDB(categories: string[], limit = 40): Promise<str
         content: knowledgeSnippets.content,
       })
       .from(knowledgeSnippets)
-      .where(sql`${knowledgeSnippets.category} = ANY(${categories})`)
+      .where(inArray(knowledgeSnippets.category, categories))
       .orderBy(sql`random()`)
       .limit(limit);
 
