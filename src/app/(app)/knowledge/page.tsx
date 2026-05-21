@@ -5,7 +5,6 @@ import { api } from "@/lib/trpc/client";
 import { Search, BookOpen, Copy, Check, ChevronRight, Loader2, Hash, Sparkles, Brain, Type, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderMarkdown } from "@/lib/markdown";
-import { getEmbedding } from "@/lib/ai/embeddings";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Architecture:        "hsl(220, 90%, 62%)",
@@ -144,8 +143,6 @@ export default function KnowledgePage() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [offset, setOffset] = useState(0);
   const [searchMode, setSearchMode] = useState<"text" | "semantic" | "hybrid">("text");
-  const [semanticEmbedding, setSemanticEmbedding] = useState<number[] | null>(null);
-  const [isEmbedding, setIsEmbedding] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -155,18 +152,12 @@ export default function KnowledgePage() {
 
   useEffect(() => { setOffset(0); }, [activeCategory]);
 
-  // Generate embedding when switching to semantic/hybrid mode or when query changes
-  useEffect(() => {
-    if ((searchMode === "semantic" || searchMode === "hybrid") && debouncedQuery.trim()) {
-      setIsEmbedding(true);
-      getEmbedding(debouncedQuery)
-        .then((emb) => setSemanticEmbedding(emb))
-        .catch(() => setSemanticEmbedding(null))
-        .finally(() => setIsEmbedding(false));
-    } else {
-      setSemanticEmbedding(null);
-    }
-  }, [searchMode, debouncedQuery]);
+  // Generate embedding server-side via tRPC
+  const needsEmbedding = (searchMode === "semantic" || searchMode === "hybrid") && debouncedQuery.trim().length > 0;
+  const { data: semanticEmbedding, isLoading: isEmbedding } = api.knowledge.embed.useQuery(
+    debouncedQuery,
+    { enabled: needsEmbedding },
+  );
 
   const { data: stats } = api.knowledge.stats.useQuery();
   const { data: categoriesData } = api.knowledge.categories.useQuery();

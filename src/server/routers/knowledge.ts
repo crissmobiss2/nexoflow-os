@@ -2,6 +2,7 @@ import { ilike, or, eq, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { knowledgeSnippets } from "../db/schema";
+import { getEmbedding } from "@/lib/ai/embeddings";
 
 export const knowledgeRouter = createTRPCRouter({
   // Get all unique categories with snippet counts
@@ -266,6 +267,14 @@ export const knowledgeRouter = createTRPCRouter({
       return ctx.db.query.knowledgeSnippets.findFirst({
         where: eq(knowledgeSnippets.id, input.id),
       });
+    }),
+
+  // Generate embedding server-side (keeps API key off the client)
+  embed: publicProcedure
+    .input(z.string().min(1).max(2000))
+    .query(async ({ input }) => {
+      const embedding = await getEmbedding(input);
+      return embedding;
     }),
 
   // Stats
