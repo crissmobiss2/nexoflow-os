@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
-import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { users, accounts, sessions, verificationTokens } from "@/server/db/schema";
 
@@ -24,27 +23,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = (credentials?.email ?? "") as string;
         if (!email) return null;
 
-        try {
-          // Find existing user
-          let user = await db.query.users.findFirst({ where: eq(users.email, email) });
-
-          // Create new user if not found
-          if (!user) {
-            const id = crypto.randomUUID();
-            const name = email.split("@")[0] ?? "User";
-            const [created] = await db
-              .insert(users)
-              .values({ id, email, name, role: "admin" })
-              .returning();
-            user = created ?? null;
-          }
-
-          if (!user) return null;
-          return { id: user.id, email: user.email, name: user.name, role: user.role, teamId: user.teamId };
-        } catch (err) {
-          console.error("[auth] credentials authorize error:", err);
-          return null;
-        }
+        // Return immediately — DB sync happens post-sign-in via API
+        return { id: email, email, name: email.split("@")[0] ?? "User", role: "admin" };
       },
     }),
   ],
