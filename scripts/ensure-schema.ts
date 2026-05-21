@@ -129,9 +129,32 @@ async function main() {
   await run("nf_leads status idx",  `CREATE INDEX IF NOT EXISTS nf_leads_status_idx ON nf_leads (status)`);
   await run("nf_leads team idx",    `CREATE INDEX IF NOT EXISTS nf_leads_team_idx ON nf_leads (team_id)`);
   await run("nf_leads email idx",   `CREATE INDEX IF NOT EXISTS nf_leads_email_idx ON nf_leads (email)`);
-  await run("nf_leads.demo_html",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_html TEXT`);
-  await run("nf_leads.proposal_html",  `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_html TEXT`);
-  await run("nf_leads.proposal_url",   `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_url VARCHAR(500)`);
+  // Patch columns that may be missing if table was created by an older schema version
+  await run("nf_leads.first_name",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS first_name VARCHAR(255)`);
+  await run("nf_leads.last_name",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)`);
+  await run("nf_leads.phone",           `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
+  await run("nf_leads.linkedin",        `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS linkedin VARCHAR(500)`);
+  await run("nf_leads.company",         `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+  await run("nf_leads.website",         `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS website VARCHAR(500)`);
+  await run("nf_leads.industry",        `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS industry VARCHAR(255)`);
+  await run("nf_leads.company_size",    `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS company_size VARCHAR(50)`);
+  await run("nf_leads.region",          `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS region VARCHAR(100)`);
+  await run("nf_leads.job_title",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS job_title VARCHAR(255)`);
+  await run("nf_leads.tech_stack",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS tech_stack TEXT`);
+  await run("nf_leads.pain_points",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS pain_points TEXT`);
+  await run("nf_leads.scraped_data",    `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS scraped_data TEXT`);
+  await run("nf_leads.ai_insights",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS ai_insights TEXT`);
+  await run("nf_leads.demo_url",        `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_url VARCHAR(500)`);
+  await run("nf_leads.demo_generated_at", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_generated_at TIMESTAMPTZ`);
+  await run("nf_leads.demo_html",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS demo_html TEXT`);
+  await run("nf_leads.proposal_html",   `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_html TEXT`);
+  await run("nf_leads.proposal_url",    `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS proposal_url VARCHAR(500)`);
+  await run("nf_leads.project_id",      `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL`);
+  await run("nf_leads.client_id",       `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL`);
+  await run("nf_leads.team_id",         `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE`);
+  await run("nf_leads.assigned_to",     `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT REFERENCES nf_user(id) ON DELETE SET NULL`);
+  await run("nf_leads.notes",           `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS notes TEXT`);
+  await run("nf_leads.tags",            `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS tags TEXT[]`);
 
   // ── nf_invoices — add milestone linking columns ────────────────────────────
   await run("nf_invoices.project_id",    `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL`);
