@@ -6,7 +6,7 @@ import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 import { leads, leadOutreach, leadCalls, projects, clients } from "../db/schema";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY ?? "not_configured");
 
 const leadInput = z.object({
   firstName: z.string().optional(),
