@@ -232,12 +232,8 @@ async function main() {
   `);
   await run("nf_lead_outreach lead idx", `CREATE INDEX IF NOT EXISTS nf_lead_outreach_lead_idx ON nf_lead_outreach (lead_id)`);
 
-  // ── nf_notifications — add column if enum type was just created ───────────
-  await run("nf_notifications.type column", `
-    DO $$ BEGIN
-      ALTER TABLE nf_notifications ADD COLUMN IF NOT EXISTS type nf_notification_type;
-    EXCEPTION WHEN others THEN NULL; END $$;
-  `);
+  // ── nf_notifications — add type column (IF NOT EXISTS avoids duplicate_column error)
+  await run("nf_notifications.type column", `ALTER TABLE nf_notifications ADD COLUMN IF NOT EXISTS type nf_notification_type`);
 
   // ── nf_lead_outreach — new columns ───────────────────────────────────────
   await run("nf_lead_outreach.opened_at",  `ALTER TABLE nf_lead_outreach ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ`);
