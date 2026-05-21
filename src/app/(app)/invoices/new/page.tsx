@@ -33,7 +33,7 @@ export default function NewInvoicePage() {
 
   const { data: clients } = api.clients.list.useQuery();
   const create = api.invoices.create.useMutation({
-    onSuccess: (inv) => router.push(`/invoices/${inv.id}`),
+    onSuccess: (inv) => { void router.push(inv ? `/invoices/${inv.id}` : "/invoices"); },
   });
 
   function updateItem(i: number, field: keyof LineItem, value: string | number) {
