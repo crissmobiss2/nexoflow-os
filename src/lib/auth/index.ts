@@ -1,20 +1,9 @@
 import NextAuth from "next-auth";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
-import { db } from "@/server/db";
-import { users, accounts, sessions, verificationTokens } from "@/server/db/schema";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
   session: { strategy: "jwt" },
   providers: [
-    ...(process.env.AUTH_RESEND_KEY ? [Resend({ from: "nexoflow@resend.dev" })] : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -22,8 +11,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorize: async (credentials) => {
         const email = (credentials?.email ?? "") as string;
         if (!email) return null;
-
-        // Return immediately — DB sync happens post-sign-in via API
         return { id: email, email, name: email.split("@")[0] ?? "User", role: "admin" };
       },
     }),
