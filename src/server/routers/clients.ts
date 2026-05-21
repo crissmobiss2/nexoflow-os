@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, teamProcedure, publicProcedure } from "../trpc";
+import { createTRPCRouter, teamProcedure } from "../trpc";
 import { clients } from "../db/schema";
 
 const onboardingInput = z.object({
@@ -40,13 +40,14 @@ export const clientsRouter = createTRPCRouter({
       });
     }),
 
-  create: publicProcedure
+  create: teamProcedure
     .input(onboardingInput)
     .mutation(async ({ ctx, input }) => {
       const [client] = await ctx.db
         .insert(clients)
         .values({
           ...input,
+          teamId: ctx.teamId,
           email: input.email || null,
           onboardedAt: new Date(),
         })
@@ -54,7 +55,7 @@ export const clientsRouter = createTRPCRouter({
       return client;
     }),
 
-  update: publicProcedure
+  update: teamProcedure
     .input(onboardingInput.partial().extend({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
@@ -66,7 +67,7 @@ export const clientsRouter = createTRPCRouter({
       return client;
     }),
 
-  delete: publicProcedure
+  delete: teamProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(clients).where(eq(clients.id, input.id));
