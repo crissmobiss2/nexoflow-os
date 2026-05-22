@@ -1,13 +1,13 @@
 "use client";
 
-import { use } from "react";
+import React, { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/trpc/client";
 import {
   ArrowLeft, Plus, Globe, Phone, Mail, Building2, Users,
   MapPin, Loader2, ExternalLink, FolderKanban, ChevronRight,
-  Zap, AlertCircle,
+  Zap, AlertCircle, Lock, Unlock, Copy, Check,
 } from "lucide-react";
 import { formatScore } from "@/lib/utils";
 
@@ -41,9 +41,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { data: client, isLoading } = api.clients.get.useQuery({ id });
+  const [copied, setCopied] = React.useState(false);
+  const { data: client, isLoading, refetch } = api.clients.get.useQuery({ id });
   const deleteClient = api.clients.delete.useMutation({
     onSuccess: () => router.push("/clients"),
+  });
+  const enablePortal = api.clients.enablePortal.useMutation({
+    onSuccess: () => refetch(),
   });
 
   if (isLoading) {
@@ -273,6 +277,52 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
               <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{client.notes}</p>
             </Section>
           )}
+
+          <Section title="Client Portal">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {client.portalEnabled
+                    ? <Unlock className="w-4 h-4" style={{ color: "hsl(142 70% 50%)" }} />
+                    : <Lock className="w-4 h-4" style={{ color: "var(--text-muted)" }} />}
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {client.portalEnabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => enablePortal.mutate({ id, enabled: !client.portalEnabled })}
+                  disabled={enablePortal.isPending}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={client.portalEnabled
+                    ? { background: "hsl(0 70% 55% / 0.12)", color: "hsl(0 70% 55%)" }
+                    : { background: "hsl(142 70% 50% / 0.12)", color: "hsl(142 70% 50%)" }}
+                >
+                  {enablePortal.isPending ? "..." : client.portalEnabled ? "Disable" : "Enable"}
+                </button>
+              </div>
+              {client.portalEnabled && client.portalToken && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Portal URL</div>
+                  <div className="flex items-center gap-1.5">
+                    <code className="flex-1 text-[10px] px-2 py-1.5 rounded-lg truncate" style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)" }}>
+                      /portal/client/{client.portalToken}
+                    </code>
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(`${window.location.origin}/portal/client/${client.portalToken}`);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="p-1.5 rounded-lg transition-opacity hover:opacity-70"
+                      style={{ background: "var(--surface-elevated)" }}
+                    >
+                      {copied ? <Check className="w-3 h-3" style={{ color: "hsl(142 70% 50%)" }} /> : <Copy className="w-3 h-3" style={{ color: "var(--text-muted)" }} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
 
           <Section title="Quick Actions">
             <div className="space-y-2">

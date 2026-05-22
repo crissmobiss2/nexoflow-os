@@ -31,11 +31,12 @@ export default function AffiliatesPage() {
   const { data: affiliates = [], isLoading, refetch } = api.affiliates.list.useQuery(
     filterStatus ? { status: filterStatus as any } : undefined,
   );
-  const { data: stats } = api.affiliates.stats.useQuery();
+  const { data: stats, refetch: refetchStats } = api.affiliates.stats.useQuery();
 
-  const approveMutation = api.affiliates.approve.useMutation({ onSuccess: () => void refetch() });
-  const rejectMutation = api.affiliates.reject.useMutation({ onSuccess: () => void refetch() });
-  const updateMutation = api.affiliates.update.useMutation({ onSuccess: () => void refetch() });
+  const refetchAll = () => { void refetch(); void refetchStats(); };
+  const approveMutation = api.affiliates.approve.useMutation({ onSuccess: refetchAll });
+  const rejectMutation = api.affiliates.reject.useMutation({ onSuccess: refetchAll });
+  const updateMutation = api.affiliates.update.useMutation({ onSuccess: refetchAll });
 
   function copyCode(code: string) {
     void navigator.clipboard.writeText(`https://nexoflow.tech/ref/${code}`);

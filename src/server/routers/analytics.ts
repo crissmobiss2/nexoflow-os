@@ -413,10 +413,15 @@ Return ONLY valid JSON: { "summary": "2-3 sentence overall insight", "patterns":
       model: "claude-haiku-4-5-20251001", max_tokens: 800,
       messages: [{ role: "user", content: prompt }],
     });
-    const text = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+    const raw = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+    const text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
     try {
       return JSON.parse(text) as { summary: string; patterns: { title: string; insight: string; action: string }[] };
     } catch {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { return JSON.parse(jsonMatch[0]) as { summary: string; patterns: { title: string; insight: string; action: string }[] }; } catch { /* fall through */ }
+      }
       return { summary: "Could not parse AI response.", patterns: [] };
     }
   }),
@@ -430,9 +435,9 @@ Return ONLY valid JSON: { "summary": "2-3 sentence overall insight", "patterns":
 
       const [newLeads, wonLeads, paidInvoicesRaw, totalLeadsRaw] = await Promise.all([
         ctx.db.select({ count: count() }).from(leads).where(gte(leads.createdAt, oneWeekAgo)),
-        ctx.db.select({ count: count() }).from(leads).where(sql`${leads.status} = 'won' AND ${leads.updatedAt} >= ${oneWeekAgo}`),
+        ctx.db.select({ count: count() }).from(leads).where(sql`${leads.status} = 'won' AND ${leads.updatedAt} >= ${oneWeekAgo.toISOString()}`),
         ctx.db.select({ total: sql<number>`sum(${invoices.total})`, count: count() }).from(invoices)
-          .where(sql`${invoices.status} = 'paid' AND ${invoices.updatedAt} >= ${oneWeekAgo}`),
+          .where(sql`${invoices.status} = 'paid' AND ${invoices.updatedAt} >= ${oneWeekAgo.toISOString()}`),
         ctx.db.select({ count: count() }).from(leads),
       ]);
 

@@ -25,5 +25,5 @@ export const env = createEnv({
     OBSIDIAN_LOCAL_API_URL: process.env.OBSIDIAN_LOCAL_API_URL,
     NODE_ENV: process.env.NODE_ENV,
   },
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION || process.env.VERCEL === "1",
 });
