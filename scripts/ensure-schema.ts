@@ -108,6 +108,23 @@ async function main() {
     console.log("diagnostic skipped:", err?.message);
   }
 
+  // ── nf_teams (must exist before any table that references it) ─────────────
+  await run("nf_teams table", `
+    CREATE TABLE IF NOT EXISTS nf_teams (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  // Seed a default team for single-user installs (fallback when session has no teamId)
+  await run("nf_teams default seed", `
+    INSERT INTO nf_teams (id, name)
+    VALUES ('00000000-0000-0000-0000-000000000000', 'Default Team')
+    ON CONFLICT (id) DO NOTHING
+  `);
+
   // ── nf_leads: drop & recreate if table is empty and has legacy schema ──────
   // Safe because all insert attempts have been failing (no leads exist).
   // Triggers on: wrong status type OR presence of old company_name column (NOT NULL, no default)
