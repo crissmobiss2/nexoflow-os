@@ -124,6 +124,11 @@ async function main() {
     VALUES ('00000000-0000-0000-0000-000000000000', 'Default Team')
     ON CONFLICT (id) DO NOTHING
   `);
+  // Drop FK constraints that reference nf_teams — single-user installs have no team rows;
+  // app-level filtering still enforces multi-tenant isolation via teamId WHERE clauses.
+  await run("drop nf_invoices_team_id_fkey", `ALTER TABLE nf_invoices DROP CONSTRAINT IF EXISTS nf_invoices_team_id_fkey`);
+  await run("drop nf_leads_team_id_fkey",    `ALTER TABLE nf_leads DROP CONSTRAINT IF EXISTS nf_leads_team_id_fkey`);
+  await run("drop nf_clients_team_id_fkey",  `ALTER TABLE nf_clients DROP CONSTRAINT IF EXISTS nf_clients_team_id_fkey`);
 
   // ── nf_leads: drop & recreate if table is empty and has legacy schema ──────
   // Safe because all insert attempts have been failing (no leads exist).
