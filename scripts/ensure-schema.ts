@@ -362,8 +362,9 @@ async function main() {
   // ── nf_notifications — add link column ───────────────────────────────────
   await run("nf_notifications.link column", `ALTER TABLE nf_notifications ADD COLUMN IF NOT EXISTS link TEXT`);
 
-  // ── nf_invoice_line_items — add rate column ───────────────────────────────
+  // ── nf_invoice_line_items — add missing columns ──────────────────────────
   await run("nf_invoice_line_items.rate column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS rate INTEGER NOT NULL DEFAULT 0`);
+  await run("nf_invoice_line_items.amount column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS amount INTEGER NOT NULL DEFAULT 0`);
 
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
