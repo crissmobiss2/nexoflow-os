@@ -365,6 +365,8 @@ async function main() {
   // ── nf_invoice_line_items — add missing columns ──────────────────────────
   await run("nf_invoice_line_items.rate column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS rate INTEGER NOT NULL DEFAULT 0`);
   await run("nf_invoice_line_items.amount column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS amount INTEGER NOT NULL DEFAULT 0`);
+  await run("nf_invoice_line_items.created_at column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`);
+  await run("nf_invoice_line_items.updated_at column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
 
   // ── nf_invoices — multi-currency + recurring columns ─────────────────────
   await run("nf_invoices.currency", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'GBP'`);

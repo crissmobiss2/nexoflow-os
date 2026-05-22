@@ -46,31 +46,34 @@ export const invoicesRouter = createTRPCRouter({
       });
     }),
 
-  create: publicProcedure
+  create: teamProcedure
     .input(invoiceInput)
     .mutation(async ({ ctx, input }) => {
       const { lineItems: items, ...invoiceData } = input;
-      const [invoice] = await ctx.db
-        .insert(invoices)
-        .values({
-          ...invoiceData,
-          dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : null,
-          paidDate: invoiceData.paidDate ? new Date(invoiceData.paidDate) : null,
-        })
-        .returning();
+      return ctx.db.transaction(async (tx) => {
+        const [invoice] = await tx
+          .insert(invoices)
+          .values({
+            ...invoiceData,
+            teamId: ctx.teamId,
+            dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : null,
+            paidDate: invoiceData.paidDate ? new Date(invoiceData.paidDate) : null,
+          })
+          .returning();
 
-      if (items.length > 0) {
-        await ctx.db.insert(invoiceLineItems).values(
-          items.map((item) => ({
-            ...item,
-            invoiceId: invoice.id,
-          })),
-        );
-      }
+        if (items.length > 0) {
+          await tx.insert(invoiceLineItems).values(
+            items.map((item) => ({
+              ...item,
+              invoiceId: invoice!.id,
+            })),
+          );
+        }
 
-      return ctx.db.query.invoices.findFirst({
-        where: eq(invoices.id, invoice.id),
-        with: { client: true, lineItems: true },
+        return tx.query.invoices.findFirst({
+          where: eq(invoices.id, invoice!.id),
+          with: { client: true, lineItems: true },
+        });
       });
     }),
 
