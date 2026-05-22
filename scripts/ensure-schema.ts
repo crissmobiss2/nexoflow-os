@@ -366,6 +366,57 @@ async function main() {
   await run("nf_invoice_line_items.rate column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS rate INTEGER NOT NULL DEFAULT 0`);
   await run("nf_invoice_line_items.amount column", `ALTER TABLE nf_invoice_line_items ADD COLUMN IF NOT EXISTS amount INTEGER NOT NULL DEFAULT 0`);
 
+  // ── nf_invoices — multi-currency + recurring columns ─────────────────────
+  await run("nf_invoices.currency", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'GBP'`);
+  await run("nf_invoices.recurring_interval", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS recurring_interval VARCHAR(20)`);
+  await run("nf_invoices.recurring_enabled", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS recurring_enabled BOOLEAN NOT NULL DEFAULT false`);
+  await run("nf_invoices.next_recurring_at", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS next_recurring_at TIMESTAMPTZ`);
+  await run("nf_invoices.stripe_customer_id", `ALTER TABLE nf_invoices ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)`);
+
+  // ── nf_leads — AI score + enrichment columns ──────────────────────────────
+  await run("nf_leads.ai_score", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS ai_score INTEGER`);
+  await run("nf_leads.ai_score_reason", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS ai_score_reason TEXT`);
+  await run("nf_leads.enriched_at", `ALTER TABLE nf_leads ADD COLUMN IF NOT EXISTS enriched_at TIMESTAMPTZ`);
+
+  // ── nf_clients — portal columns ───────────────────────────────────────────
+  await run("nf_clients.portal_token", `ALTER TABLE nf_clients ADD COLUMN IF NOT EXISTS portal_token TEXT UNIQUE`);
+  await run("nf_clients.portal_enabled", `ALTER TABLE nf_clients ADD COLUMN IF NOT EXISTS portal_enabled BOOLEAN NOT NULL DEFAULT false`);
+  await run("nf_clients.slack_webhook_url", `ALTER TABLE nf_clients ADD COLUMN IF NOT EXISTS slack_webhook_url VARCHAR(500)`);
+
+  // ── nf_proposal_versions ──────────────────────────────────────────────────
+  await run("nf_proposal_versions table", `
+    CREATE TABLE IF NOT EXISTS nf_proposal_versions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      lead_id UUID NOT NULL REFERENCES nf_leads(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL DEFAULT 1,
+      html TEXT NOT NULL,
+      signed_at TIMESTAMPTZ,
+      signer_name VARCHAR(255),
+      signer_email VARCHAR(255),
+      signer_ip VARCHAR(45),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_proposal_versions_lead_idx", `CREATE INDEX IF NOT EXISTS nf_proposal_versions_lead_idx ON nf_proposal_versions (lead_id)`);
+
+  // ── nf_follow_up_sequences ────────────────────────────────────────────────
+  await run("nf_followup_status enum", `DO $$ BEGIN CREATE TYPE nf_followup_status AS ENUM ('active','paused','completed','cancelled'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await run("nf_follow_up_sequences table", `
+    CREATE TABLE IF NOT EXISTS nf_follow_up_sequences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      lead_id UUID NOT NULL REFERENCES nf_leads(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL DEFAULT 'Default Sequence',
+      status nf_followup_status NOT NULL DEFAULT 'active',
+      current_step INTEGER NOT NULL DEFAULT 0,
+      total_steps INTEGER NOT NULL DEFAULT 3,
+      next_send_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }

@@ -1,7 +1,12 @@
 import { count, sql, and, isNotNull, gte, lte, inArray } from "drizzle-orm";
 import { z } from "zod";
+import Anthropic from "@anthropic-ai/sdk";
+import { Resend } from "resend";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { projects, clients, aiConversations, opportunityScores, leads, invoices } from "../db/schema";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY ?? "not_configured");
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -377,5 +382,120 @@ export const analyticsRouter = createTRPCRouter({
         .orderBy(sql`to_char(${projects.createdAt}, 'YYYY-MM')`);
 
       return rows.map((r) => ({ month: r.month, value: r.value }));
+    }),
+
+  // Win/Loss AI insights
+  winLossInsights: publicProcedure.query(async ({ ctx }) => {
+    const wonLeads = await ctx.db
+      .select({ company: leads.company, industry: leads.industry, source: leads.source,
+        companySize: leads.companySize, jobTitle: leads.jobTitle, aiScore: leads.aiScore })
+      .from(leads).where(sql`${leads.status} = 'won'`).limit(20);
+    const lostLeads = await ctx.db
+      .select({ company: leads.company, industry: leads.industry, source: leads.source,
+        companySize: leads.companySize, jobTitle: leads.jobTitle, aiScore: leads.aiScore })
+      .from(leads).where(sql`${leads.status} = 'lost'`).limit(20);
+
+    if (wonLeads.length + lostLeads.length < 2) {
+      return { summary: "Not enough data yet. Mark leads as won or lost to generate insights.", patterns: [] };
+    }
+
+    const prompt = `Analyze these won vs lost leads and identify 3-5 key patterns.
+
+WON LEADS (${wonLeads.length}):
+${wonLeads.map((l) => `- ${l.company ?? "?"} | ${l.industry ?? "?"} | ${l.jobTitle ?? "?"} | Size: ${l.companySize ?? "?"} | Source: ${l.source} | Score: ${l.aiScore ?? "?"}`).join("\n")}
+
+LOST LEADS (${lostLeads.length}):
+${lostLeads.map((l) => `- ${l.company ?? "?"} | ${l.industry ?? "?"} | ${l.jobTitle ?? "?"} | Size: ${l.companySize ?? "?"} | Source: ${l.source} | Score: ${l.aiScore ?? "?"}`).join("\n")}
+
+Return ONLY valid JSON: { "summary": "2-3 sentence overall insight", "patterns": [{ "title": string, "insight": string, "action": string }] }`;
+
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001", max_tokens: 800,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const text = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+    try {
+      return JSON.parse(text) as { summary: string; patterns: { title: string; insight: string; action: string }[] };
+    } catch {
+      return { summary: "Could not parse AI response.", patterns: [] };
+    }
+  }),
+
+  // Weekly AI Business Report
+  generateWeeklyReport: publicProcedure
+    .input(z.object({ email: z.string().email().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const [newLeads, wonLeads, paidInvoicesRaw, totalLeadsRaw] = await Promise.all([
+        ctx.db.select({ count: count() }).from(leads).where(gte(leads.createdAt, oneWeekAgo)),
+        ctx.db.select({ count: count() }).from(leads).where(sql`${leads.status} = 'won' AND ${leads.updatedAt} >= ${oneWeekAgo}`),
+        ctx.db.select({ total: sql<number>`sum(${invoices.total})`, count: count() }).from(invoices)
+          .where(sql`${invoices.status} = 'paid' AND ${invoices.updatedAt} >= ${oneWeekAgo}`),
+        ctx.db.select({ count: count() }).from(leads),
+      ]);
+
+      const newLeadsCount = newLeads[0]?.count ?? 0;
+      const wonCount = wonLeads[0]?.count ?? 0;
+      const invoicePaidAmount = Number(paidInvoicesRaw[0]?.total ?? 0);
+      const invoicePaidCount = paidInvoicesRaw[0]?.count ?? 0;
+      const totalLeads = totalLeadsRaw[0]?.count ?? 0;
+      const conversionRate = totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0;
+
+      const prompt = `Generate a brief weekly business report for NexoFlow (software agency).
+
+Stats this week:
+- New leads: ${newLeadsCount}
+- Deals won: ${wonCount}
+- Invoices paid: ${invoicePaidCount} (£${(invoicePaidAmount / 100).toFixed(2)})
+- Overall conversion rate: ${conversionRate}%
+
+Write a professional but friendly 3-paragraph weekly summary with:
+1. Performance overview
+2. Key wins and areas of concern
+3. One strategic recommendation for next week
+
+Keep it under 200 words.`;
+
+      const resp = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001", max_tokens: 400,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const reportText = resp.content[0]?.type === "text" ? resp.content[0].text : "Report generation failed.";
+
+      const recipientEmail = input.email ?? process.env.REPORT_EMAIL ?? "crissmobiss@gmail.com";
+      let emailSent = false;
+      try {
+        await resend.emails.send({
+          from: "NexoFlow Reports <reports@nexoflow.tech>",
+          to: [recipientEmail],
+          subject: `NexoFlow Weekly Report — w/e ${new Date().toLocaleDateString("en-GB")}`,
+          html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#7c5cbf">NexoFlow Weekly Report</h2>
+<p style="color:#666;font-size:13px">Week ending ${new Date().toLocaleDateString("en-GB")}</p>
+<hr style="border-color:#eee">
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+<tr><td style="padding:8px;background:#f9f9f9;border-radius:4px"><strong>New Leads</strong></td><td style="padding:8px;text-align:right;font-weight:bold">${newLeadsCount}</td></tr>
+<tr><td style="padding:8px"><strong>Deals Won</strong></td><td style="padding:8px;text-align:right;color:#22c55e;font-weight:bold">${wonCount}</td></tr>
+<tr><td style="padding:8px;background:#f9f9f9"><strong>Revenue Collected</strong></td><td style="padding:8px;text-align:right;font-weight:bold">£${(invoicePaidAmount / 100).toFixed(2)}</td></tr>
+<tr><td style="padding:8px"><strong>Conversion Rate</strong></td><td style="padding:8px;text-align:right;font-weight:bold">${conversionRate}%</td></tr>
+</table>
+<hr style="border-color:#eee">
+<h3 style="color:#333">AI Analysis</h3>
+${reportText.split("\n").map((p) => p ? `<p style="color:#444;line-height:1.6">${p}</p>` : "").join("")}
+<hr style="border-color:#eee">
+<p style="color:#999;font-size:12px">NexoFlow OS · <a href="https://nexoflow-os-crissmobiss2s-projects.vercel.app">Open Dashboard</a></p>
+</div>`,
+        });
+        emailSent = true;
+      } catch { /* best-effort */ }
+
+      return {
+        stats: { newLeadsCount, wonCount, invoicePaidAmount, invoicePaidCount, conversionRate },
+        report: reportText,
+        emailSent,
+        sentTo: recipientEmail,
+      };
     }),
 });

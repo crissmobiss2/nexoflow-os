@@ -72,4 +72,20 @@ export const clientsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(clients).where(eq(clients.id, input.id));
     }),
+
+  enablePortal: teamProcedure
+    .input(z.object({ id: z.string().uuid(), enabled: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const { randomUUID } = await import("crypto");
+      const [client] = await ctx.db
+        .update(clients)
+        .set({
+          portalEnabled: input.enabled,
+          portalToken: input.enabled ? randomUUID() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(clients.id, input.id))
+        .returning();
+      return client;
+    }),
 });

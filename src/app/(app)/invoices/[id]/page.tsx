@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/client";
 import { formatDate } from "@/lib/utils";
 import {
   ArrowLeft, Download, Trash2, Loader2, Banknote,
-  Clock, CheckCircle2, Send, CreditCard, ExternalLink, Copy,
+  Clock, CheckCircle2, Send, CreditCard, ExternalLink, Copy, RefreshCw,
 } from "lucide-react";
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -58,6 +58,9 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     onSuccess: () => void refetch(),
   });
   const [copiedLink, setCopiedLink] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState("monthly");
+  const setRecurring = api.invoices.setRecurring.useMutation({ onSuccess: () => void refetch() });
+  const createPortal = api.invoices.createCustomerPortal.useMutation();
 
   function copyPaymentLink(url: string) {
     void navigator.clipboard.writeText(url);
@@ -297,6 +300,76 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
               {invoice.author && <InfoRow label="Created by" value={invoice.author.name ?? invoice.author.email} />}
             </div>
           </Section>
+
+          {/* Recurring Billing */}
+          <Section title="Recurring Billing">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Auto-renew</span>
+                <button
+                  onClick={() => setRecurring.mutate({ id, recurringEnabled: !(invoice as any).recurringEnabled, recurringInterval: recurringInterval as "weekly" | "monthly" | "quarterly" })}
+                  disabled={setRecurring.isPending}
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none disabled:opacity-50`}
+                  style={{ background: (invoice as any).recurringEnabled ? "var(--brand-primary)" : "var(--surface-border)" }}
+                >
+                  <span
+                    className="pointer-events-none inline-block h-4 w-4 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: (invoice as any).recurringEnabled ? "translateX(1rem) translateY(0.125rem)" : "translateX(0.125rem) translateY(0.125rem)" }}
+                  />
+                </button>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Interval</label>
+                <select
+                  value={recurringInterval}
+                  onChange={(e) => setRecurringInterval(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+                >
+                  {["weekly", "monthly", "quarterly"].map((v) => (
+                    <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              {(invoice as any).nextRecurringAt && (
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Next: {new Date((invoice as any).nextRecurringAt).toLocaleDateString("en-GB")}
+                </p>
+              )}
+            </div>
+          </Section>
+
+          {/* Stripe Customer Portal */}
+          {invoice.client && (
+            <Section title="Customer Portal">
+              <div className="space-y-2">
+                <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  Open Stripe billing portal for {invoice.client.name} to manage payment methods and view history.
+                </p>
+                {createPortal.data ? (
+                  <a
+                    href={createPortal.data.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                    style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)", border: "1px solid hsl(262 83% 68% / 0.25)" }}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Open Portal
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => createPortal.mutate({ id })}
+                    disabled={createPortal.isPending}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}
+                  >
+                    {createPortal.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    {createPortal.isPending ? "Loading…" : "Get Portal Link"}
+                  </button>
+                )}
+              </div>
+            </Section>
+          )}
 
           {generatePdf.data && (
             <Section title="Generated Content">

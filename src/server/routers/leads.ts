@@ -3,7 +3,8 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
-import { leads, leadOutreach, leadCalls, projects, clients } from "../db/schema";
+import { leads, leadOutreach, leadCalls, projects, clients, proposalVersions, followUpSequences } from "../db/schema";
+import { slack } from "@/lib/slack";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY ?? "not_configured");
@@ -484,6 +485,15 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdow
       const proposalHtml = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
       const proposalUrl = `/api/proposal/${input.id}`;
 
+      const existingVersions = await ctx.db
+        .select({ version: proposalVersions.version })
+        .from(proposalVersions)
+        .where(eq(proposalVersions.leadId, input.id))
+        .orderBy(desc(proposalVersions.version))
+        .limit(1);
+      const nextVersion = (existingVersions[0]?.version ?? 0) + 1;
+      await ctx.db.insert(proposalVersions).values({ leadId: input.id, version: nextVersion, html: proposalHtml });
+
       const [updated] = await ctx.db
         .update(leads)
         .set({ proposalHtml, proposalUrl, updatedAt: new Date() })
@@ -491,5 +501,188 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdow
         .returning();
 
       return { lead: updated, proposalUrl };
+    }),
+
+  scoreWithAi: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
+      if (!lead) throw new Error("Lead not found");
+
+      const prompt = `Score this sales lead from 0-100 and give a one-sentence reason.
+
+Lead info:
+- Name: ${[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+- Company: ${lead.company ?? "Unknown"}
+- Industry: ${lead.industry ?? "Unknown"}
+- Job Title: ${lead.jobTitle ?? "Unknown"}
+- Company Size: ${lead.companySize ?? "Unknown"}
+- Region: ${lead.region ?? "Unknown"}
+- Pain Points: ${lead.painPoints ?? "None listed"}
+- Source: ${lead.source}
+
+Scoring criteria:
+- 80-100: Decision maker, clear pain point, good company size, high urgency
+- 60-79: Good fit but missing some info or not decision maker
+- 40-59: Possible fit, needs qualification
+- 0-39: Poor fit or very little info
+
+Respond ONLY with valid JSON: { "score": <number 0-100>, "reason": "<one sentence>" }`;
+
+      const resp = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const text = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+      let score = 50, reason = "AI scoring completed.";
+      try {
+        const parsed = JSON.parse(text) as { score: number; reason: string };
+        score = Math.min(100, Math.max(0, parsed.score));
+        reason = parsed.reason;
+      } catch { /* use defaults */ }
+
+      const [updated] = await ctx.db
+        .update(leads)
+        .set({ aiScore: score, aiScoreReason: reason, updatedAt: new Date() })
+        .where(eq(leads.id, input.id))
+        .returning();
+      return updated;
+    }),
+
+  parseMeetingNotes: publicProcedure
+    .input(z.object({ id: z.string().uuid(), notes: z.string().min(10) }))
+    .mutation(async ({ ctx, input }) => {
+      const prompt = `Extract structured CRM data from these meeting notes. Return ONLY valid JSON.
+
+Notes: "${input.notes}"
+
+Return: { "painPoints": string, "budget": string, "timeline": string, "nextSteps": string, "outcome": "interested"|"not_interested"|"follow_up"|"won"|"lost"|"unknown", "summary": string }`;
+
+      const resp = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const text = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+      let parsed = { painPoints: "", budget: "", timeline: "", nextSteps: "", outcome: "unknown" as const, summary: "" };
+      try {
+        parsed = { ...parsed, ...(JSON.parse(text) as typeof parsed) };
+      } catch { /* use defaults */ }
+
+      const updatedNotes = `[Meeting Notes]\n${parsed.summary}\n\nPain Points: ${parsed.painPoints}\nBudget: ${parsed.budget}\nTimeline: ${parsed.timeline}\nNext Steps: ${parsed.nextSteps}`;
+      const [updated] = await ctx.db
+        .update(leads)
+        .set({
+          notes: updatedNotes,
+          painPoints: parsed.painPoints || undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(leads.id, input.id))
+        .returning();
+      return { lead: updated, extracted: parsed };
+    }),
+
+  enrichLead: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
+      if (!lead) throw new Error("Lead not found");
+
+      const prompt = `You are a B2B research analyst. Based on the info below, infer enriched profile data.
+
+Company: ${lead.company ?? "Unknown"}
+Website: ${lead.website ?? "Unknown"}
+Industry: ${lead.industry ?? "Unknown"}
+Job Title: ${lead.jobTitle ?? "Unknown"}
+Region: ${lead.region ?? "Unknown"}
+
+Return ONLY valid JSON: {
+  "techStack": "comma-separated likely tech stack",
+  "companySize": "estimated headcount range e.g. '10-50'",
+  "painPoints": "2-3 likely pain points for this company type",
+  "fundingStage": "bootstrap|seed|series-a|series-b|enterprise",
+  "buyerPersona": "brief description of their likely role and priorities"
+}`;
+
+      const resp = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const text = resp.content[0]?.type === "text" ? resp.content[0].text.trim() : "{}";
+      let enriched = { techStack: "", companySize: "", painPoints: "", fundingStage: "", buyerPersona: "" };
+      try {
+        enriched = { ...enriched, ...(JSON.parse(text) as typeof enriched) };
+      } catch { /* use defaults */ }
+
+      const [updated] = await ctx.db
+        .update(leads)
+        .set({
+          techStack: enriched.techStack || lead.techStack || null,
+          companySize: enriched.companySize || lead.companySize || null,
+          painPoints: enriched.painPoints || lead.painPoints || null,
+          enrichedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(leads.id, input.id))
+        .returning();
+      return { lead: updated, enriched };
+    }),
+
+  startFollowUpSequence: publicProcedure
+    .input(z.object({ leadId: z.string().uuid(), name: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const nextSendAt = new Date();
+      nextSendAt.setDate(nextSendAt.getDate() + 1);
+      const [seq] = await ctx.db
+        .insert(followUpSequences)
+        .values({ leadId: input.leadId, name: input.name ?? "Default Sequence", nextSendAt })
+        .returning();
+      return seq;
+    }),
+
+  getFollowUpSequences: publicProcedure
+    .input(z.object({ leadId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(followUpSequences)
+        .where(eq(followUpSequences.leadId, input.leadId))
+        .orderBy(desc(followUpSequences.createdAt));
+    }),
+
+  getProposalVersions: publicProcedure
+    .input(z.object({ leadId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(proposalVersions)
+        .where(eq(proposalVersions.leadId, input.leadId))
+        .orderBy(desc(proposalVersions.version));
+    }),
+
+  signProposal: publicProcedure
+    .input(z.object({
+      versionId: z.string().uuid(),
+      signerName: z.string().min(1),
+      signerEmail: z.string().email(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [version] = await ctx.db
+        .update(proposalVersions)
+        .set({ signedAt: new Date(), signerName: input.signerName, signerEmail: input.signerEmail })
+        .where(eq(proposalVersions.id, input.versionId))
+        .returning();
+      if (version) {
+        const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, version.leadId) });
+        if (lead) {
+          void slack.proposalSigned(
+            [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Lead",
+            lead.company ?? "Unknown",
+          );
+        }
+      }
+      return version;
     }),
 });

@@ -306,6 +306,10 @@ export default function AnalyticsPage() {
   const { data: leadFunnel } = api.analytics.leadFunnel.useQuery();
   const { data: leadSources } = api.analytics.leadSources.useQuery();
   const { data: revenuePipeline } = api.analytics.revenuePipeline.useQuery();
+  const { data: winLoss } = api.analytics.winLossInsights.useQuery();
+  const { data: revenueSummary } = api.invoices.revenueSummary.useQuery();
+  const weeklyReport = api.analytics.generateWeeklyReport.useMutation();
+  const [reportSent, setReportSent] = useState(false);
 
   const statusData = byStatus ?? [];
   const typeData = byType ?? [];
@@ -774,6 +778,64 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* ── MRR / ARR / Revenue Summary ─────────────────────────────────── */}
+        {revenueSummary && (
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: "MRR", value: `£${(revenueSummary.mrr / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(262, 83%, 68%)" },
+              { label: "ARR", value: `£${(revenueSummary.arr / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(142, 68%, 52%)" },
+              { label: "Collected", value: `£${(revenueSummary.totalCollected / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(207, 90%, 62%)" },
+              { label: "Pipeline", value: `£${(revenueSummary.pipeline / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(35, 90%, 58%)" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="rounded-xl p-5" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>{label}</div>
+                <div className="text-2xl font-bold" style={{ color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Win / Loss AI Insights ───────────────────────────────────────── */}
+        {winLoss && (
+          <ChartCard title="AI Win/Loss Insights">
+            <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>{winLoss.summary}</p>
+            {winLoss.patterns?.length > 0 && (
+              <div className="space-y-3">
+                {winLoss.patterns.map((p, i) => (
+                  <div key={i} className="rounded-lg p-3" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)" }}>
+                    <div className="text-xs font-semibold mb-1" style={{ color: "hsl(262, 83%, 68%)" }}>{p.title}</div>
+                    <div className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>{p.insight}</div>
+                    <div className="text-xs font-medium" style={{ color: "hsl(142, 68%, 52%)" }}>→ {p.action}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ChartCard>
+        )}
+
+        {/* ── Weekly Report ────────────────────────────────────────────────── */}
+        <div className="rounded-xl p-5" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Weekly AI Business Report</h3>
+            <button
+              onClick={() => weeklyReport.mutate({}, { onSuccess: () => setReportSent(true) })}
+              disabled={weeklyReport.isPending || reportSent}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ background: "var(--brand-gradient)" }}
+            >
+              {weeklyReport.isPending ? "Generating…" : reportSent ? "✓ Sent to your email" : "Send Weekly Report"}
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Claude analyzes your last 7 days — leads, deals, revenue — and emails a strategic summary to crissmobiss@gmail.com.
+          </p>
+          {weeklyReport.data && (
+            <div className="mt-3 p-3 rounded-lg text-xs whitespace-pre-wrap" style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)" }}>
+              {weeklyReport.data.report}
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/trpc/client";
 import {
-  Star, Plus, Eye, EyeOff, Trash2, Edit3, CheckCircle2, Loader2, Quote,
+  Star, Plus, Eye, EyeOff, Trash2, Edit3, CheckCircle2, Loader2, Quote, Sparkles,
 } from "lucide-react";
 
 type CS = {
@@ -64,8 +64,17 @@ export default function CaseStudiesPage() {
   const [isNew, setIsNew] = useState(false);
   const [form, setForm] = useState<typeof BLANK>(BLANK);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showAiGen, setShowAiGen] = useState(false);
+  const [aiForm, setAiForm] = useState({ clientName: "", company: "", industry: "", projectDescription: "", outcome: "" });
 
   const { data: studies = [], isLoading, refetch } = api.caseStudies.list.useQuery();
+  const generateWithAi = api.caseStudies.generateWithAi.useMutation({
+    onSuccess: () => {
+      void refetch();
+      setShowAiGen(false);
+      setAiForm({ clientName: "", company: "", industry: "", projectDescription: "", outcome: "" });
+    },
+  });
   const createMutation = api.caseStudies.create.useMutation({
     onSuccess: () => { void refetch(); setIsNew(false); setForm(BLANK); setSaveError(null); },
     onError: (e) => setSaveError(e.message),
@@ -108,14 +117,80 @@ export default function CaseStudiesPage() {
             {studies.filter((s) => s.published).length} published · {studies.length} total
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
-          style={{ background: "var(--brand-gradient)" }}
-        >
-          <Plus className="w-4 h-4" /> Add Case Study
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAiGen((v) => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
+            style={{ background: "hsl(270 70% 65% / 0.12)", color: "hsl(270, 70%, 65%)", border: "1px solid hsl(270 70% 65% / 0.25)" }}
+          >
+            <Sparkles className="w-4 h-4" /> AI Generate
+          </button>
+          <button
+            onClick={openNew}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
+            style={{ background: "var(--brand-gradient)" }}
+          >
+            <Plus className="w-4 h-4" /> Add Case Study
+          </button>
+        </div>
       </div>
+
+      {/* AI Generate Panel */}
+      {showAiGen && (
+        <div className="rounded-2xl p-6 mb-6" style={{ background: "var(--surface-card)", border: "1px solid hsl(270 70% 65% / 0.3)" }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Sparkles className="w-4 h-4" style={{ color: "hsl(270, 70%, 65%)" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>AI Case Study Generator</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {([
+              ["clientName", "Client Name *"],
+              ["company", "Company"],
+              ["industry", "Industry"],
+              ["outcome", "Key Outcome (e.g. 3x revenue in 6 months)"],
+            ] as [keyof typeof aiForm, string][]).map(([key, label]) => (
+              <div key={key}>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>{label}</label>
+                <input
+                  value={aiForm[key]}
+                  onChange={(e) => setAiForm((f) => ({ ...f, [key]: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mb-4">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Project Description *</label>
+            <textarea
+              value={aiForm.projectDescription}
+              onChange={(e) => setAiForm((f) => ({ ...f, projectDescription: e.target.value }))}
+              rows={3}
+              placeholder="Describe what you built/did for this client…"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none"
+              style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => generateWithAi.mutate(aiForm)}
+              disabled={generateWithAi.isPending || !aiForm.clientName.trim() || !aiForm.projectDescription.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{ background: "hsl(270 70% 65% / 0.15)", color: "hsl(270, 70%, 65%)", border: "1px solid hsl(270 70% 65% / 0.3)" }}
+            >
+              {generateWithAi.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {generateWithAi.isPending ? "Generating…" : "Generate with AI"}
+            </button>
+            <button
+              onClick={() => setShowAiGen(false)}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       {(isNew || editing) && (

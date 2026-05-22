@@ -24,6 +24,7 @@ export default function NewInvoicePage() {
   const router = useRouter();
   const [invoiceNumber, setInvoiceNumber] = useState(genInvoiceNumber());
   const [clientId, setClientId] = useState("");
+  const [currency, setCurrency] = useState("GBP");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [taxPct, setTaxPct] = useState(0);
@@ -62,6 +63,7 @@ export default function NewInvoicePage() {
     create.mutate({
       invoiceNumber,
       clientId: clientId || null,
+      currency,
       status: "draft",
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       notes: notes || undefined,
@@ -151,6 +153,16 @@ export default function NewInvoicePage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                Currency
+              </label>
+              <select style={{ ...inputStyle }} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                {["GBP", "USD", "EUR", "CAD", "AUD"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                 Tax %
               </label>
               <input
@@ -225,9 +237,9 @@ export default function NewInvoicePage() {
           {/* Totals */}
           <div className="pt-4 space-y-1.5" style={{ borderTop: "1px solid var(--surface-border)" }}>
             {[
-              ["Subtotal", `£${(subtotalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
-              [`Tax (${taxPct}%)`, `£${(taxCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
-              ["Total", `£${(totalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
+              ["Subtotal", `${currency} ${(subtotalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
+              [`Tax (${taxPct}%)`, `${currency} ${(taxCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
+              ["Total", `${currency} ${(totalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span style={{ color: "var(--text-muted)" }}>{label}</span>

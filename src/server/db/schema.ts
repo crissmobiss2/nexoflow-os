@@ -76,6 +76,9 @@ export const clients = pgTable("nf_clients", {
   urgency: varchar("urgency", { length: 50 }),
   decisionMakerRole: varchar("decision_maker_role", { length: 100 }),
   notes: text("notes"),
+  portalToken: text("portal_token").unique(),
+  portalEnabled: boolean("portal_enabled").default(false).notNull(),
+  slackWebhookUrl: varchar("slack_webhook_url", { length: 500 }),
   teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
   onboardedAt: timestamp("onboarded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -307,6 +310,11 @@ export const invoices = pgTable(
     subtotal: integer("subtotal").notNull().default(0),
     tax: integer("tax").notNull().default(0),
     total: integer("total").notNull().default(0),
+    currency: varchar("currency", { length: 3 }).notNull().default("GBP"),
+    recurringInterval: varchar("recurring_interval", { length: 20 }), // "monthly" | "weekly" | "quarterly"
+    recurringEnabled: boolean("recurring_enabled").default(false).notNull(),
+    nextRecurringAt: timestamp("next_recurring_at"),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
     dueDate: timestamp("due_date"),
     paidDate: timestamp("paid_date"),
     notes: text("notes"),
@@ -689,6 +697,9 @@ export const leads = pgTable(
     status: leadStatusEnum("status").default("new").notNull(),
     source: leadSourceEnum("source").default("manual").notNull(),
     aiInsights: text("ai_insights"),
+    aiScore: integer("ai_score"), // 0-100
+    aiScoreReason: text("ai_score_reason"),
+    enrichedAt: timestamp("enriched_at"),
     demoHtml: text("demo_html"),
     demoUrl: varchar("demo_url", { length: 500 }),
     demoGeneratedAt: timestamp("demo_generated_at"),
@@ -737,6 +748,8 @@ export const leadRelations = relations(leads, ({ one, many }) => ({
   assignee: one(users, { fields: [leads.assignedTo], references: [users.id] }),
   outreach: many(leadOutreach),
   calls: many(leadCalls),
+  proposalVersions: many(proposalVersions),
+  followUpSequences: many(followUpSequences),
 }));
 
 export const leadOutreachRelations = relations(leadOutreach, ({ one }) => ({
@@ -867,6 +880,55 @@ export const leadCalls = pgTable(
 export const leadCallRelations = relations(leadCalls, ({ one }) => ({
   lead: one(leads, { fields: [leadCalls.leadId], references: [leads.id] }),
   caller: one(users, { fields: [leadCalls.calledBy], references: [users.id] }),
+}));
+
+// ─── Proposal Versions ────────────────────────────────────────────────────────
+
+export const proposalVersions = pgTable(
+  "nf_proposal_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    version: integer("version").notNull().default(1),
+    html: text("html").notNull(),
+    signedAt: timestamp("signed_at"),
+    signerName: varchar("signer_name", { length: 255 }),
+    signerEmail: varchar("signer_email", { length: 255 }),
+    signerIp: varchar("signer_ip", { length: 45 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_proposal_versions_lead_idx").on(t.leadId)],
+);
+
+export const proposalVersionRelations = relations(proposalVersions, ({ one }) => ({
+  lead: one(leads, { fields: [proposalVersions.leadId], references: [leads.id] }),
+}));
+
+// ─── Follow-up Sequences ──────────────────────────────────────────────────────
+
+export const followUpSequenceStatusEnum = pgEnum("nf_followup_status", [
+  "active", "paused", "completed", "cancelled",
+]);
+
+export const followUpSequences = pgTable(
+  "nf_follow_up_sequences",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    name: varchar("name", { length: 255 }).notNull().default("Default Sequence"),
+    status: followUpSequenceStatusEnum("status").default("active").notNull(),
+    currentStep: integer("current_step").default(0).notNull(),
+    totalSteps: integer("total_steps").default(3).notNull(),
+    nextSendAt: timestamp("next_send_at"),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_followup_lead_idx").on(t.leadId)],
+);
+
+export const followUpSequenceRelations = relations(followUpSequences, ({ one }) => ({
+  lead: one(leads, { fields: [followUpSequences.leadId], references: [leads.id] }),
 }));
 
 // ─── Relations for new tables added above ─────────────────────────────────────

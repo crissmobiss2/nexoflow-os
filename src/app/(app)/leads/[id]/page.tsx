@@ -94,6 +94,25 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => router.push("/leads"),
     onError: (err) => setActionError(err.message),
   });
+  const scoreWithAi = api.leads.scoreWithAi.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const enrichLead = api.leads.enrichLead.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [showMeetingNotesInput, setShowMeetingNotesInput] = useState(false);
+  const parseMeetingNotes = api.leads.parseMeetingNotes.useMutation({
+    onSuccess: () => { refetch(); setShowMeetingNotesInput(false); setMeetingNotes(""); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const startFollowUp = api.leads.startFollowUpSequence.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const { data: proposalVersions } = api.leads.getProposalVersions.useQuery({ leadId: id });
 
   if (isLoading) {
     return (
@@ -514,6 +533,75 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                       {copiedProposal ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
+                </div>
+              )}
+              {/* AI Score */}
+              {lead.aiScore != null && (
+                <div className="rounded-xl px-3 py-2 flex items-center justify-between" style={{ background: `hsl(${lead.aiScore >= 70 ? "142 68% 52%" : lead.aiScore >= 40 ? "35 90% 58%" : "0 72% 58%"} / 0.12)` }}>
+                  <span className="text-xs font-semibold" style={{ color: `hsl(${lead.aiScore >= 70 ? "142 68% 52%" : lead.aiScore >= 40 ? "35 90% 58%" : "0 72% 58%"})` }}>
+                    AI Score: {lead.aiScore}/100
+                  </span>
+                  {lead.aiScoreReason && <span className="text-[10px] ml-2 flex-1 text-right" style={{ color: "var(--text-muted)" }}>{lead.aiScoreReason}</span>}
+                </div>
+              )}
+              <button
+                onClick={() => scoreWithAi.mutate({ id: lead.id })}
+                disabled={scoreWithAi.isPending}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}
+              >
+                {scoreWithAi.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {scoreWithAi.isPending ? "Scoring…" : lead.aiScore != null ? "Re-score Lead" : "AI Score Lead"}
+              </button>
+              <button
+                onClick={() => enrichLead.mutate({ id: lead.id })}
+                disabled={enrichLead.isPending}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(35 90% 58% / 0.12)", color: "hsl(35, 90%, 58%)" }}
+              >
+                {enrichLead.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {enrichLead.isPending ? "Enriching…" : lead.enrichedAt ? "Re-enrich Lead" : "Enrich with AI"}
+              </button>
+              <button
+                onClick={() => setShowMeetingNotesInput((v) => !v)}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: "hsl(207 90% 62% / 0.1)", color: "hsl(207, 90%, 62%)" }}
+              >
+                <FileText className="w-3.5 h-3.5" /> Parse Meeting Notes
+              </button>
+              {showMeetingNotesInput && (
+                <div className="space-y-2">
+                  <textarea
+                    rows={4}
+                    placeholder="Paste raw meeting notes here…"
+                    value={meetingNotes}
+                    onChange={(e) => setMeetingNotes(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2 text-xs"
+                    style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)", resize: "vertical", outline: "none" }}
+                  />
+                  <button
+                    onClick={() => parseMeetingNotes.mutate({ id: lead.id, notes: meetingNotes })}
+                    disabled={parseMeetingNotes.isPending || meetingNotes.length < 10}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--brand-gradient)" }}
+                  >
+                    {parseMeetingNotes.isPending ? <><Loader2 className="w-3 h-3 animate-spin" /> Parsing…</> : "Extract & Save to CRM"}
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => startFollowUp.mutate({ leadId: lead.id })}
+                disabled={startFollowUp.isPending || startFollowUp.isSuccess}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(142 68% 52% / 0.08)", color: "hsl(142, 68%, 52%)", border: "1px solid hsl(142 68% 52% / 0.2)" }}
+              >
+                <Send className="w-3.5 h-3.5" />
+                {startFollowUp.isSuccess ? "✓ Follow-up Sequence Started" : "Start Follow-up Sequence"}
+              </button>
+              {/* Proposal Versions */}
+              {proposalVersions && proposalVersions.length > 0 && (
+                <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                  {proposalVersions.length} proposal version{proposalVersions.length !== 1 ? "s" : ""} · {proposalVersions.filter((v) => v.signedAt).length} signed
                 </div>
               )}
               <Link
