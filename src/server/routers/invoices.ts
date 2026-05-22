@@ -42,7 +42,7 @@ export const invoicesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.query.invoices.findFirst({
         where: (t, { and, eq }) => and(eq(t.id, input.id), eq(t.teamId, ctx.teamId)),
-        with: { client: true, lineItems: true, author: true },
+        with: { client: true, lineItems: true },
       });
     }),
 
