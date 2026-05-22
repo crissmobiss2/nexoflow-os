@@ -297,7 +297,6 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                 </div>
               )}
               <InfoRow label="Created" value={invoice.createdAt ? formatDate(invoice.createdAt) : undefined} />
-              {invoice.author && <InfoRow label="Created by" value={invoice.author.name ?? invoice.author.email} />}
             </div>
           </Section>
 
