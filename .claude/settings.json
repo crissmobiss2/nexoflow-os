@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dev-browser *)",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(tsx scripts/*)"
+    ]
+  }
+}
