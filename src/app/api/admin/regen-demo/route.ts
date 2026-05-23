@@ -132,7 +132,6 @@ End with </body></html>`;
 
   return { prompt, head };
 }
-}
 
 export async function POST(req: NextRequest) {
   // Secret check
