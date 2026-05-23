@@ -122,15 +122,18 @@ async function main() {
     CREATE TABLE IF NOT EXISTS nf_teams (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR(255) NOT NULL,
+      slug VARCHAR(64) NOT NULL DEFAULT 'default',
       description TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  // Backfill slug column if missing (installs created without it)
+  await run("nf_teams.slug", `ALTER TABLE nf_teams ADD COLUMN IF NOT EXISTS slug VARCHAR(64) NOT NULL DEFAULT 'default'`);
   // Seed a default team for single-user installs (fallback when session has no teamId)
   await run("nf_teams default seed", `
-    INSERT INTO nf_teams (id, name)
-    VALUES ('00000000-0000-0000-0000-000000000000', 'Default Team')
+    INSERT INTO nf_teams (id, name, slug)
+    VALUES ('00000000-0000-0000-0000-000000000000', 'Default Team', 'default')
     ON CONFLICT (id) DO NOTHING
   `);
   // Drop FK constraints that reference nf_teams — single-user installs have no team rows;
