@@ -67,12 +67,12 @@ const config: NextConfig = {
   async headers() {
     return [
       {
-        // Strict headers for the main app
-        source: "/((?!api/demo).*)",
+        // Apply strict security headers to all routes first
+        source: "/(.*)",
         headers: securityHeaders,
       },
       {
-        // Relaxed headers for AI-generated demo pages
+        // Demo pages override CSP and framing — applied after, so these win
         source: "/api/demo/:path*",
         headers: demoHeaders,
       },
