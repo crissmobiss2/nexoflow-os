@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,6 +19,7 @@ export default function SignInPage() {
     try {
       const result = await signIn("credentials", {
         email,
+        password,
         redirect: false,
       });
       if (result?.error) {
@@ -79,6 +81,30 @@ export default function SignInPage() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all duration-150"
+              style={{
+                background: "var(--surface-ground, #0a0a0f)",
+                color: "var(--text-primary, #f1f1f7)",
+                border: "1px solid var(--surface-border, #22222e)",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+              style={{ color: "var(--text-muted, #8888a0)" }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all duration-150"
               style={{
                 background: "var(--surface-ground, #0a0a0f)",

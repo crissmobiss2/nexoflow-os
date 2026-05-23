@@ -61,8 +61,8 @@ Use native (SwiftUI / WPF / WinUI) when:
 □ Background processes: what runs when the window is closed?
 □ Auto-update: required? User-controlled or automatic?
 □ Code signing: client has Apple Developer cert? Windows EV cert?
-  → Apple Developer Program: £99/year (required for notarization)
-  → Windows EV Code Signing cert: £200-£400/year (required for SmartScreen trust)
+  → Apple Developer Program: $99/year (required for notarization)
+  → Windows EV Code Signing cert: $200-$400/year (required for SmartScreen trust)
 □ Existing desktop app? (migration vs. new build)
 □ Internal tool or commercial product? (changes distribution requirements)
 ```
@@ -246,7 +246,7 @@ APPLE_TEAM_ID
 ```bash
 # Required to prevent Windows SmartScreen "Unknown Publisher" warning
 # EV (Extended Validation) cert required to bypass SmartScreen entirely
-# Cost: ~£200-£400/year from DigiCert, Sectigo, GlobalSign
+# Cost: ~$200-$400/year from DigiCert, Sectigo, GlobalSign
 
 WINDOWS_CERTIFICATE       # PFX file (base64)
 WINDOWS_CERTIFICATE_PASSWORD

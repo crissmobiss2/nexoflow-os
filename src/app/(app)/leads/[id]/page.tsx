@@ -8,7 +8,7 @@ import {
   ArrowLeft, ChevronRight, Globe, Mail, Phone, Building2, MapPin,
   Linkedin, Loader2, Sparkles, Zap, Send, ExternalLink, Tag, FolderKanban,
   ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor, FileText,
-  PhoneCall, Plus, Clock,
+  PhoneCall, Plus, Clock, Search, Palette, Eye, Award, Lock, Unlock, RotateCw, X,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -112,7 +112,31 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => { refetch(); setActionError(null); },
     onError: (err) => setActionError(err.message),
   });
+  const scrapeLead = api.leads.scrapeLead.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const generateBusinessProfile = api.leads.generateBusinessProfile.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const rotateShareToken = api.leads.rotateShareToken.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const revokeShare = api.leads.revokeShare.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); },
+    onError: (err) => setActionError(err.message),
+  });
+  const recordOutcome = api.leads.recordOutcome.useMutation({
+    onSuccess: () => { refetch(); setActionError(null); setShowOutcomeForm(false); },
+    onError: (err) => setActionError(err.message),
+  });
+  const [showOutcomeForm, setShowOutcomeForm] = useState(false);
+  const [outcomeForm, setOutcomeForm] = useState({ outcome: "won" as "won"|"lost"|"ghosted"|"not_a_fit"|"follow_up", valueUsd: "", notes: "" });
   const { data: proposalVersions } = api.leads.getProposalVersions.useQuery({ leadId: id });
+  const { data: demoViews } = api.leads.getDemoViews.useQuery({ leadId: id });
+  const { data: outcomes } = api.leads.getOutcomes.useQuery({ leadId: id });
 
   if (isLoading) {
     return (
@@ -373,6 +397,135 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
 
+          {/* Business Profile (new — from real scrape + Sonnet) */}
+          {lead.businessProfile && (
+            <div
+              className="rounded-xl p-5"
+              style={{ background: "hsl(207 90% 62% / 0.05)", border: "1px solid hsl(207 90% 62% / 0.2)" }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4" style={{ color: "hsl(207, 90%, 62%)" }} />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(207, 90%, 62%)" }}>Business Profile</h3>
+                </div>
+                <button
+                  onClick={() => generateBusinessProfile.mutate({ id: lead.id, forceScrape: true })}
+                  disabled={generateBusinessProfile.isPending}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ background: "hsl(207 90% 62% / 0.12)", color: "hsl(207, 90%, 62%)" }}
+                >
+                  {generateBusinessProfile.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
+                  {generateBusinessProfile.isPending ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
+              <div className="space-y-3">
+                {lead.businessProfile.summary && (
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>{lead.businessProfile.summary}</p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {lead.businessProfile.offer && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Their offer</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>{lead.businessProfile.offer}</div>
+                    </div>
+                  )}
+                  {lead.businessProfile.targetCustomer && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Target customer</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>{lead.businessProfile.targetCustomer}</div>
+                    </div>
+                  )}
+                  {lead.businessProfile.toneOfVoice && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Tone</div>
+                      <div className="text-xs capitalize" style={{ color: "var(--text-secondary)" }}>{lead.businessProfile.toneOfVoice}</div>
+                    </div>
+                  )}
+                  {lead.businessProfile.estimatedValue && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Est. value</div>
+                      <div className="text-xs font-semibold" style={{ color: "hsl(142, 80%, 45%)" }}>{lead.businessProfile.estimatedValue}</div>
+                    </div>
+                  )}
+                </div>
+                {(lead.businessProfile.brandColors?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Brand palette</div>
+                    <div className="flex gap-1.5">
+                      {lead.businessProfile.brandColors!.map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-md" style={{ background: c, border: "1px solid var(--surface-border)" }} />
+                          <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>{c}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(lead.businessProfile.visibleWeaknesses?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Visible weaknesses</div>
+                    <ul className="space-y-1">
+                      {lead.businessProfile.visibleWeaknesses!.map((w, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>
+                          <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "hsl(35, 90%, 60%)" }} />
+                          {w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(lead.businessProfile.buildOpportunities?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Build opportunities</div>
+                    <div className="space-y-2">
+                      {lead.businessProfile.buildOpportunities!.map((o, i) => (
+                        <div key={i} className="rounded-lg px-3 py-2" style={{ background: "var(--surface-elevated)" }}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{o.title}</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{o.effort}</span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>{o.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lead.businessProfile.demoAngle && (
+                  <div className="rounded-lg px-3 py-2.5" style={{ background: "hsl(262 83% 68% / 0.06)", border: "1px solid hsl(262 83% 68% / 0.15)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "hsl(262, 83%, 68%)" }}>Demo angle</div>
+                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{lead.businessProfile.demoAngle}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Scraped Profile fallback display */}
+          {!lead.businessProfile && lead.scrapedProfile && (
+            <div
+              className="rounded-xl p-5"
+              style={{ background: "hsl(207 90% 62% / 0.04)", border: "1px dashed hsl(207 90% 62% / 0.2)" }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4" style={{ color: "hsl(207, 90%, 62%)" }} />
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    Site scraped — ready to build profile
+                  </span>
+                </div>
+                <button
+                  onClick={() => generateBusinessProfile.mutate({ id: lead.id })}
+                  disabled={generateBusinessProfile.isPending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ background: "hsl(207 90% 62% / 0.15)", color: "hsl(207, 90%, 62%)" }}
+                >
+                  {generateBusinessProfile.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  Build Business Profile
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Lead intel */}
           {(lead.techStack || lead.painPoints || lead.scrapedData) && (
             <Section title="Scraped Intelligence">
@@ -443,6 +596,193 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Right sidebar */}
         <div className="space-y-4">
+          {/* Research (scrape + profile) */}
+          <Section title="Research">
+            <div className="space-y-2">
+              <button
+                onClick={() => scrapeLead.mutate({ id: lead.id })}
+                disabled={scrapeLead.isPending || !lead.website}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(207 90% 62% / 0.12)", color: "hsl(207, 90%, 62%)" }}
+                title={!lead.website ? "Add a website to scrape" : ""}
+              >
+                {scrapeLead.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                {scrapeLead.isPending ? "Scraping website…" : lead.scrapedAt ? "Re-scrape Website" : "Scrape Website"}
+              </button>
+              <button
+                onClick={() => generateBusinessProfile.mutate({ id: lead.id })}
+                disabled={generateBusinessProfile.isPending}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}
+              >
+                {generateBusinessProfile.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Palette className="w-3.5 h-3.5" />}
+                {generateBusinessProfile.isPending ? "Building profile…" : lead.businessProfile ? "Refresh Business Profile" : "Build Business Profile"}
+              </button>
+              {lead.scrapedAt && (
+                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  Last scraped {new Date(lead.scrapedAt).toLocaleString()}
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* Demo Tracking */}
+          {lead.demoUrl && (lead.demoViewCount ?? 0) > 0 && (
+            <Section title="Demo Engagement">
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg px-2 py-2 text-center" style={{ background: "var(--surface-elevated)" }}>
+                    <div className="text-base font-bold" style={{ color: "var(--text-primary)" }}>{lead.demoViewCount ?? 0}</div>
+                    <div className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Views</div>
+                  </div>
+                  <div className="rounded-lg px-2 py-2 text-center" style={{ background: "var(--surface-elevated)" }}>
+                    <div className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+                      {Math.floor((lead.demoTotalSeconds ?? 0) / 60)}m{(lead.demoTotalSeconds ?? 0) % 60}s
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Total</div>
+                  </div>
+                  <div className="rounded-lg px-2 py-2 text-center" style={{ background: "var(--surface-elevated)" }}>
+                    <div className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+                      {Math.max(...(demoViews ?? [{ scrollDepthPct: 0 }]).map((v) => v.scrollDepthPct), 0)}%
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Scroll</div>
+                  </div>
+                </div>
+                {(demoViews?.length ?? 0) > 0 && (
+                  <div className="space-y-1.5">
+                    {(demoViews ?? []).slice(0, 4).map((v) => (
+                      <div key={v.id} className="flex items-center justify-between text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                        <span>{new Date(v.lastSeenAt).toLocaleString()}</span>
+                        <span className="font-mono" style={{ color: "var(--text-muted)" }}>
+                          {Math.floor(v.secondsOnPage / 60)}:{String(v.secondsOnPage % 60).padStart(2, "0")} · {v.scrollDepthPct}% · {v.ctaClicks} clk
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* Share controls */}
+          {lead.demoUrl && (
+            <Section title="Share Link">
+              <div className="space-y-2">
+                {lead.shareRevokedAt ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: "hsl(0 70% 60% / 0.1)", color: "hsl(0, 70%, 60%)" }}>
+                    <Lock className="w-3.5 h-3.5" />
+                    Revoked {new Date(lead.shareRevokedAt).toLocaleDateString()}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: "hsl(142 68% 52% / 0.08)", color: "hsl(142, 68%, 52%)" }}>
+                    <Unlock className="w-3.5 h-3.5" />
+                    Live
+                  </div>
+                )}
+                <button
+                  onClick={() => rotateShareToken.mutate({ id: lead.id })}
+                  disabled={rotateShareToken.isPending}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}
+                >
+                  <RotateCw className="w-3.5 h-3.5" /> Rotate token
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm("Revoke this demo share link? Anyone with the old link will see a 410.")) {
+                      revokeShare.mutate({ id: lead.id });
+                    }
+                  }}
+                  disabled={revokeShare.isPending || !!lead.shareRevokedAt}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ background: "hsl(0 70% 60% / 0.1)", color: "hsl(0, 70%, 60%)" }}
+                >
+                  <Lock className="w-3.5 h-3.5" /> Revoke
+                </button>
+              </div>
+            </Section>
+          )}
+
+          {/* Outcome capture */}
+          <Section title="Outcome">
+            {!showOutcomeForm ? (
+              <button
+                onClick={() => setShowOutcomeForm(true)}
+                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: "hsl(142 68% 52% / 0.1)", color: "hsl(142, 68%, 52%)" }}
+              >
+                <Award className="w-3.5 h-3.5" /> Record outcome
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <select
+                  value={outcomeForm.outcome}
+                  onChange={(e) => setOutcomeForm((f) => ({ ...f, outcome: e.target.value as typeof outcomeForm.outcome }))}
+                  className="w-full px-3 py-2 rounded-lg text-xs"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+                >
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                  <option value="ghosted">Ghosted</option>
+                  <option value="not_a_fit">Not a fit</option>
+                  <option value="follow_up">Follow up later</option>
+                </select>
+                {outcomeForm.outcome === "won" && (
+                  <input
+                    type="number"
+                    placeholder="Project value $"
+                    value={outcomeForm.valueUsd}
+                    onChange={(e) => setOutcomeForm((f) => ({ ...f, valueUsd: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg text-xs"
+                    style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+                  />
+                )}
+                <textarea
+                  placeholder="Notes (optional)"
+                  rows={2}
+                  value={outcomeForm.notes}
+                  onChange={(e) => setOutcomeForm((f) => ({ ...f, notes: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-xs"
+                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)", resize: "none" }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowOutcomeForm(false)}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs"
+                    style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => recordOutcome.mutate({
+                      leadId: lead.id,
+                      outcome: outcomeForm.outcome,
+                      valueCents: outcomeForm.valueUsd ? Math.round(parseFloat(outcomeForm.valueUsd) * 100) : undefined,
+                      notes: outcomeForm.notes || undefined,
+                    })}
+                    disabled={recordOutcome.isPending}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--brand-gradient)" }}
+                  >
+                    {recordOutcome.isPending ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </div>
+            )}
+            {(outcomes?.length ?? 0) > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {(outcomes ?? []).slice(0, 3).map((o) => (
+                  <div key={o.id} className="flex items-center justify-between text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                    <span className="capitalize">{o.outcome.replace("_", " ")}</span>
+                    <span style={{ color: "var(--text-muted)" }}>
+                      {o.valueCents ? `$${(o.valueCents / 100).toLocaleString()}` : ""} {new Date(o.capturedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
           {/* Quick actions */}
           <Section title="Actions">
             <div className="space-y-2">
@@ -711,7 +1051,7 @@ function CallLogSection({ leadId, calls, onRefetch }: { leadId: string; calls: C
                 <div className="flex items-center gap-2">
                   <PhoneCall className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
                   <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
-                    {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Call logged"}
+                    {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Call logged"}
                   </span>
                   {c.durationMinutes && (
                     <span className="flex items-center gap-0.5 text-[11px]" style={{ color: "var(--text-muted)" }}>

@@ -54,7 +54,7 @@ export function formatProjectType(type: string): string {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",

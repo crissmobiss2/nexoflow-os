@@ -60,7 +60,7 @@ export function SyncStatus() {
   const config = STATUS_CONFIG[health];
 
   const lastSyncStr = data.lastSyncAt
-    ? new Date(data.lastSyncAt).toLocaleString("en-GB", {
+    ? new Date(data.lastSyncAt).toLocaleString("en-US", {
         day: "numeric",
         month: "short",
         hour: "2-digit",

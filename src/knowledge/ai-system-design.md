@@ -68,7 +68,7 @@ const draftProposal = async (discoveryNotes: string) => {
         "scope": ["item1", "item2"],
         "deliverables": ["item1", "item2"],
         "timeline_weeks": number,
-        "recommended_price_gbp": number,
+        "recommended_price_usd": number,
         "why_us": "string"
       }`
     }],
@@ -112,8 +112,8 @@ const scoreLeadWithAI = async (lead: Lead): Promise<LeadScore> => {
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',  // Cheaper for high volume
     max_tokens: 500,
-    system: `You are a B2B lead qualification specialist for a UK AI software agency.
-    Ideal clients: UK professional services, 10-100 employees, £2M-£20M revenue, 
+    system: `You are a B2B lead qualification specialist for a USA-based AI software agency.
+    Ideal clients: US professional services, 10-100 employees, $2M-$20M revenue, 
     operations-heavy, decision maker present.`,
     messages: [{
       role: 'user',
@@ -378,10 +378,10 @@ Opus:   Input $15/MTok    | Output $75/MTok
 
 **Budget guardrails per use case:**
 ```
-Per classification:    < £0.001 (Haiku)
-Per proposal draft:   < £0.05  (Sonnet)
-Per agent run:        < £0.50  (Sonnet, budget by token limit)
-Per deep analysis:    < £2.00  (Opus, human-approved)
+Per classification:    < $0.001 (Haiku)
+Per proposal draft:   < $0.05  (Sonnet)
+Per agent run:        < $0.50  (Sonnet, budget by token limit)
+Per deep analysis:    < $2.00  (Opus, human-approved)
 ```
 
 ---
@@ -509,11 +509,11 @@ const tokenBudgets = {
 ```
 Track per feature:
   - Total tokens in/out
-  - Cost in £
+  - Cost in $
   - Requests per day
   - Cost per unit of value (cost per lead scored, cost per proposal)
 
-Alert: if any feature exceeds £50/month → review and optimise
+Alert: if any feature exceeds $50/month → review and optimise
 ```
 
 ---

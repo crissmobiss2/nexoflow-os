@@ -7,7 +7,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers";
 import {
   Target, Plus, Upload, Globe, Mail, Phone, Building2,
-  Loader2, ArrowRight, Sparkles, ChevronDown,
+  Loader2, ArrowRight, Sparkles, ChevronDown, Trash2, CheckSquare, Square, X, Award,
 } from "lucide-react";
 
 const PIPELINE_STAGES: { key: string; label: string; color: string; bg: string }[] = [
@@ -29,10 +29,46 @@ type ViewMode = "table" | "kanban";
 export default function LeadsPage() {
   const [view, setView] = useState<ViewMode>("table");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: allLeads = [], isLoading, refetch } = api.leads.list.useQuery(
     filterStatus ? { status: filterStatus as any } : undefined,
   );
+
+  const bulkDelete = api.leads.bulkDelete.useMutation({
+    onSuccess: () => { setSelected(new Set()); void refetch(); },
+  });
+  const bulkUpdateStatus = api.leads.bulkUpdateStatus.useMutation({
+    onSuccess: () => { setSelected(new Set()); void refetch(); },
+  });
+  const bulkScrape = api.leads.bulkScrape.useMutation({
+    onSuccess: (r) => {
+      alert(`Scraped ${r.succeeded} · failed ${r.failed}`);
+      setSelected(new Set());
+      void refetch();
+    },
+  });
+  const bulkGenerateDemo = api.leads.bulkGenerateDemo.useMutation({
+    onSuccess: (r) => {
+      alert(`Generated ${r.succeeded} demos · failed ${r.failed}`);
+      setSelected(new Set());
+      void refetch();
+    },
+  });
+
+  function toggleSelect(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function selectAll() {
+    setSelected(new Set(allLeads.map((l) => l.id)));
+  }
+  function clearSelection() {
+    setSelected(new Set());
+  }
 
   const counts = PIPELINE_STAGES.reduce<Record<string, number>>((acc, s) => {
     acc[s.key] = allLeads.filter((l) => l.status === s.key).length;
@@ -120,6 +156,77 @@ export default function LeadsPage() {
         ))}
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl mb-4 sticky top-2 z-10"
+          style={{ background: "var(--brand-gradient)", color: "white" }}
+        >
+          <span className="text-xs font-semibold">{selected.size} selected</span>
+          <button onClick={clearSelection} className="text-xs underline opacity-90 hover:opacity-100">Clear</button>
+          <button onClick={selectAll} className="text-xs underline opacity-90 hover:opacity-100">Select all</button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (selected.size > 20) { alert("Scraping is limited to 20 leads per batch."); return; }
+                bulkScrape.mutate({ ids: [...selected] });
+              }}
+              disabled={bulkScrape.isPending || bulkGenerateDemo.isPending}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+              title="Scrape websites for up to 20 leads"
+            >
+              {bulkScrape.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              Scrape
+            </button>
+            <button
+              onClick={() => {
+                if (selected.size > 10) { alert("Demo generation is limited to 10 leads per batch (Sonnet calls)."); return; }
+                if (confirm(`Generate ${selected.size} demos? This will take ~${selected.size * 30}s and cost ~$${(selected.size * 0.04).toFixed(2)} in API.`)) {
+                  bulkGenerateDemo.mutate({ ids: [...selected] });
+                }
+              }}
+              disabled={bulkGenerateDemo.isPending || bulkScrape.isPending}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+              title="Auto-scrape, profile, and generate demos for up to 10 leads"
+            >
+              {bulkGenerateDemo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
+              Generate Demos
+            </button>
+            <select
+              onChange={(e) => {
+                if (e.target.value && confirm(`Move ${selected.size} leads to ${e.target.value}?`)) {
+                  bulkUpdateStatus.mutate({ ids: [...selected], status: e.target.value as any });
+                }
+                e.target.value = "";
+              }}
+              defaultValue=""
+              className="px-2 py-1 rounded-lg text-xs"
+              style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
+            >
+              <option value="" disabled>Move to status…</option>
+              {PIPELINE_STAGES.map((s) => (
+                <option key={s.key} value={s.key} style={{ color: "#000" }}>{s.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                if (confirm(`Delete ${selected.size} leads permanently? This cannot be undone.`)) {
+                  bulkDelete.mutate({ ids: [...selected] });
+                }
+              }}
+              disabled={bulkDelete.isPending}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+            >
+              {bulkDelete.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--text-muted)" }} />
@@ -127,7 +234,7 @@ export default function LeadsPage() {
       ) : allLeads.length === 0 ? (
         <EmptyState />
       ) : view === "table" ? (
-        <LeadTable leads={allLeads} />
+        <LeadTable leads={allLeads} selected={selected} onToggle={toggleSelect} />
       ) : (
         <KanbanView leads={allLeads} onRefetch={refetch} />
       )}
@@ -174,7 +281,7 @@ function EmptyState() {
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type Lead = RouterOutput["leads"]["list"][number];
 
-function LeadTable({ leads: rows }: { leads: Lead[] }) {
+function LeadTable({ leads: rows, selected, onToggle }: { leads: Lead[]; selected: Set<string>; onToggle: (id: string) => void }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -184,12 +291,12 @@ function LeadTable({ leads: rows }: { leads: Lead[] }) {
         className="grid px-6 py-3"
         style={{
           borderBottom: "1px solid var(--surface-border)",
-          gridTemplateColumns: "2fr 1.5fr 120px 100px 100px 16px",
+          gridTemplateColumns: "20px 2fr 1.5fr 120px 100px 100px 16px",
           gap: "1rem",
         }}
       >
-        {["Lead", "Company / Contact", "Industry", "Status", "Actions", ""].map((h) => (
-          <div key={h} className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+        {["", "Lead", "Company / Contact", "Industry", "Status", "Actions", ""].map((h, i) => (
+          <div key={i} className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
             {h}
           </div>
         ))}
@@ -197,16 +304,27 @@ function LeadTable({ leads: rows }: { leads: Lead[] }) {
       {rows.map((lead) => {
         const stage = STAGE_MAP[lead.status];
         const fullName = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.email || "Unnamed Lead";
+        const isSelected = selected.has(lead.id);
         return (
           <div
             key={lead.id}
             className="grid items-center px-6 py-4"
             style={{
               borderBottom: "1px solid var(--surface-border-subtle)",
-              gridTemplateColumns: "2fr 1.5fr 120px 100px 100px 16px",
+              gridTemplateColumns: "20px 2fr 1.5fr 120px 100px 100px 16px",
               gap: "1rem",
+              background: isSelected ? "hsl(220 90% 62% / 0.05)" : undefined,
             }}
           >
+            {/* Checkbox */}
+            <button
+              onClick={() => onToggle(lead.id)}
+              className="p-0.5 rounded"
+              style={{ color: isSelected ? "var(--brand-primary)" : "var(--text-muted)" }}
+              aria-label={isSelected ? "Deselect" : "Select"}
+            >
+              {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            </button>
             {/* Name */}
             <div className="flex items-center gap-3 min-w-0">
               <div

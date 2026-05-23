@@ -61,8 +61,8 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
           {[
             { label: "Total Referrals", value: String(affiliate.totalReferrals), color: "#60a5fa" },
             { label: "Conversion Rate", value: `${conversionRate}%`, color: "#a78bfa" },
-            { label: "Earnings Pending", value: `£${(pending / 100).toFixed(2)}`, color: "#f59e0b" },
-            { label: "Total Paid Out", value: `£${(paidOut / 100).toFixed(2)}`, color: "#22c55e" },
+            { label: "Earnings Pending", value: `$${(pending / 100).toFixed(2)}`, color: "#f59e0b" },
+            { label: "Total Paid Out", value: `$${(paidOut / 100).toFixed(2)}`, color: "#22c55e" },
           ].map((m) => (
             <div key={m.label} style={{ background: "#1a1a2e", border: "1px solid #2d2d44", borderRadius: 12, padding: "20px 24px" }}>
               <div style={{ fontSize: 12, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{m.label}</div>
@@ -99,10 +99,10 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
               {referrals.map((r) => (
                 <div key={r.id} style={{ background: "#1a1a2e", border: "1px solid #2d2d44", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
-                    <div style={{ fontSize: 13, color: "#888" }}>{new Date(r.createdAt).toLocaleDateString("en-GB")}</div>
+                    <div style={{ fontSize: 13, color: "#888" }}>{new Date(r.createdAt).toLocaleDateString("en-US")}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    {r.commissionCents ? <div style={{ fontWeight: 700 }}>£{(r.commissionCents / 100).toFixed(2)}</div> : null}
+                    {r.commissionCents ? <div style={{ fontWeight: 700 }}>${(r.commissionCents / 100).toFixed(2)}</div> : null}
                     <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: `${REF_STATUS_COLOR[r.status] ?? "#888"}22`, color: REF_STATUS_COLOR[r.status] ?? "#888", border: `1px solid ${REF_STATUS_COLOR[r.status] ?? "#888"}44`, textTransform: "capitalize" }}>
                       {r.status}
                     </span>

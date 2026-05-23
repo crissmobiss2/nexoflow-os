@@ -146,7 +146,7 @@ export default function AuditLogPage() {
                     style={{ gridTemplateColumns: "160px 140px 120px 1fr 40px", gap: "0.75rem", borderBottom: "1px solid var(--surface-border-subtle)" }}
                   >
                     <span className="text-xs font-mono" style={{ color: "var(--text-secondary)" }}>
-                      {new Date(log.createdAt).toLocaleString("en-GB", {
+                      {new Date(log.createdAt).toLocaleString("en-US", {
                         day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
                       })}
                     </span>

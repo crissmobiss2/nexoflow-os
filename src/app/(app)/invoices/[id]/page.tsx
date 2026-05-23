@@ -212,10 +212,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
-              £{(invoice.total / 100).toLocaleString()}
+              ${(invoice.total / 100).toLocaleString()}
             </div>
             <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-              VAT: £{(invoice.tax / 100).toLocaleString()}
+              Tax: ${(invoice.tax / 100).toLocaleString()}
             </div>
           </div>
         </div>
@@ -243,23 +243,23 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                       <tr key={item.id} style={{ borderBottom: "1px solid var(--surface-border-subtle)" }}>
                         <td className="py-2.5" style={{ color: "var(--text-primary)" }}>{item.description}</td>
                         <td className="py-2.5 text-right tabular-nums" style={{ color: "var(--text-secondary)" }}>{item.quantity}</td>
-                        <td className="py-2.5 text-right tabular-nums" style={{ color: "var(--text-secondary)" }}>£{(item.rate / 100).toLocaleString()}</td>
-                        <td className="py-2.5 text-right tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>£{(item.amount / 100).toLocaleString()}</td>
+                        <td className="py-2.5 text-right tabular-nums" style={{ color: "var(--text-secondary)" }}>${(item.rate / 100).toLocaleString()}</td>
+                        <td className="py-2.5 text-right tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>${(item.amount / 100).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={3} className="pt-3 text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Subtotal</td>
-                      <td className="pt-3 text-right text-sm tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>£{(invoice.subtotal / 100).toLocaleString()}</td>
+                      <td className="pt-3 text-right text-sm tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>${(invoice.subtotal / 100).toLocaleString()}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="pt-1 text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Tax</td>
-                      <td className="pt-1 text-right text-sm tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>£{(invoice.tax / 100).toLocaleString()}</td>
+                      <td className="pt-1 text-right text-sm tabular-nums font-semibold" style={{ color: "var(--text-primary)" }}>${(invoice.tax / 100).toLocaleString()}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="pt-2 text-right text-sm font-bold" style={{ color: "var(--text-primary)", borderTop: "2px solid var(--surface-border)" }}>Total</td>
-                      <td className="pt-2 text-right text-lg font-bold tabular-nums" style={{ color: "var(--text-primary)", borderTop: "2px solid var(--surface-border)" }}>£{(invoice.total / 100).toLocaleString()}</td>
+                      <td className="pt-2 text-right text-lg font-bold tabular-nums" style={{ color: "var(--text-primary)", borderTop: "2px solid var(--surface-border)" }}>${(invoice.total / 100).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -332,7 +332,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
               </div>
               {(invoice as any).nextRecurringAt && (
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Next: {new Date((invoice as any).nextRecurringAt).toLocaleDateString("en-GB")}
+                  Next: {new Date((invoice as any).nextRecurringAt).toLocaleDateString("en-US")}
                 </p>
               )}
             </div>

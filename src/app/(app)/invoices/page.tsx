@@ -137,7 +137,7 @@ export default function InvoicesPage() {
                 </div>
 
                 <div className="text-sm font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
-                  £{(invoice.total / 100).toLocaleString()}
+                  ${(invoice.total / 100).toLocaleString()}
                 </div>
 
                 <ArrowRight className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />

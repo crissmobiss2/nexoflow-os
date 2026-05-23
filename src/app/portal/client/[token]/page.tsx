@@ -44,8 +44,8 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
         {/* Metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
           {[
-            { label: "Total Paid", value: `£${(totalPaid / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`, color: "#22c55e" },
-            { label: "Outstanding", value: `£${(totalDue / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`, color: "#f59e0b" },
+            { label: "Total Paid", value: `$${(totalPaid / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, color: "#22c55e" },
+            { label: "Outstanding", value: `$${(totalDue / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, color: "#f59e0b" },
             { label: "Active Projects", value: String(clientProjects.filter((p) => p.status !== "archived").length), color: "#60a5fa" },
           ].map((m) => (
             <div key={m.label} style={{ background: "#1a1a2e", border: "1px solid #2d2d44", borderRadius: 12, padding: "20px 24px" }}>
@@ -86,10 +86,10 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
                 <div key={inv.id} style={{ background: "#1a1a2e", border: "1px solid #2d2d44", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontWeight: 600, marginBottom: 2 }}>{inv.invoiceNumber}</div>
-                    {inv.dueDate && <div style={{ fontSize: 12, color: "#888" }}>Due {new Date(inv.dueDate).toLocaleDateString("en-GB")}</div>}
+                    {inv.dueDate && <div style={{ fontSize: 12, color: "#888" }}>Due {new Date(inv.dueDate).toLocaleDateString("en-US")}</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>£{(inv.total / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>${(inv.total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
                     <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: `${STATUS_COLOR[inv.status] ?? "#888"}22`, color: STATUS_COLOR[inv.status] ?? "#888", border: `1px solid ${STATUS_COLOR[inv.status] ?? "#888"}44`, textTransform: "capitalize" }}>
                       {inv.status}
                     </span>

@@ -21,7 +21,7 @@ const invoiceInput = z.object({
   subtotal: z.number().int().default(0),
   tax: z.number().int().default(0),
   total: z.number().int().default(0),
-  currency: z.string().length(3).optional().default("GBP"),
+  currency: z.string().length(3).optional().default("USD"),
   dueDate: z.string().datetime().optional().nullable(),
   paidDate: z.string().datetime().optional().nullable(),
   notes: z.string().optional(),
@@ -268,7 +268,7 @@ export const invoicesRouter = createTRPCRouter({
       if (inv) {
         void slack.invoicePaid(
           inv.invoiceNumber,
-          `${(inv.currency ?? "GBP")} ${((inv.total ?? 0) / 100).toFixed(2)}`,
+          `${(inv.currency ?? "USD")} ${((inv.total ?? 0) / 100).toFixed(2)}`,
           inv.client?.name,
         );
       }

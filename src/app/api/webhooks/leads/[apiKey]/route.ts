@@ -11,18 +11,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { apiKeys, leads } from "@/server/db/schema";
 
 function hashKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    const char = key.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
+  return createHash("sha256").update(key).digest("hex");
 }
 
 export async function POST(

@@ -688,7 +688,7 @@ function KanbanView({
                                   <div className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" style={{ color: "var(--text-muted)" }} />
                                     <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                                      {dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                                      {dueDate.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                                     </span>
                                   </div>
                                 )}
@@ -811,7 +811,7 @@ function WeekView({
   return (
     <div className="space-y-4">
       {weekTasks.map(({ week, tasks, points }) => {
-        const weekLabel = new Date(week + "T00:00:00").toLocaleDateString("en-GB", {
+        const weekLabel = new Date(week + "T00:00:00").toLocaleDateString("en-US", {
           day: "numeric", month: "short", year: "numeric",
         });
         return (
@@ -922,7 +922,7 @@ function WeekView({
                     {/* Due date */}
                     {dueDate && (
                       <span className="text-[10px] shrink-0" style={{ color: "var(--text-muted)" }}>
-                        {dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {dueDate.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                       </span>
                     )}
                   </div>

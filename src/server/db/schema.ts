@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -310,7 +311,7 @@ export const invoices = pgTable(
     subtotal: integer("subtotal").notNull().default(0),
     tax: integer("tax").notNull().default(0),
     total: integer("total").notNull().default(0),
-    currency: varchar("currency", { length: 3 }).notNull().default("GBP"),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     recurringInterval: varchar("recurring_interval", { length: 20 }), // "monthly" | "weekly" | "quarterly"
     recurringEnabled: boolean("recurring_enabled").default(false).notNull(),
     nextRecurringAt: timestamp("next_recurring_at"),
@@ -694,6 +695,10 @@ export const leads = pgTable(
     techStack: text("tech_stack"),
     painPoints: text("pain_points"),
     scrapedData: text("scraped_data"),
+    scrapedProfile: jsonb("scraped_profile").$type<ScrapedProfile>(),
+    scrapedAt: timestamp("scraped_at"),
+    businessProfile: jsonb("business_profile").$type<BusinessProfile>(),
+    businessProfileAt: timestamp("business_profile_at"),
     status: leadStatusEnum("status").default("new").notNull(),
     source: leadSourceEnum("source").default("manual").notNull(),
     aiInsights: text("ai_insights"),
@@ -702,9 +707,18 @@ export const leads = pgTable(
     enrichedAt: timestamp("enriched_at"),
     demoHtml: text("demo_html"),
     demoUrl: varchar("demo_url", { length: 500 }),
+    demoBlobUrl: varchar("demo_blob_url", { length: 1000 }),
     demoGeneratedAt: timestamp("demo_generated_at"),
+    demoViewCount: integer("demo_view_count").default(0).notNull(),
+    demoLastViewedAt: timestamp("demo_last_viewed_at"),
+    demoTotalSeconds: integer("demo_total_seconds").default(0).notNull(),
+    shareToken: varchar("share_token", { length: 64 }),
+    shareRevokedAt: timestamp("share_revoked_at"),
     proposalHtml: text("proposal_html"),
     proposalUrl: varchar("proposal_url", { length: 500 }),
+    proposalBlobUrl: varchar("proposal_blob_url", { length: 1000 }),
+    industryProfileId: uuid("industry_profile_id"),
+    wonValueCents: integer("won_value_cents"),
     projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
@@ -721,6 +735,7 @@ export const leads = pgTable(
     index("nf_leads_status_idx").on(t.status),
     index("nf_leads_team_idx").on(t.teamId),
     index("nf_leads_email_idx").on(t.email),
+    index("nf_leads_share_token_idx").on(t.shareToken),
   ],
 );
 
@@ -733,14 +748,136 @@ export const leadOutreach = pgTable(
     subject: varchar("subject", { length: 500 }),
     message: text("message").notNull(),
     shareLink: varchar("share_link", { length: 500 }),
+    providerMessageId: varchar("provider_message_id", { length: 255 }),
+    providerStatus: varchar("provider_status", { length: 64 }),
+    providerError: text("provider_error"),
     openedAt: timestamp("opened_at"),
     clickedAt: timestamp("clicked_at"),
     repliedAt: timestamp("replied_at"),
     sentBy: text("sent_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [index("nf_lead_outreach_lead_idx").on(t.leadId)],
+  (t) => [
+    index("nf_lead_outreach_lead_idx").on(t.leadId),
+    index("nf_lead_outreach_provider_id_idx").on(t.providerMessageId),
+  ],
 );
+
+// ─── Demo views (per-session telemetry) ──────────────────────────────────────
+
+export const leadDemoViews = pgTable(
+  "nf_lead_demo_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    sessionId: varchar("session_id", { length: 64 }).notNull(),
+    referrer: varchar("referrer", { length: 500 }),
+    userAgent: text("user_agent"),
+    ipHash: varchar("ip_hash", { length: 64 }),
+    secondsOnPage: integer("seconds_on_page").default(0).notNull(),
+    scrollDepthPct: integer("scroll_depth_pct").default(0).notNull(),
+    ctaClicks: integer("cta_clicks").default(0).notNull(),
+    firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_lead_demo_views_lead_idx").on(t.leadId),
+    index("nf_lead_demo_views_session_idx").on(t.sessionId),
+  ],
+);
+
+export const leadDemoViewsRelations = relations(leadDemoViews, ({ one }) => ({
+  lead: one(leads, { fields: [leadDemoViews.leadId], references: [leads.id] }),
+}));
+
+// ─── Industry profile templates (demo angles per industry) ───────────────────
+
+export const industryProfiles = pgTable(
+  "nf_industry_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: varchar("slug", { length: 64 }).notNull().unique(),
+    industry: varchar("industry", { length: 255 }).notNull(),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    description: text("description"),
+    commonPainPoints: jsonb("common_pain_points").$type<string[]>(),
+    typicalOffers: jsonb("typical_offers").$type<string[]>(),
+    demoAngle: text("demo_angle"),
+    proposalAngle: text("proposal_angle"),
+    suggestedFeatures: jsonb("suggested_features").$type<string[]>(),
+    brandPalette: jsonb("brand_palette").$type<string[]>(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nf_industry_profiles_industry_idx").on(t.industry)],
+);
+
+// ─── Lead outcomes (conversion feedback loop) ────────────────────────────────
+
+export const leadOutcomes = pgTable(
+  "nf_lead_outcomes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }).notNull(),
+    outcome: varchar("outcome", { length: 32 }).notNull(),
+    valueCents: integer("value_cents"),
+    notes: text("notes"),
+    industryProfileId: uuid("industry_profile_id"),
+    demoStyleTag: varchar("demo_style_tag", { length: 64 }),
+    capturedBy: text("captured_by").references(() => users.id, { onDelete: "set null" }),
+    capturedAt: timestamp("captured_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_lead_outcomes_lead_idx").on(t.leadId),
+    index("nf_lead_outcomes_outcome_idx").on(t.outcome),
+  ],
+);
+
+export const leadOutcomesRelations = relations(leadOutcomes, ({ one }) => ({
+  lead: one(leads, { fields: [leadOutcomes.leadId], references: [leads.id] }),
+}));
+
+// ─── Structured types for jsonb columns ──────────────────────────────────────
+
+export type ScrapedProfile = {
+  homepage?: { title?: string; description?: string; h1?: string; markdown?: string };
+  about?: string;
+  services?: string[];
+  products?: string[];
+  team?: { name?: string; role?: string }[];
+  socialLinks?: Record<string, string>;
+  contactEmails?: string[];
+  contactPhones?: string[];
+  brandColors?: string[];
+  brandFonts?: string[];
+  logoUrl?: string;
+  faviconUrl?: string;
+  techSignals?: string[];
+  blogPosts?: { title: string; url: string; excerpt?: string }[];
+  pages?: { url: string; title?: string }[];
+  rawMarkdown?: string;
+  scrapedFrom?: "firecrawl" | "native";
+  scrapedAt?: string;
+  errors?: string[];
+};
+
+export type BusinessProfile = {
+  summary?: string;
+  offer?: string;
+  targetCustomer?: string;
+  toneOfVoice?: string;
+  positioningStatement?: string;
+  brandColors?: string[];
+  brandFonts?: string[];
+  visibleWeaknesses?: string[];
+  buildOpportunities?: { title: string; description: string; effort: string }[];
+  industryFit?: string;
+  demoAngle?: string;
+  recommendedFeatures?: string[];
+  estimatedValue?: string;
+  generatedAt?: string;
+};
 
 export const leadRelations = relations(leads, ({ one, many }) => ({
   project: one(projects, { fields: [leads.projectId], references: [projects.id] }),
@@ -755,6 +892,37 @@ export const leadRelations = relations(leads, ({ one, many }) => ({
 export const leadOutreachRelations = relations(leadOutreach, ({ one }) => ({
   lead: one(leads, { fields: [leadOutreach.leadId], references: [leads.id] }),
   sender: one(users, { fields: [leadOutreach.sentBy], references: [users.id] }),
+}));
+
+// ─── Reusable outreach templates (openers, follow-ups, breakups) ──────────────
+
+export const outreachTemplates = pgTable(
+  "nf_outreach_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    channel: outreachChannelEnum("channel").notNull(),
+    subject: varchar("subject", { length: 500 }),
+    body: text("body").notNull(),
+    tags: text("tags").array(),
+    industry: varchar("industry", { length: 255 }),
+    useCount: integer("use_count").default(0).notNull(),
+    wonCount: integer("won_count").default(0).notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+    isActive: boolean("is_active").default(true).notNull(),
+    ownerId: text("owner_id").references(() => users.id, { onDelete: "set null" }),
+    teamId: uuid("team_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_outreach_templates_channel_idx").on(t.channel),
+    index("nf_outreach_templates_industry_idx").on(t.industry),
+  ],
+);
+
+export const outreachTemplatesRelations = relations(outreachTemplates, ({ one }) => ({
+  owner: one(users, { fields: [outreachTemplates.ownerId], references: [users.id] }),
 }));
 
 // ─── Affiliates ───────────────────────────────────────────────────────────────

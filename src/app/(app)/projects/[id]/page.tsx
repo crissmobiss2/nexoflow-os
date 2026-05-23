@@ -474,7 +474,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                       {comment.authorName}
                     </span>
                     <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                      {new Date(comment.createdAt).toLocaleDateString("en-GB", {
+                      {new Date(comment.createdAt).toLocaleDateString("en-US", {
                         day: "numeric", month: "short", year: "numeric",
                       })}
                     </span>

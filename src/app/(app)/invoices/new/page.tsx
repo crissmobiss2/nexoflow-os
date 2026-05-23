@@ -24,7 +24,7 @@ export default function NewInvoicePage() {
   const router = useRouter();
   const [invoiceNumber, setInvoiceNumber] = useState(genInvoiceNumber());
   const [clientId, setClientId] = useState("");
-  const [currency, setCurrency] = useState("GBP");
+  const [currency, setCurrency] = useState("USD");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [taxPct, setTaxPct] = useState(0);
@@ -156,7 +156,7 @@ export default function NewInvoicePage() {
                 Currency
               </label>
               <select style={{ ...inputStyle }} value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {["GBP", "USD", "EUR", "CAD", "AUD"].map((c) => (
+                {["USD", "CAD", "EUR", "GBP", "AUD"].map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -209,7 +209,7 @@ export default function NewInvoicePage() {
                   min="0"
                   step="0.01"
                   style={inputStyle}
-                  placeholder="Rate (£)"
+                  placeholder="Rate ($)"
                   value={item.rate}
                   onChange={(e) => updateItem(i, "rate", Number(e.target.value))}
                 />
@@ -237,9 +237,9 @@ export default function NewInvoicePage() {
           {/* Totals */}
           <div className="pt-4 space-y-1.5" style={{ borderTop: "1px solid var(--surface-border)" }}>
             {[
-              ["Subtotal", `${currency} ${(subtotalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
-              [`Tax (${taxPct}%)`, `${currency} ${(taxCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
-              ["Total", `${currency} ${(totalCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`],
+              ["Subtotal", `${currency} ${(subtotalCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+              [`Tax (${taxPct}%)`, `${currency} ${(taxCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+              ["Total", `${currency} ${(totalCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span style={{ color: "var(--text-muted)" }}>{label}</span>

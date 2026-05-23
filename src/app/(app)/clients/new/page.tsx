@@ -19,8 +19,8 @@ const STEPS = [
 
 const COMPANY_SIZES = ["1–10", "11–50", "51–200", "201–1,000", "1,000+"];
 const BUDGET_RANGES = [
-  "Under £5K", "£5K–£10K", "£10K–£20K", "£20K–£40K",
-  "£40K–£80K", "£80K–£150K", "£150K+",
+  "Under $5K", "$5K–$12K", "$12K–$25K", "$25K–$50K",
+  "$50K–$100K", "$100K–$200K", "$200K+",
 ];
 const URGENCY_OPTIONS = [
   { value: "exploring", label: "Exploring", desc: "No fixed timeline, researching options" },
@@ -158,7 +158,7 @@ export default function NewClientPage() {
                   </select>
                 </Field>
                 <Field label="Region / Country">
-                  <input type="text" value={form.region} onChange={set("region")} placeholder="e.g. UK, Australia, US" className="nf-input" />
+                  <input type="text" value={form.region} onChange={set("region")} placeholder="e.g. US, Canada, EU" className="nf-input" />
                 </Field>
               </div>
             </>
@@ -173,7 +173,7 @@ export default function NewClientPage() {
                   value={form.businessDescription}
                   onChange={set("businessDescription")}
                   rows={3}
-                  placeholder="e.g. They operate a chain of 12 dental practices across the UK and need to modernise their booking and patient management system."
+                  placeholder="e.g. They operate a chain of 12 dental practices across the US and need to modernize their booking and patient management system."
                   className="nf-input resize-none"
                 />
               </Field>

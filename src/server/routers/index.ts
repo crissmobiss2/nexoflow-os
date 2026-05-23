@@ -18,6 +18,8 @@ import { syncRouter } from "./sync";
 import { decisionLogRouter } from "./decisionLog";
 import { playbookRouter } from "./playbooks";
 import { leadsRouter } from "./leads";
+import { industryProfilesRouter } from "./industryProfiles";
+import { outreachTemplatesRouter } from "./outreachTemplates";
 import { affiliatesRouter } from "./affiliates";
 import { caseStudiesRouter } from "./caseStudies";
 
@@ -41,6 +43,8 @@ export const appRouter = createTRPCRouter({
   decisionLog: decisionLogRouter,
   playbooks: playbookRouter,
   leads: leadsRouter,
+  industryProfiles: industryProfilesRouter,
+  outreachTemplates: outreachTemplatesRouter,
   affiliates: affiliatesRouter,
   caseStudies: caseStudiesRouter,
 });

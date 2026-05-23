@@ -25,8 +25,8 @@ const PROJECT_TYPES = [
 ] as const;
 
 const BUDGET_RANGES = [
-  "Under £5K", "£5K–£10K", "£10K–£20K", "£20K–£40K",
-  "£40K–£80K", "£80K–£150K", "£150K+",
+  "Under $5K", "$5K–$12K", "$12K–$25K", "$25K–$50K",
+  "$50K–$100K", "$100K–$200K", "$200K+",
 ];
 
 type ProjectType = (typeof PROJECT_TYPES)[number]["value"];

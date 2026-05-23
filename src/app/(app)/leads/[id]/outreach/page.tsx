@@ -7,6 +7,7 @@ import { api } from "@/lib/trpc/client";
 import {
   ArrowLeft, Mail, MessageSquare, Phone, Link2,
   Loader2, Sparkles, Send, CheckCircle2, Copy, ChevronDown,
+  BookmarkPlus, Bookmark, AlertCircle,
 } from "lucide-react";
 
 const CHANNELS = [
@@ -24,14 +25,38 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
 
   const { data: lead, isLoading } = api.leads.get.useQuery({ id });
   const generateMessage = api.leads.generateMessage.useMutation();
+  const [sendError, setSendError] = useState<string | null>(null);
   const sendOutreach = api.leads.sendOutreach.useMutation({
-    onSuccess: () => router.push(`/leads/${id}`),
+    onSuccess: (result) => {
+      if (result.sentSuccessfully) {
+        router.push(`/leads/${id}`);
+      } else {
+        setSendError(result.providerError ?? "Send failed — outreach recorded but not delivered.");
+      }
+    },
+    onError: (err) => setSendError(err.message),
   });
 
   const [channel, setChannel] = useState<Channel>("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+
+  const { data: templates = [], refetch: refetchTemplates } = api.outreachTemplates.list.useQuery({ channel });
+  const createTemplate = api.outreachTemplates.create.useMutation({
+    onSuccess: () => { setShowSaveTemplate(false); setTemplateName(""); void refetchTemplates(); },
+  });
+
+  function applyTemplate(templateId: string) {
+    const t = templates.find((x) => x.id === templateId);
+    if (!t) return;
+    setSelectedTemplateId(templateId);
+    if (t.subject) setSubject(t.subject);
+    setMessage(t.body);
+  }
 
   if (isLoading) {
     return (
@@ -66,12 +91,26 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
 
   function handleSend() {
     if (!message.trim() || !lead) return;
+    setSendError(null);
     sendOutreach.mutate({
       leadId: id,
       channel,
       subject: subject || undefined,
       message,
       shareLink: lead.demoUrl ?? undefined,
+      templateId: selectedTemplateId ?? undefined,
+    });
+  }
+
+  function handleSaveTemplate() {
+    if (!templateName.trim() || !message.trim()) return;
+    createTemplate.mutate({
+      name: templateName.trim(),
+      channel,
+      subject: subject || undefined,
+      body: message,
+      industry: lead?.industry || undefined,
+      isActive: true,
     });
   }
 
@@ -142,6 +181,46 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
         )}
       </div>
 
+      {/* Template picker */}
+      {templates.length > 0 && (
+        <div
+          className="rounded-xl p-3 mb-3 flex items-center gap-3"
+          style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+        >
+          <Bookmark className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-muted)" }} />
+          <select
+            value={selectedTemplateId ?? ""}
+            onChange={(e) => e.target.value ? applyTemplate(e.target.value) : setSelectedTemplateId(null)}
+            className="flex-1 px-2 py-1.5 rounded-lg text-xs"
+            style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+          >
+            <option value="">Pick a template…</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} {t.useCount > 0 ? `· used ${t.useCount}×${t.wonCount > 0 ? ` · ${t.wonCount} won` : ""}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Send error banner */}
+      {sendError && (
+        <div
+          className="flex items-start gap-2 px-4 py-3 rounded-xl mb-3 text-sm"
+          style={{ background: "hsl(0 72% 58% / 0.1)", border: "1px solid hsl(0 72% 58% / 0.3)", color: "hsl(0 72% 68%)" }}
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold mb-0.5">Send failed</div>
+            <div className="text-xs opacity-90">{sendError}</div>
+            <div className="text-[11px] opacity-70 mt-1">
+              The outreach was logged but not delivered. Check your provider config (Resend / Twilio).
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Compose area */}
       <div
         className="rounded-2xl p-6 space-y-4"
@@ -151,16 +230,60 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
           <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             {selectedChannel.label} message
           </h2>
-          <button
-            onClick={handleGenerate}
-            disabled={generateMessage.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-            style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}
-          >
-            {generateMessage.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            {generateMessage.isPending ? "Generating…" : "Generate with AI"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSaveTemplate(true)}
+              disabled={!message.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-30"
+              style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}
+              title="Save current message as a reusable template"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5" />
+              Save template
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={generateMessage.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}
+            >
+              {generateMessage.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {generateMessage.isPending ? "Generating…" : "Generate with AI"}
+            </button>
+          </div>
         </div>
+
+        {showSaveTemplate && (
+          <div className="rounded-xl p-3 space-y-2" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)" }}>
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Template name (e.g. 'Cold opener — HVAC')"
+              className="w-full px-3 py-2 rounded-lg text-xs outline-none"
+              style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowSaveTemplate(false); setTemplateName(""); }}
+                className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ background: "var(--surface-card)", color: "var(--text-secondary)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || createTemplate.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                style={{ background: "var(--brand-gradient)" }}
+              >
+                {createTemplate.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookmarkPlus className="w-3 h-3" />}
+                Save
+              </button>
+            </div>
+          </div>
+        )}
 
         {channel === "email" && (
           <div>

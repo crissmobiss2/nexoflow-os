@@ -492,7 +492,7 @@ function AiStudioInner() {
 function getSuggestedPrompts(mode: Mode): string[] {
   const prompts: Record<Mode, string[]> = {
     general:      ["What's the best way to handle auth in a Next.js SaaS app?", "Explain CAP theorem and when I'd choose CP vs AP", "What are the most common mistakes in REST API design?"],
-    architect:    ["Design a multi-tenant SaaS architecture for a £40K project", "How should I structure a Next.js monorepo with shared packages?", "What's the right database architecture for a marketplace with high read volume?"],
+    architect:    ["Design a multi-tenant SaaS architecture for a $50K project", "How should I structure a Next.js monorepo with shared packages?", "What's the right database architecture for a marketplace with high read volume?"],
     tech_advisor: ["What stack should I use for a React Native app with offline sync?", "Postgres vs MongoDB for a real-time collaboration tool?", "Should I use tRPC or REST for a mobile app backend?"],
     code_review:  ["Review this Drizzle ORM query for N+1 issues: [paste code]", "Is this auth middleware secure? [paste code]", "Review this React component for performance issues: [paste code]"],
     security:     ["What are the most common Next.js security vulnerabilities I should check?", "How do I properly implement RBAC in a multi-tenant app?", "Review my authentication flow for security issues: [paste code]"],

@@ -14,7 +14,7 @@ const PLAYBOOKS = [
     label: "Website",
     icon: Globe,
     color: "hsl(220, 90%, 62%)",
-    budget: "£3.5K – £12K",
+    budget: "$4.5K – $15K",
     timeline: "2–6 weeks",
     stack: "Next.js 16 · Tailwind v4 · Vercel",
     phases: [
@@ -44,7 +44,7 @@ const PLAYBOOKS = [
     label: "Web App",
     icon: LayoutDashboard,
     color: "hsl(262, 83%, 68%)",
-    budget: "£8K – £35K",
+    budget: "$10K – $45K",
     timeline: "6–16 weeks",
     stack: "Next.js 16 · tRPC · Drizzle + Neon · Auth.js",
     phases: [
@@ -75,7 +75,7 @@ const PLAYBOOKS = [
     label: "Mobile App",
     icon: Smartphone,
     color: "hsl(142, 68%, 52%)",
-    budget: "£18K – £60K",
+    budget: "$22K – $75K",
     timeline: "12–24 weeks",
     stack: "React Native · Expo SDK 52 · Expo Router v4 · EAS",
     phases: [
@@ -106,7 +106,7 @@ const PLAYBOOKS = [
     label: "SaaS Product",
     icon: Box,
     color: "hsl(207, 90%, 60%)",
-    budget: "£25K – £80K",
+    budget: "$30K – $100K",
     timeline: "16–32 weeks",
     stack: "Next.js 16 · tRPC · Drizzle · Auth.js · Stripe",
     phases: [
@@ -137,7 +137,7 @@ const PLAYBOOKS = [
     label: "AI Product",
     icon: Brain,
     color: "hsl(280, 85%, 65%)",
-    budget: "£8K – £30K add-on",
+    budget: "$10K – $38K add-on",
     timeline: "4–12 weeks",
     stack: "Claude Sonnet 4.6 · @anthropic-ai/sdk · pgvector · Vercel",
     phases: [
@@ -168,7 +168,7 @@ const PLAYBOOKS = [
     label: "Desktop App",
     icon: Monitor,
     color: "hsl(35, 90%, 58%)",
-    budget: "£15K – £50K",
+    budget: "$18K – $65K",
     timeline: "12–20 weeks",
     stack: "Tauri v2 · React · TypeScript · Vite",
     phases: [

@@ -1,38 +1,33 @@
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createHash, randomBytes } from "crypto";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { apiKeys } from "../db/schema";
 
 function generateApiKey(): { fullKey: string; prefix: string; hash: string; lastChars: string } {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  const segments = Array.from({ length: 3 }, () =>
-    Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""),
-  );
-  const fullKey = `nf_${segments.join("_")}`;
+  // 32 cryptographically random bytes → base64url → always unique
+  const secret = randomBytes(32).toString("base64url");
+  const fullKey = `nf_${secret}`;
   const prefix = fullKey.slice(0, 8);
   const lastChars = fullKey.slice(-4);
+  // SHA-256 — safe to store; can't be reversed to recover the original key
+  const hash = createHash("sha256").update(fullKey).digest("hex");
+  return { fullKey, prefix, hash, lastChars };
+}
 
-  // Simple hash (in production use bcrypt or similar)
-  let hash = 0;
-  for (let i = 0; i < fullKey.length; i++) {
-    const char = fullKey.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32-bit integer
-  }
-  const hashStr = Math.abs(hash).toString(36);
-
-  return { fullKey, prefix, hash: hashStr, lastChars };
+export function sha256ApiKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
 }
 
 export const apiKeysRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.query.apiKeys.findMany({
       orderBy: [desc(apiKeys.createdAt)],
       with: { creator: true },
     });
   }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.apiKeys.findFirst({
@@ -41,7 +36,7 @@ export const apiKeysRouter = createTRPCRouter({
       });
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         name: z.string().min(1),
@@ -68,7 +63,7 @@ export const apiKeysRouter = createTRPCRouter({
       return { ...key, fullKey };
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -87,13 +82,13 @@ export const apiKeysRouter = createTRPCRouter({
       return key;
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(apiKeys).where(eq(apiKeys.id, input.id));
     }),
 
-  recordUsage: publicProcedure
+  recordUsage: protectedProcedure
     .input(z.object({ keyPrefix: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db

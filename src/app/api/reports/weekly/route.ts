@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 Stats this week:
 - New leads: ${newLeadsCount}
 - Deals won: ${wonCount}
-- Invoices paid: ${invoicePaidCount} (£${(invoicePaidAmount / 100).toFixed(2)})
+- Invoices paid: ${invoicePaidCount} ($${(invoicePaidAmount / 100).toFixed(2)})
 - Overall conversion rate: ${conversionRate}%
 
 Write a professional but friendly 3-paragraph weekly summary with performance overview, key wins/concerns, and one strategic recommendation. Under 200 words.` }],
@@ -51,15 +51,15 @@ Write a professional but friendly 3-paragraph weekly summary with performance ov
   await resend.emails.send({
     from: "NexoFlow Reports <reports@nexoflow.tech>",
     to: [recipientEmail],
-    subject: `NexoFlow Weekly Report — w/e ${new Date().toLocaleDateString("en-GB")}`,
+    subject: `NexoFlow Weekly Report — w/e ${new Date().toLocaleDateString("en-US")}`,
     html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
 <h2 style="color:#7c5cbf">NexoFlow Weekly Report</h2>
-<p style="color:#666;font-size:13px">Week ending ${new Date().toLocaleDateString("en-GB")}</p>
+<p style="color:#666;font-size:13px">Week ending ${new Date().toLocaleDateString("en-US")}</p>
 <hr style="border-color:#eee">
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 <tr><td style="padding:8px;background:#f9f9f9"><strong>New Leads</strong></td><td style="padding:8px;text-align:right;font-weight:bold">${newLeadsCount}</td></tr>
 <tr><td style="padding:8px"><strong>Deals Won</strong></td><td style="padding:8px;text-align:right;color:#22c55e;font-weight:bold">${wonCount}</td></tr>
-<tr><td style="padding:8px;background:#f9f9f9"><strong>Revenue Collected</strong></td><td style="padding:8px;text-align:right;font-weight:bold">£${(invoicePaidAmount / 100).toFixed(2)}</td></tr>
+<tr><td style="padding:8px;background:#f9f9f9"><strong>Revenue Collected</strong></td><td style="padding:8px;text-align:right;font-weight:bold">$${(invoicePaidAmount / 100).toFixed(2)}</td></tr>
 <tr><td style="padding:8px"><strong>Conversion Rate</strong></td><td style="padding:8px;text-align:right;font-weight:bold">${conversionRate}%</td></tr>
 </table>
 <hr style="border-color:#eee">

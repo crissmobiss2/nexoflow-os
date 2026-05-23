@@ -27,39 +27,39 @@ NexoFlow prices are not cost-plus (Tyler's hours × markup). They are value-base
 **Step 1: Quantify the problem cost**
 ```
 How much is this problem costing the client right now?
-  → Staff time wasted: [X hours/week] × [£hourly cost] × 52 weeks = £[annual cost]
-  → Revenue lost due to inefficiency: £[X]
-  → Risk cost (compliance, errors, delays): £[X]
-  → Opportunity cost (what else could staff do): £[X]
+  → Staff time wasted: [X hours/week] × [$hourly cost] × 52 weeks = $[annual cost]
+  → Revenue lost due to inefficiency: $[X]
+  → Risk cost (compliance, errors, delays): $[X]
+  → Opportunity cost (what else could staff do): $[X]
 
-Total annual problem cost: £[X]
+Total annual problem cost: $[X]
 ```
 
 **Step 2: Quantify the solution value**
 ```
 What does NexoFlow's system deliver?
-  → Time saved: [X hours/week] × [£hourly cost] × 52 = £[annual saving]
-  → Revenue enabled: £[X] additional revenue per year
-  → Risk eliminated: £[X] annual risk reduction
-  → Competitive advantage: £[X] (harder to quantify, but real)
+  → Time saved: [X hours/week] × [$hourly cost] × 52 = $[annual saving]
+  → Revenue enabled: $[X] additional revenue per year
+  → Risk eliminated: $[X] annual risk reduction
+  → Competitive advantage: $[X] (harder to quantify, but real)
 
-Total annual value delivered: £[X]
+Total annual value delivered: $[X]
 ```
 
 **Step 3: Price at a fraction of value**
 ```
 Pricing rule: charge 20-40% of Year 1 value delivered.
 
-If Year 1 value = £180,000:
-  → 20% = £36,000 (minimum — below this we're underpricing)
-  → 30% = £54,000 (sweet spot — strong value case for client)
-  → 40% = £72,000 (justified for complex, high-risk, high-touch projects)
+If Year 1 value = $180,000:
+  → 20% = $36,000 (minimum — below this we're underpricing)
+  → 30% = $54,000 (sweet spot — strong value case for client)
+  → 40% = $72,000 (justified for complex, high-risk, high-touch projects)
 
 The client gets 60-80% of the value as pure ROI in Year 1 alone.
 By Year 3, the system has paid for itself 5-10×.
 ```
 
-This framing transforms pricing conversations from "is £X a lot to pay?" to "does the ROI make sense?"
+This framing transforms pricing conversations from "is $X a lot to pay?" to "does the ROI make sense?"
 
 ---
 
@@ -94,11 +94,11 @@ Run this when win rate is >50% for 8+ consecutive weeks, or when Tyler's utilisa
 
 **Step 1: Calculate the new rate**
 ```
-Current rate: £[X]
+Current rate: $[X]
 Increase: 15-20%
-New rate: £[X × 1.175 to 1.20]
+New rate: $[X × 1.175 to 1.20]
 
-Round to the nearest clean number (£8,500 not £8,437).
+Round to the nearest clean number ($8,500 not $8,437).
 ```
 
 **Step 2: Grandfather existing clients**
@@ -133,9 +133,9 @@ How NexoFlow structures proposals to make the target price feel like the obvious
 
 | Option | Name | Positioning | Price |
 |---|---|---|---|
-| Essentials | "The Foundation" | Core problem solved, minimum viable | £[X × 0.65] |
-| **Recommended** | **"The System"** | **Full solution, NexoFlow's recommendation** | **£[X]** |
-| Premium | "The Accelerator" | Everything + ongoing optimisation + priority access | £[X × 1.4] |
+| Essentials | "The Foundation" | Core problem solved, minimum viable | $[X × 0.65] |
+| **Recommended** | **"The System"** | **Full solution, NexoFlow's recommendation** | **$[X]** |
+| Premium | "The Accelerator" | Everything + ongoing optimisation + priority access | $[X × 1.4] |
 
 **Why this works:**
 - The Essentials option anchors down: the Recommended looks reasonable by comparison
@@ -161,24 +161,24 @@ A retainer commands a premium over hourly for several reasons:
 
 **Retainer pricing formula:**
 ```
-Hourly rate equivalent: £150/hr
+Hourly rate equivalent: $150/hr
 Retainer premium factor: 1.1–1.2× (10-20% above project rate)
 
-Effective retainer hourly rate: £165–£180/hr
+Effective retainer hourly rate: $165–$180/hr
 
 Example:
-  10 hrs/month = £1,650–£1,800/month
-  15 hrs/month = £2,475–£2,700/month
-  20 hrs/month = £3,300–£3,600/month
-  30 hrs/month = £4,950–£5,400/month
+  10 hrs/month = $1,650–$1,800/month
+  15 hrs/month = $2,475–$2,700/month
+  20 hrs/month = $3,300–$3,600/month
+  30 hrs/month = $4,950–$5,400/month
 
 Round for clean billing. The complexity of the account drives which end of the range to use.
 ```
 
 **Retainer floors:**
-- Minimum meaningful retainer: £1,500/month (below this, the relationship cost outweighs the value)
-- Standard retainer range: £2,000–£5,000/month
-- Enterprise retainer: £5,000–£10,000/month (strategic partnership, multiple senior contacts)
+- Minimum meaningful retainer: $1,500/month (below this, the relationship cost outweighs the value)
+- Standard retainer range: $2,000–$5,000/month
+- Enterprise retainer: $5,000–$10,000/month (strategic partnership, multiple senior contacts)
 
 ---
 
@@ -226,15 +226,15 @@ Track quarterly in [[NexoFlow System/Business Intelligence/Revenue Forecast]]:
 
 | Metric | Target | Current |
 |---|---|---|
-| Average project value | ≥£18,000 | £__ |
-| Average retainer value | ≥£2,500/month | £__ |
+| Average project value | ≥$18,000 | $__ |
+| Average retainer value | ≥$2,500/month | $__ |
 | Win rate (all proposals) | 35-45% | __% |
 | Win rate at full price (no discounting) | >80% of wins | __% |
 | Discount rate (times we discounted ÷ proposals) | <10% | __% |
 | Average discount given | <10% | __% |
-| Revenue per Tyler hour (blended) | >£200/hr | £__ |
+| Revenue per Tyler hour (blended) | >$200/hr | $__ |
 
-**Red flag:** If revenue per Tyler hour drops below £180/hr, NexoFlow is either underpricing or scoping poorly.
+**Red flag:** If revenue per Tyler hour drops below $180/hr, NexoFlow is either underpricing or scoping poorly.
 
 ---
 

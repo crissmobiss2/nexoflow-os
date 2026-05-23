@@ -786,10 +786,10 @@ export default function AnalyticsPage() {
         {revenueSummary && (
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "MRR", value: `£${(revenueSummary.mrr / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(262, 83%, 68%)" },
-              { label: "ARR", value: `£${(revenueSummary.arr / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(142, 68%, 52%)" },
-              { label: "Collected", value: `£${(revenueSummary.totalCollected / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(207, 90%, 62%)" },
-              { label: "Pipeline", value: `£${(revenueSummary.pipeline / 100).toLocaleString("en-GB", { minimumFractionDigits: 0 })}`, color: "hsl(35, 90%, 58%)" },
+              { label: "MRR", value: `$${(revenueSummary.mrr / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(262, 83%, 68%)" },
+              { label: "ARR", value: `$${(revenueSummary.arr / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(142, 68%, 52%)" },
+              { label: "Collected", value: `$${(revenueSummary.totalCollected / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(207, 90%, 62%)" },
+              { label: "Pipeline", value: `$${(revenueSummary.pipeline / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(35, 90%, 58%)" },
             ].map(({ label, value, color }) => (
               <div key={label} className="rounded-xl p-5" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
                 <div className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>{label}</div>

@@ -4,61 +4,32 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/client";
-import { ArrowLeft, Upload, FileText, Loader2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Loader2, CheckCircle2, AlertCircle, X, Copy } from "lucide-react";
+import { parseCsv, mapLeadRow, dedupKey } from "@/lib/csv";
 
-const REQUIRED_COLUMNS = ["firstName", "lastName", "email", "company"];
 const ALL_COLUMNS = [
   "firstName", "lastName", "email", "phone", "company", "website",
   "industry", "companySize", "region", "jobTitle", "linkedIn",
   "techStack", "painPoints", "scrapedData", "notes",
 ];
 
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.trim().split("\n");
-  if (lines.length < 2) return [];
-  const headers = lines[0]!.split(",").map((h) => h.trim().replace(/^["']|["']$/g, "").toLowerCase());
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim().replace(/^["']|["']$/g, ""));
-    return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""]));
-  }).filter((row) => Object.values(row).some((v) => v));
-}
-
-function mapRow(raw: Record<string, string>): Record<string, string> {
-  const aliases: Record<string, string[]> = {
-    firstName: ["firstname", "first_name", "first", "fname"],
-    lastName: ["lastname", "last_name", "last", "lname"],
-    email: ["email", "email_address", "emailaddress"],
-    phone: ["phone", "phone_number", "phonenumber", "tel", "telephone"],
-    company: ["company", "company_name", "companyname", "organization", "org"],
-    website: ["website", "url", "web", "site"],
-    industry: ["industry", "sector", "vertical"],
-    companySize: ["companysize", "company_size", "employees", "size", "headcount"],
-    region: ["region", "country", "location", "geography", "geo"],
-    jobTitle: ["jobtitle", "job_title", "title", "role", "position"],
-    linkedIn: ["linkedin", "linkedin_url", "linkedinurl"],
-    techStack: ["techstack", "tech_stack", "technologies", "tech"],
-    painPoints: ["painpoints", "pain_points", "challenges", "problems"],
-    scrapedData: ["scrapeddata", "scraped_data", "raw_data", "rawdata"],
-    notes: ["notes", "note", "comments", "comment"],
-  };
-
-  const mapped: Record<string, string> = {};
-  for (const [field, aliasList] of Object.entries(aliases)) {
-    const match = aliasList.find((alias) => raw[alias] !== undefined && raw[alias] !== "");
-    if (match) mapped[field] = raw[match]!;
-  }
-  return mapped;
-}
-
 export default function ImportLeadsPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
+  const [rawCount, setRawCount] = useState(0);
+  const [internalDupes, setInternalDupes] = useState(0);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+
   const importMutation = api.leads.importBulk.useMutation({
     onSuccess: (result) => {
-      router.push(`/leads?imported=${result.count}`);
+      const params = new URLSearchParams({
+        imported: String(result.count),
+        skipped: String(result.skipped),
+      });
+      router.push(`/leads?${params.toString()}`);
     },
     onError: (err) => setError(err.message),
   });
@@ -68,10 +39,27 @@ export default function ImportLeadsPage() {
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const raw = parseCSV(text);
-      const mapped = raw.map(mapRow);
-      setPreview(mapped);
+      try {
+        const text = e.target?.result as string;
+        const raw = parseCsv(text);
+        setRawCount(raw.length);
+        const mapped = raw.map(mapLeadRow);
+
+        // De-duplicate within the file itself
+        const seen = new Set<string>();
+        const deduped: Record<string, string>[] = [];
+        let dupes = 0;
+        for (const row of mapped) {
+          const key = dedupKey(row);
+          if (seen.has(key)) { dupes++; continue; }
+          seen.add(key);
+          deduped.push(row);
+        }
+        setInternalDupes(dupes);
+        setPreview(deduped);
+      } catch (err) {
+        setError(`Failed to parse CSV: ${err instanceof Error ? err.message : "unknown"}`);
+      }
     };
     reader.readAsText(file);
   }
@@ -102,7 +90,7 @@ export default function ImportLeadsPage() {
       scrapedData: r.scrapedData || undefined,
       notes: r.notes || undefined,
     }));
-    importMutation.mutate({ rows });
+    importMutation.mutate({ rows, skipDuplicates });
   }
 
   const hasMappedColumns = preview.length > 0 && preview[0] && Object.keys(preview[0]).length > 0;
@@ -116,7 +104,6 @@ export default function ImportLeadsPage() {
         <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Import CSV</span>
       </div>
 
-      {/* Drop zone */}
       {preview.length === 0 && (
         <div
           onDrop={handleDrop}
@@ -128,10 +115,11 @@ export default function ImportLeadsPage() {
           <Upload className="w-10 h-10 mb-4" style={{ color: "var(--brand-primary)" }} />
           <h2 className="text-base font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Drop your CSV here</h2>
           <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-            or click to browse. Supports any columns — we auto-map to lead fields.
+            or click to browse. RFC-4180 compliant — handles quoted commas & line breaks.
           </p>
           <div className="text-xs space-y-1" style={{ color: "var(--text-muted)" }}>
             <div>Recognized columns: <span style={{ color: "var(--text-secondary)" }}>{ALL_COLUMNS.join(", ")}</span></div>
+            <div className="opacity-70">Also accepts: name, full_name, organization, sector, tel, mobile…</div>
           </div>
           <input
             ref={fileRef}
@@ -153,7 +141,6 @@ export default function ImportLeadsPage() {
         </div>
       )}
 
-      {/* Preview */}
       {preview.length > 0 && (
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -166,9 +153,19 @@ export default function ImportLeadsPage() {
               >
                 {preview.length} rows
               </span>
+              {internalDupes > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                  style={{ background: "hsl(35 90% 60% / 0.12)", color: "hsl(35, 90%, 60%)" }}
+                  title="Rows with duplicate email/website/company inside this CSV"
+                >
+                  <Copy className="w-3 h-3 inline mr-1" />
+                  {internalDupes} dupe{internalDupes === 1 ? "" : "s"} removed
+                </span>
+              )}
             </div>
             <button
-              onClick={() => { setPreview([]); setFileName(""); setError(""); }}
+              onClick={() => { setPreview([]); setFileName(""); setError(""); setRawCount(0); setInternalDupes(0); }}
               className="p-1.5 rounded-lg transition-opacity hover:opacity-70"
               style={{ color: "var(--text-muted)" }}
             >
@@ -222,12 +219,24 @@ export default function ImportLeadsPage() {
           </div>
 
           {hasMappedColumns && (
-            <div
-              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-              style={{ background: "hsl(142 68% 52% / 0.1)", border: "1px solid hsl(142 68% 52% / 0.3)", color: "hsl(142, 68%, 52%)" }}
-            >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              {Object.keys(preview[0] ?? {}).length} columns mapped · ready to import {preview.length} leads
+            <div className="flex flex-col gap-2">
+              <div
+                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+                style={{ background: "hsl(142 68% 52% / 0.1)", border: "1px solid hsl(142 68% 52% / 0.3)", color: "hsl(142, 68%, 52%)" }}
+              >
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                {Object.keys(preview[0] ?? {}).length} columns mapped · ready to import {preview.length} leads
+                {rawCount !== preview.length && ` (${rawCount} parsed, ${rawCount - preview.length} duplicates removed)`}
+              </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none" style={{ color: "var(--text-secondary)" }}>
+                <input
+                  type="checkbox"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                Skip leads that already exist (matched by email or website)
+              </label>
             </div>
           )}
 

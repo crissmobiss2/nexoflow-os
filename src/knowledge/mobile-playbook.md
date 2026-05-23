@@ -65,7 +65,7 @@ Does the project need a single codebase for iOS, Android, AND a web companion?
 □ Accessibility requirements (WCAG AA minimum)
 □ Performance expectations: target devices, minimum iOS/Android version
 □ App Store account status: does client have developer accounts?
-  → iOS: Apple Developer Program (£99/year) — must be active before build
+  → iOS: Apple Developer Program ($99/year) — must be active before build
   → Android: Google Play Developer ($25 one-time) — must be active before build
 ```
 
