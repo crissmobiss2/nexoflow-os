@@ -8,6 +8,7 @@ const PUBLIC_PATHS = new Set([
   "/api/auth",          // NextAuth routes
   "/api/demo",          // Public demo links (token-validated in the route itself)
   "/api/track",         // Demo engagement tracking
+  "/api/admin",         // Admin API routes (protected by x-admin-secret header)
   "/api/webhooks",      // External webhook integrations
   "/api/widget",        // Embeddable widget
   "/api/integration",   // External intake forms
