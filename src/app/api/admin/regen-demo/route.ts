@@ -7,6 +7,8 @@ import { randomBytes } from "crypto";
 import { uploadHtml } from "@/lib/blob";
 import type { BusinessProfile, ScrapedProfile } from "@/server/db/schema";
 
+export const maxDuration = 300;
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function buildDemoPrompt({
