@@ -44,7 +44,10 @@ function NewProjectInner() {
   const preselectedClientId = searchParams.get("clientId");
   const templateId = searchParams.get("templateId");
 
-  const { data: allClients = [] } = api.clients.list.useQuery();
+  const { data: allClients = [], isLoading: clientsLoading } = api.clients.list.useQuery(
+    undefined,
+    { staleTime: 0, refetchOnMount: true },
+  );
   const createProject = api.projects.create.useMutation();
   const scoreProject = api.projects.score.useMutation();
   const { data: template } = api.templates.get.useQuery(
@@ -201,9 +204,21 @@ function NewProjectInner() {
               />
             </div>
 
-            {filteredClients.length === 0 ? (
+            {clientsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl animate-pulse"
+                    style={{ background: "var(--surface-elevated)" }}
+                  />
+                ))}
+              </div>
+            ) : filteredClients.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No clients found.</p>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {clientSearch ? "No clients match your search." : "No clients yet. Onboard one below."}
+                </p>
               </div>
             ) : (
               <div className="space-y-1.5 max-h-80 overflow-auto">
@@ -252,16 +267,14 @@ function NewProjectInner() {
               >
                 <Plus className="w-3 h-3" /> Onboard new client first
               </Link>
-              {allClients.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setSelectedClientId(""); setStep(2); }}
-                  className="ml-auto text-xs transition-opacity hover:opacity-70"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Skip — no client
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => { setSelectedClientId(""); setStep(2); }}
+                className="ml-auto text-xs transition-opacity hover:opacity-70"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Skip — no client
+              </button>
             </div>
           </div>
         )}
