@@ -604,6 +604,20 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // Backfill projects with no team → assign to default team so tRPC board query finds them
+  await run("nf_projects default team backfill", `
+    UPDATE nf_projects
+    SET team_id = '00000000-0000-0000-0000-000000000000'
+    WHERE team_id IS NULL
+  `);
+
+  // Backfill clients with no team → assign to default team
+  await run("nf_clients default team backfill", `
+    UPDATE nf_clients
+    SET team_id = '00000000-0000-0000-0000-000000000000'
+    WHERE team_id IS NULL
+  `);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }

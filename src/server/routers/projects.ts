@@ -71,6 +71,7 @@ export const projectsRouter = createTRPCRouter({
           timelineWeeks: input.timelineWeeks,
           clientId: input.clientId,
           status: "brief",
+          teamId: (ctx.user as any)?.teamId ?? "00000000-0000-0000-0000-000000000000",
         })
         .returning();
 
