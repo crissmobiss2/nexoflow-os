@@ -270,6 +270,73 @@ async function main() {
   `);
   await run("nf_lead_outreach lead idx", `CREATE INDEX IF NOT EXISTS nf_lead_outreach_lead_idx ON nf_lead_outreach (lead_id)`);
 
+  // ── nf_knowledge_snippets ─────────────────────────────────────────────────
+  await run("nf_knowledge_snippets table", `
+    CREATE TABLE IF NOT EXISTS nf_knowledge_snippets (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      category VARCHAR(255) NOT NULL,
+      name VARCHAR(500) NOT NULL,
+      content TEXT NOT NULL,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_snippets_category_idx", `CREATE INDEX IF NOT EXISTS nf_snippets_category_idx ON nf_knowledge_snippets (category)`);
+  await run("nf_snippets_name_idx",     `CREATE INDEX IF NOT EXISTS nf_snippets_name_idx     ON nf_knowledge_snippets (name)`);
+
+  // ── nf_notifications ─────────────────────────────────────────────────────
+  await run("nf_notifications table", `
+    CREATE TABLE IF NOT EXISTS nf_notifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
+      type nf_notification_type NOT NULL DEFAULT 'project_status',
+      title TEXT NOT NULL,
+      message TEXT,
+      link TEXT,
+      read BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_notifications_user_read_idx", `CREATE INDEX IF NOT EXISTS nf_notifications_user_read_idx ON nf_notifications (user_id, read)`);
+  await run("nf_notifications_created_idx",   `CREATE INDEX IF NOT EXISTS nf_notifications_created_idx   ON nf_notifications (created_at)`);
+
+  // ── nf_decision_log ───────────────────────────────────────────────────────
+  await run("enum nf_decl_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_decl_status AS ENUM ('proposed','accepted','deprecated','superseded');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["proposed", "accepted", "deprecated", "superseded"]) {
+    await run(`enum nf_decl_status add ${v}`, `ALTER TYPE nf_decl_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("nf_decision_log table", `
+    CREATE TABLE IF NOT EXISTS nf_decision_log (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      decl_number VARCHAR(50) NOT NULL UNIQUE,
+      title VARCHAR(500) NOT NULL,
+      status nf_decl_status NOT NULL DEFAULT 'proposed',
+      affected_standards TEXT[],
+      affected_mocs TEXT[],
+      context TEXT,
+      decision TEXT NOT NULL,
+      consequences TEXT,
+      date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // ── nf_sync_metadata ─────────────────────────────────────────────────────
+  await run("nf_sync_metadata table", `
+    CREATE TABLE IF NOT EXISTS nf_sync_metadata (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      last_sync_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      files_count INTEGER NOT NULL DEFAULT 0,
+      status VARCHAR(50) NOT NULL DEFAULT 'idle',
+      error_message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   // ── nf_notifications — add type column (IF NOT EXISTS avoids duplicate_column error)
   await run("nf_notifications.type column", `ALTER TABLE nf_notifications ADD COLUMN IF NOT EXISTS type nf_notification_type`);
 
