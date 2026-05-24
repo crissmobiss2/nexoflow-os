@@ -593,7 +593,7 @@ export const notifications = pgTable(
   "nf_notifications",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    userId: text("user_id").notNull(), // No FK — allows userId='system' for system-generated notifications
     type: notificationTypeEnum("type").notNull(),
     title: text("title").notNull(),
     message: text("message"),
@@ -607,9 +607,7 @@ export const notifications = pgTable(
   ],
 );
 
-export const notificationRelations = relations(notifications, ({ one }) => ({
-  user: one(users, { fields: [notifications.userId], references: [users.id] }),
-}));
+// notificationRelations: userId is plain text (no FK), so no relation defined
 
 // ─── Sync Metadata ────────────────────────────────────────────────────────────
 

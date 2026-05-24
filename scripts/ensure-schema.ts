@@ -573,10 +573,11 @@ async function main() {
   await run("nf_snippets_name_idx",     `CREATE INDEX IF NOT EXISTS nf_snippets_name_idx     ON nf_knowledge_snippets (name)`);
 
   // ── nf_notifications ─────────────────────────────────────────────────────
+  // user_id is plain TEXT (no FK) so system notifications with userId='system' work.
   await run("nf_notifications table", `
     CREATE TABLE IF NOT EXISTS nf_notifications (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
       type nf_notification_type NOT NULL DEFAULT 'project_status',
       title TEXT NOT NULL,
       message TEXT,
@@ -585,6 +586,8 @@ async function main() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  // Drop the FK constraint if the table was created with one (system notifications would fail otherwise)
+  await run("drop nf_notifications_user_fkey", `ALTER TABLE nf_notifications DROP CONSTRAINT IF EXISTS nf_notifications_user_id_fkey`);
   await run("nf_notifications_user_read_idx", `CREATE INDEX IF NOT EXISTS nf_notifications_user_read_idx ON nf_notifications (user_id, read)`);
   await run("nf_notifications_created_idx",   `CREATE INDEX IF NOT EXISTS nf_notifications_created_idx   ON nf_notifications (created_at)`);
 
