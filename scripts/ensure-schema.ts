@@ -604,6 +604,28 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // ── nf_comments ──────────────────────────────────────────────────────────
+  await run("nf_comments table", `
+    CREATE TABLE IF NOT EXISTS nf_comments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      author_id TEXT,
+      author_name VARCHAR(255) NOT NULL DEFAULT 'User',
+      content TEXT NOT NULL,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_comments_project_idx", `CREATE INDEX IF NOT EXISTS nf_comments_project_idx ON nf_comments (project_id)`);
+  await run("nf_comments.author_id",   `ALTER TABLE nf_comments ADD COLUMN IF NOT EXISTS author_id TEXT`);
+  await run("nf_comments.team_id",     `ALTER TABLE nf_comments ADD COLUMN IF NOT EXISTS team_id UUID`);
+  await run("nf_comments.author_name", `ALTER TABLE nf_comments ADD COLUMN IF NOT EXISTS author_name VARCHAR(255) NOT NULL DEFAULT 'User'`);
+
+  // ── nf_projects — portal columns ─────────────────────────────────────────
+  await run("nf_projects.portal_token",   `ALTER TABLE nf_projects ADD COLUMN IF NOT EXISTS portal_token TEXT UNIQUE`);
+  await run("nf_projects.portal_enabled", `ALTER TABLE nf_projects ADD COLUMN IF NOT EXISTS portal_enabled BOOLEAN NOT NULL DEFAULT false`);
+
   // Backfill projects with no team → assign to default team so tRPC board query finds them
   await run("nf_projects default team backfill", `
     UPDATE nf_projects
