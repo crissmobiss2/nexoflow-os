@@ -214,6 +214,11 @@ async function main() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  // Patch NextAuth-managed tables that may be missing our custom columns
+  await run("nf_user.role",       `ALTER TABLE nf_user ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'viewer'`);
+  await run("nf_user.team_id",    `ALTER TABLE nf_user ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES nf_teams(id) ON DELETE SET NULL`);
+  await run("nf_user.created_at", `ALTER TABLE nf_user ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  await run("nf_user.updated_at", `ALTER TABLE nf_user ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
   await run("nf_account table", `
     CREATE TABLE IF NOT EXISTS nf_account (
       user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
