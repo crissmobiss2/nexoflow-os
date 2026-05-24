@@ -5,6 +5,7 @@ import { api } from "@/lib/trpc/client";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight, FileSignature, Loader2, Printer } from "lucide-react";
 import { formatProjectType, formatDate } from "@/lib/utils";
+import { renderMarkdown } from "@/lib/markdown";
 
 export default function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -222,21 +223,15 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
               Scope of Work
             </h2>
             {proposal.scopeContent ? (
-              <div
-                className="text-sm leading-relaxed space-y-3"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <p>
+              <div className="text-sm leading-relaxed space-y-3">
+                <p style={{ color: "var(--text-secondary)" }}>
                   The following scope of work outlines the deliverables, milestones, and technical
                   approach for <strong style={{ color: "var(--text-primary)" }}>{projectName}</strong>.
                 </p>
-                <div className="mt-4 p-4 rounded-lg whitespace-pre-wrap font-mono text-xs leading-relaxed"
-                  style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)", color: "var(--text-secondary)", maxHeight: "400px", overflowY: "auto" }}
-                >
-                  {proposal.scopeContent.length > 3000
-                    ? proposal.scopeContent.slice(0, 3000) + "\n\n... (full scope document available in the Scope page)"
-                    : proposal.scopeContent}
-                </div>
+                <div
+                  className="prose-nexoflow mt-4"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(proposal.scopeContent) }}
+                />
               </div>
             ) : (
               <p className="text-sm italic" style={{ color: "var(--text-muted)" }}>
