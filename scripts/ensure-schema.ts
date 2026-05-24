@@ -78,6 +78,64 @@ async function main() {
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
 
+  // ── Core project enums (created by drizzle-kit; ensure they exist for fresh DBs) ─
+  await run("enum nf_project_type", `
+    DO $$ BEGIN
+      CREATE TYPE nf_project_type AS ENUM (
+        'website','web_app','mobile_app','desktop_app',
+        'saas','marketplace','internal_tool','ai_product','ecommerce','portal'
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["website","web_app","mobile_app","desktop_app","saas","marketplace","internal_tool","ai_product","ecommerce","portal"]) {
+    await run(`enum nf_project_type add ${v}`, `ALTER TYPE nf_project_type ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_project_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_project_status AS ENUM (
+        'brief','scored','scoped','architected','generating','ready','archived'
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["brief","scored","scoped","architected","generating","ready","archived"]) {
+    await run(`enum nf_project_status add ${v}`, `ALTER TYPE nf_project_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_score_decision", `
+    DO $$ BEGIN
+      CREATE TYPE nf_score_decision AS ENUM ('pass','conditional','build','prioritise');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["pass","conditional","build","prioritise"]) {
+    await run(`enum nf_score_decision add ${v}`, `ALTER TYPE nf_score_decision ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_artifact_type", `
+    DO $$ BEGIN
+      CREATE TYPE nf_artifact_type AS ENUM (
+        'scope_doc','tech_stack','architecture','risk_register',
+        'code_bundle','file_tree','database_schema','deployment_config'
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["scope_doc","tech_stack","architecture","risk_register","code_bundle","file_tree","database_schema","deployment_config"]) {
+    await run(`enum nf_artifact_type add ${v}`, `ALTER TYPE nf_artifact_type ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_phase_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_phase_status AS ENUM ('pending','in_progress','completed','skipped');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["pending","in_progress","completed","skipped"]) {
+    await run(`enum nf_phase_status add ${v}`, `ALTER TYPE nf_phase_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_invoice_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_invoice_status AS ENUM ('draft','sent','paid','overdue','cancelled');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["draft","sent","paid","overdue","cancelled"]) {
+    await run(`enum nf_invoice_status add ${v}`, `ALTER TYPE nf_invoice_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+
   // ── pgvector extension ────────────────────────────────────────────────────────
   await run("extension vector", `CREATE EXTENSION IF NOT EXISTS vector`);
 
@@ -141,6 +199,232 @@ async function main() {
   await run("drop nf_invoices_team_id_fkey", `ALTER TABLE nf_invoices DROP CONSTRAINT IF EXISTS nf_invoices_team_id_fkey`);
   await run("drop nf_leads_team_id_fkey",    `ALTER TABLE nf_leads DROP CONSTRAINT IF EXISTS nf_leads_team_id_fkey`);
   await run("drop nf_clients_team_id_fkey",  `ALTER TABLE nf_clients DROP CONSTRAINT IF EXISTS nf_clients_team_id_fkey`);
+
+  // ── NextAuth tables (nf_user must exist before any FK that references it) ──
+  await run("nf_user table", `
+    CREATE TABLE IF NOT EXISTS nf_user (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      email TEXT NOT NULL UNIQUE,
+      email_verified TIMESTAMPTZ,
+      image TEXT,
+      role VARCHAR(20) NOT NULL DEFAULT 'viewer',
+      team_id UUID REFERENCES nf_teams(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_account table", `
+    CREATE TABLE IF NOT EXISTS nf_account (
+      user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_account_id TEXT NOT NULL,
+      refresh_token TEXT,
+      access_token TEXT,
+      expires_at INTEGER,
+      token_type TEXT,
+      scope TEXT,
+      id_token TEXT,
+      session_state TEXT,
+      PRIMARY KEY (provider, provider_account_id)
+    )
+  `);
+  await run("nf_session table", `
+    CREATE TABLE IF NOT EXISTS nf_session (
+      session_token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
+      expires TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await run("nf_verification_token table", `
+    CREATE TABLE IF NOT EXISTS nf_verification_token (
+      identifier TEXT NOT NULL,
+      token TEXT NOT NULL,
+      expires TIMESTAMPTZ NOT NULL,
+      PRIMARY KEY (identifier, token)
+    )
+  `);
+
+  // ── nf_clients ───────────────────────────────────────────────────────────
+  await run("nf_clients table", `
+    CREATE TABLE IF NOT EXISTS nf_clients (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      phone VARCHAR(50),
+      company VARCHAR(255),
+      website VARCHAR(255),
+      industry VARCHAR(255),
+      company_size VARCHAR(50),
+      region VARCHAR(100),
+      business_description TEXT,
+      target_customers TEXT,
+      current_challenges TEXT,
+      existing_tech TEXT,
+      typical_budget VARCHAR(100),
+      urgency VARCHAR(50),
+      decision_maker_role VARCHAR(100),
+      notes TEXT,
+      portal_token TEXT UNIQUE,
+      portal_enabled BOOLEAN NOT NULL DEFAULT false,
+      slack_webhook_url VARCHAR(500),
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      onboarded_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_clients_email_idx", `CREATE INDEX IF NOT EXISTS nf_clients_email_idx ON nf_clients (email)`);
+  await run("nf_clients_team_idx",  `CREATE INDEX IF NOT EXISTS nf_clients_team_idx  ON nf_clients (team_id)`);
+
+  // ── nf_projects ──────────────────────────────────────────────────────────
+  await run("nf_projects table", `
+    CREATE TABLE IF NOT EXISTS nf_projects (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL,
+      project_type nf_project_type NOT NULL,
+      industry VARCHAR(255),
+      status nf_project_status NOT NULL DEFAULT 'brief',
+      opportunity_score INTEGER,
+      score_decision nf_score_decision,
+      budget_range VARCHAR(100),
+      timeline_weeks INTEGER,
+      portal_token TEXT UNIQUE,
+      portal_enabled BOOLEAN NOT NULL DEFAULT false,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_projects_status_idx", `CREATE INDEX IF NOT EXISTS nf_projects_status_idx ON nf_projects (status)`);
+  await run("nf_projects_client_idx", `CREATE INDEX IF NOT EXISTS nf_projects_client_idx ON nf_projects (client_id)`);
+
+  // ── nf_project_briefs ────────────────────────────────────────────────────
+  await run("nf_project_briefs table", `
+    CREATE TABLE IF NOT EXISTS nf_project_briefs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      target_user TEXT,
+      core_job_to_be_done TEXT,
+      existing_tech TEXT,
+      key_integrations TEXT,
+      constraints TEXT,
+      additional_context TEXT,
+      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_briefs_project_idx", `CREATE INDEX IF NOT EXISTS nf_briefs_project_idx ON nf_project_briefs (project_id)`);
+
+  // ── nf_opportunity_scores ────────────────────────────────────────────────
+  await run("nf_opportunity_scores table", `
+    CREATE TABLE IF NOT EXISTS nf_opportunity_scores (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL UNIQUE REFERENCES nf_projects(id) ON DELETE CASCADE,
+      market_size INTEGER NOT NULL DEFAULT 0,
+      problem_clarity INTEGER NOT NULL DEFAULT 0,
+      competitive_gap INTEGER NOT NULL DEFAULT 0,
+      revenue_model INTEGER NOT NULL DEFAULT 0,
+      team_fit INTEGER NOT NULL DEFAULT 0,
+      time_to_value INTEGER NOT NULL DEFAULT 0,
+      strategic_alignment INTEGER NOT NULL DEFAULT 0,
+      total_score INTEGER NOT NULL DEFAULT 0,
+      decision nf_score_decision NOT NULL DEFAULT 'conditional',
+      ai_rationale TEXT,
+      scored_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // ── nf_project_phases ────────────────────────────────────────────────────
+  await run("nf_project_phases table", `
+    CREATE TABLE IF NOT EXISTS nf_project_phases (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      phase_name VARCHAR(100) NOT NULL,
+      phase_order INTEGER NOT NULL,
+      status nf_phase_status NOT NULL DEFAULT 'pending',
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ
+    )
+  `);
+  await run("nf_phases_project_idx", `CREATE INDEX IF NOT EXISTS nf_phases_project_idx ON nf_project_phases (project_id)`);
+
+  // ── nf_project_artifacts ─────────────────────────────────────────────────
+  await run("nf_project_artifacts table", `
+    CREATE TABLE IF NOT EXISTS nf_project_artifacts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      artifact_type nf_artifact_type NOT NULL,
+      content TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      model_used VARCHAR(100),
+      prompt_tokens INTEGER,
+      completion_tokens INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_artifacts_project_type_idx", `CREATE INDEX IF NOT EXISTS nf_artifacts_project_type_idx ON nf_project_artifacts (project_id, artifact_type)`);
+
+  // ── nf_invoices ──────────────────────────────────────────────────────────
+  await run("nf_invoices table", `
+    CREATE TABLE IF NOT EXISTS nf_invoices (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL,
+      invoice_number VARCHAR(50) NOT NULL UNIQUE,
+      status nf_invoice_status NOT NULL DEFAULT 'draft',
+      amount INTEGER NOT NULL DEFAULT 0,
+      currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
+      due_date TIMESTAMPTZ,
+      paid_at TIMESTAMPTZ,
+      notes TEXT,
+      project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
+      milestone_step INTEGER,
+      stripe_payment_url VARCHAR(1000),
+      stripe_payment_link_id VARCHAR(255),
+      recurring_interval VARCHAR(20),
+      recurring_enabled BOOLEAN NOT NULL DEFAULT false,
+      next_recurring_at TIMESTAMPTZ,
+      stripe_customer_id VARCHAR(255),
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_invoices_client_idx", `CREATE INDEX IF NOT EXISTS nf_invoices_client_idx ON nf_invoices (client_id)`);
+  await run("nf_invoices_status_idx", `CREATE INDEX IF NOT EXISTS nf_invoices_status_idx ON nf_invoices (status)`);
+
+  // ── nf_invoice_line_items ────────────────────────────────────────────────
+  await run("nf_invoice_line_items table", `
+    CREATE TABLE IF NOT EXISTS nf_invoice_line_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      invoice_id UUID NOT NULL REFERENCES nf_invoices(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      rate INTEGER NOT NULL DEFAULT 0,
+      amount INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await run("nf_line_items_invoice_idx", `CREATE INDEX IF NOT EXISTS nf_line_items_invoice_idx ON nf_invoice_line_items (invoice_id)`);
+
+  // ── nf_api_keys ──────────────────────────────────────────────────────────
+  await run("nf_api_keys table", `
+    CREATE TABLE IF NOT EXISTS nf_api_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      key_prefix VARCHAR(8) NOT NULL DEFAULT '',
+      key_hash TEXT NOT NULL DEFAULT '',
+      key_last_chars VARCHAR(4) NOT NULL DEFAULT '',
+      created_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      last_used_at TIMESTAMPTZ,
+      expires_at TIMESTAMPTZ,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 
   // ── nf_leads: drop & recreate if table is empty and has legacy schema ──────
   // Safe because all insert attempts have been failing (no leads exist).
@@ -277,6 +561,7 @@ async function main() {
       category VARCHAR(255) NOT NULL,
       name VARCHAR(500) NOT NULL,
       content TEXT NOT NULL,
+      embedding vector(1024),
       team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
