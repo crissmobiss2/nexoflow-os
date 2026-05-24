@@ -607,10 +607,10 @@ async function main() {
   // ── nf_sprint_tasks ──────────────────────────────────────────────────────
   await run("enum nf_sprint_status", `
     DO $$ BEGIN
-      CREATE TYPE nf_sprint_status AS ENUM ('backlog','todo','in_progress','review','done','blocked');
+      CREATE TYPE nf_sprint_status AS ENUM ('backlog','todo','in_progress','review','done','blocked','cancelled');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
-  for (const v of ["backlog", "todo", "in_progress", "review", "done", "blocked"]) {
+  for (const v of ["backlog", "todo", "in_progress", "review", "done", "blocked", "cancelled"]) {
     await run(`enum nf_sprint_status add ${v}`, `ALTER TYPE nf_sprint_status ADD VALUE IF NOT EXISTS '${v}'`);
   }
   await run("nf_sprint_tasks table", `
