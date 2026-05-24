@@ -604,6 +604,50 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // ── nf_team_members + nf_invitations ─────────────────────────────────────
+  await run("enum nf_team_role", `
+    DO $$ BEGIN
+      CREATE TYPE nf_team_role AS ENUM ('owner','admin','pm','developer','viewer');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["owner", "admin", "pm", "developer", "viewer"]) {
+    await run(`enum nf_team_role add ${v}`, `ALTER TYPE nf_team_role ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("enum nf_invitation_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_invitation_status AS ENUM ('pending','accepted','expired','cancelled');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["pending", "accepted", "expired", "cancelled"]) {
+    await run(`enum nf_invitation_status add ${v}`, `ALTER TYPE nf_invitation_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("nf_team_members table", `
+    CREATE TABLE IF NOT EXISTS nf_team_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      team_id UUID NOT NULL REFERENCES nf_teams(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES nf_user(id) ON DELETE CASCADE,
+      role nf_team_role NOT NULL DEFAULT 'developer',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_team_members_team_idx", `CREATE INDEX IF NOT EXISTS nf_team_members_team_idx ON nf_team_members (team_id)`);
+  await run("nf_team_members_user_idx", `CREATE INDEX IF NOT EXISTS nf_team_members_user_idx ON nf_team_members (user_id)`);
+
+  await run("nf_invitations table", `
+    CREATE TABLE IF NOT EXISTS nf_invitations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      team_id UUID NOT NULL REFERENCES nf_teams(id) ON DELETE CASCADE,
+      email VARCHAR(255) NOT NULL,
+      role nf_team_role NOT NULL DEFAULT 'developer',
+      status nf_invitation_status NOT NULL DEFAULT 'pending',
+      invited_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_invitations_team_idx", `CREATE INDEX IF NOT EXISTS nf_invitations_team_idx ON nf_invitations (team_id)`);
+
   // ── nf_project_templates ─────────────────────────────────────────────────
   await run("nf_project_templates table", `
     CREATE TABLE IF NOT EXISTS nf_project_templates (
@@ -634,10 +678,10 @@ async function main() {
   // ── nf_ai_conversations + nf_ai_messages ──────────────────────────────────
   await run("enum nf_ai_mode", `
     DO $$ BEGIN
-      CREATE TYPE nf_ai_mode AS ENUM ('general','project','knowledge','code');
+      CREATE TYPE nf_ai_mode AS ENUM ('general','architect','tech_advisor','code_review','security','performance','estimator','scope_writer');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
-  for (const v of ["general", "project", "knowledge", "code"]) {
+  for (const v of ["general", "architect", "tech_advisor", "code_review", "security", "performance", "estimator", "scope_writer"]) {
     await run(`enum nf_ai_mode add ${v}`, `ALTER TYPE nf_ai_mode ADD VALUE IF NOT EXISTS '${v}'`);
   }
   await run("nf_ai_conversations table", `
