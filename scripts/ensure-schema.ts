@@ -371,21 +371,24 @@ async function main() {
     CREATE TABLE IF NOT EXISTS nf_invoices (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       client_id UUID REFERENCES nf_clients(id) ON DELETE SET NULL,
-      invoice_number VARCHAR(50) NOT NULL UNIQUE,
-      status nf_invoice_status NOT NULL DEFAULT 'draft',
-      amount INTEGER NOT NULL DEFAULT 0,
-      currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
-      due_date TIMESTAMPTZ,
-      paid_at TIMESTAMPTZ,
-      notes TEXT,
       project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
       milestone_step INTEGER,
-      stripe_payment_url VARCHAR(1000),
-      stripe_payment_link_id VARCHAR(255),
+      invoice_number VARCHAR(50) NOT NULL UNIQUE,
+      status nf_invoice_status NOT NULL DEFAULT 'draft',
+      subtotal INTEGER NOT NULL DEFAULT 0,
+      tax INTEGER NOT NULL DEFAULT 0,
+      total INTEGER NOT NULL DEFAULT 0,
+      currency VARCHAR(3) NOT NULL DEFAULT 'USD',
       recurring_interval VARCHAR(20),
       recurring_enabled BOOLEAN NOT NULL DEFAULT false,
       next_recurring_at TIMESTAMPTZ,
       stripe_customer_id VARCHAR(255),
+      due_date TIMESTAMPTZ,
+      paid_date TIMESTAMPTZ,
+      notes TEXT,
+      stripe_payment_url VARCHAR(1000),
+      stripe_payment_link_id VARCHAR(255),
+      created_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
       team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -403,8 +406,7 @@ async function main() {
       quantity INTEGER NOT NULL DEFAULT 1,
       rate INTEGER NOT NULL DEFAULT 0,
       amount INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
   await run("nf_line_items_invoice_idx", `CREATE INDEX IF NOT EXISTS nf_line_items_invoice_idx ON nf_invoice_line_items (invoice_id)`);
@@ -417,12 +419,13 @@ async function main() {
       key_prefix VARCHAR(8) NOT NULL DEFAULT '',
       key_hash TEXT NOT NULL DEFAULT '',
       key_last_chars VARCHAR(4) NOT NULL DEFAULT '',
+      permissions TEXT NOT NULL DEFAULT 'read',
       created_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
       last_used_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
-      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
