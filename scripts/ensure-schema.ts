@@ -604,6 +604,25 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // ── nf_audit_logs ────────────────────────────────────────────────────────
+  await run("nf_audit_logs table", `
+    CREATE TABLE IF NOT EXISTS nf_audit_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      user_name VARCHAR(255),
+      action VARCHAR(100) NOT NULL,
+      target_type VARCHAR(100) NOT NULL,
+      target_id VARCHAR(255),
+      details TEXT,
+      ip_address VARCHAR(45),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_audit_logs_action_idx",  `CREATE INDEX IF NOT EXISTS nf_audit_logs_action_idx  ON nf_audit_logs (action)`);
+  await run("nf_audit_logs_user_idx",    `CREATE INDEX IF NOT EXISTS nf_audit_logs_user_idx    ON nf_audit_logs (user_id)`);
+  await run("nf_audit_logs_target_idx",  `CREATE INDEX IF NOT EXISTS nf_audit_logs_target_idx  ON nf_audit_logs (target_type, target_id)`);
+  await run("nf_audit_logs_created_idx", `CREATE INDEX IF NOT EXISTS nf_audit_logs_created_idx ON nf_audit_logs (created_at)`);
+
   // ── nf_comments ──────────────────────────────────────────────────────────
   await run("nf_comments table", `
     CREATE TABLE IF NOT EXISTS nf_comments (
