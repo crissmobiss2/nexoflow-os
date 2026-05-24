@@ -640,6 +640,26 @@ async function main() {
     WHERE team_id IS NULL
   `);
 
+  // ── One-time cleanup: remove duplicate demo test records ─────────────────
+  // During QA testing, demo generation was run 11 times on the same lead,
+  // creating 11 identical "Brixton & Co. Smokehouse — Demo" projects and clients.
+  // Keep the oldest client, delete the rest and their projects.
+  await run("dedup Marcus Brixton projects", `
+    DELETE FROM nf_projects
+    WHERE name = 'Brixton & Co. Smokehouse — Demo'
+      AND status = 'brief'
+  `);
+  await run("dedup Marcus Brixton clients", `
+    DELETE FROM nf_clients
+    WHERE email = 'marcus@brixtonsmokehouse.com'
+      AND id NOT IN (
+        SELECT id FROM nf_clients
+        WHERE email = 'marcus@brixtonsmokehouse.com'
+        ORDER BY created_at ASC
+        LIMIT 1
+      )
+  `);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }
