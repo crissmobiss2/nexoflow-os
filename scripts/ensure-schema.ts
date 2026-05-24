@@ -604,6 +604,48 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // ── nf_sprint_tasks ──────────────────────────────────────────────────────
+  await run("enum nf_sprint_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_sprint_status AS ENUM ('backlog','todo','in_progress','review','done','blocked');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["backlog", "todo", "in_progress", "review", "done", "blocked"]) {
+    await run(`enum nf_sprint_status add ${v}`, `ALTER TYPE nf_sprint_status ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("nf_sprint_tasks table", `
+    CREATE TABLE IF NOT EXISTS nf_sprint_tasks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      phase_id UUID REFERENCES nf_project_phases(id) ON DELETE SET NULL,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      story_points INTEGER DEFAULT 1,
+      status nf_sprint_status NOT NULL DEFAULT 'backlog',
+      assignee_id TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      priority INTEGER DEFAULT 0,
+      order_val INTEGER DEFAULT 0,
+      due_date TIMESTAMPTZ,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_sprint_tasks_project_idx", `CREATE INDEX IF NOT EXISTS nf_sprint_tasks_project_idx ON nf_sprint_tasks (project_id)`);
+
+  // ── nf_project_playbooks ─────────────────────────────────────────────────
+  await run("nf_project_playbooks table", `
+    CREATE TABLE IF NOT EXISTS nf_project_playbooks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL UNIQUE REFERENCES nf_projects(id) ON DELETE CASCADE,
+      playbook_name VARCHAR(255) NOT NULL,
+      content TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   // ── nf_audit_logs ────────────────────────────────────────────────────────
   await run("nf_audit_logs table", `
     CREATE TABLE IF NOT EXISTS nf_audit_logs (
