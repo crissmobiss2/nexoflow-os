@@ -604,6 +604,64 @@ async function main() {
   `);
   await run("nf_followup_lead_idx", `CREATE INDEX IF NOT EXISTS nf_followup_lead_idx ON nf_follow_up_sequences (lead_id)`);
 
+  // ── nf_project_templates ─────────────────────────────────────────────────
+  await run("nf_project_templates table", `
+    CREATE TABLE IF NOT EXISTS nf_project_templates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      project_type nf_project_type NOT NULL,
+      default_brief_template TEXT,
+      created_by TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      is_built_in BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_templates_type_idx", `CREATE INDEX IF NOT EXISTS nf_templates_type_idx ON nf_project_templates (project_type)`);
+
+  await run("nf_project_template_items table", `
+    CREATE TABLE IF NOT EXISTS nf_project_template_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      template_id UUID NOT NULL REFERENCES nf_project_templates(id) ON DELETE CASCADE,
+      phase_name VARCHAR(100) NOT NULL,
+      phase_order INTEGER NOT NULL,
+      description TEXT
+    )
+  `);
+  await run("nf_template_items_template_idx", `CREATE INDEX IF NOT EXISTS nf_template_items_template_idx ON nf_project_template_items (template_id)`);
+
+  // ── nf_ai_conversations + nf_ai_messages ──────────────────────────────────
+  await run("enum nf_ai_mode", `
+    DO $$ BEGIN
+      CREATE TYPE nf_ai_mode AS ENUM ('general','project','knowledge','code');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  for (const v of ["general", "project", "knowledge", "code"]) {
+    await run(`enum nf_ai_mode add ${v}`, `ALTER TYPE nf_ai_mode ADD VALUE IF NOT EXISTS '${v}'`);
+  }
+  await run("nf_ai_conversations table", `
+    CREATE TABLE IF NOT EXISTS nf_ai_conversations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
+      title VARCHAR(500),
+      mode nf_ai_mode NOT NULL DEFAULT 'general',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_ai_messages table", `
+    CREATE TABLE IF NOT EXISTS nf_ai_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      conversation_id UUID NOT NULL REFERENCES nf_ai_conversations(id) ON DELETE CASCADE,
+      role VARCHAR(20) NOT NULL,
+      content TEXT NOT NULL,
+      context_snippets INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_messages_conv_idx", `CREATE INDEX IF NOT EXISTS nf_messages_conv_idx ON nf_ai_messages (conversation_id)`);
+
   // ── nf_sprint_tasks ──────────────────────────────────────────────────────
   await run("enum nf_sprint_status", `
     DO $$ BEGIN
