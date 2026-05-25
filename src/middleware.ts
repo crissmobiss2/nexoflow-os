@@ -9,6 +9,8 @@ const PUBLIC_PATHS = new Set([
   "/api/demo",          // Public demo links (token-validated in the route itself)
   "/api/track",         // Demo engagement tracking
   "/api/admin",         // Admin API routes (protected by x-admin-secret header)
+  "/api/background",    // Internal background workers (protected by x-internal-secret)
+  "/api/cron",          // Vercel cron jobs (protected by x-cron-secret)
   "/api/webhooks",      // External webhook integrations
   "/api/widget",        // Embeddable widget
   "/api/integration",   // External intake forms
