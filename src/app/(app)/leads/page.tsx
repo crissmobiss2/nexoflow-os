@@ -30,6 +30,12 @@ export default function LeadsPage() {
   const [view, setView] = useState<ViewMode>("table");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  function showToast(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   const { data: allLeads = [], isLoading, refetch } = api.leads.list.useQuery(
     filterStatus ? { status: filterStatus as any } : undefined,
@@ -43,17 +49,19 @@ export default function LeadsPage() {
   });
   const bulkScrape = api.leads.bulkScrape.useMutation({
     onSuccess: (r) => {
-      alert(`Scraped ${r.succeeded} · failed ${r.failed}`);
+      showToast(`Scraped ${r.succeeded}${r.failed ? ` · ${r.failed} failed` : " leads"}`, r.failed ? "error" : "success");
       setSelected(new Set());
       void refetch();
     },
+    onError: (e) => showToast(e.message, "error"),
   });
   const bulkGenerateDemo = api.leads.bulkGenerateDemo.useMutation({
     onSuccess: (r) => {
-      alert(`Generated ${r.succeeded} demos · failed ${r.failed}`);
+      showToast(`${r.succeeded} demo${r.succeeded !== 1 ? "s" : ""} generated${r.failed ? ` · ${r.failed} failed` : ""}`, r.failed ? "error" : "success");
       setSelected(new Set());
       void refetch();
     },
+    onError: (e) => showToast(e.message, "error"),
   });
 
   function toggleSelect(id: string) {
@@ -77,6 +85,21 @@ export default function LeadsPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-xl"
+          style={{
+            background: toast.type === "success" ? "hsl(142 68% 52% / 0.12)" : "hsl(0 72% 58% / 0.12)",
+            border: `1px solid ${toast.type === "success" ? "hsl(142 68% 52% / 0.35)" : "hsl(0 72% 58% / 0.35)"}`,
+            color: toast.type === "success" ? "hsl(142, 68%, 52%)" : "hsl(0, 72%, 68%)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <span>{toast.type === "success" ? "✓" : "⚠"} {toast.msg}</span>
+          <button onClick={() => setToast(null)} className="opacity-60 hover:opacity-100 transition-opacity ml-1">✕</button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>

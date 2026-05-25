@@ -11,6 +11,9 @@ export const maxDuration = 300;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// ─── Booking URL — update this to your Calendly/Cal.com link ─────────────────
+const BOOKING_URL = process.env.BOOKING_URL ?? "https://nexoflow.tech/book";
+
 // ─── Industry stat presets ────────────────────────────────────────────────────
 const STATS: Record<string, Array<{ n: string; l: string }>> = {
   restaurant: [
@@ -33,6 +36,46 @@ const STATS: Record<string, Array<{ n: string; l: string }>> = {
     { n: "91%", l: "Patient satisfaction improvement after digital intake and follow-up rollout" },
     { n: "3.3×", l: "Staff efficiency gain from automated scheduling and follow-up workflows" },
   ],
+  legal: [
+    { n: "–41%", l: "Reduction in document processing time after automated client intake and matter management" },
+    { n: "3.2×", l: "More matters handled per fee-earner after deploying practice management automation" },
+    { n: "89%", l: "Client satisfaction improvement after launching a self-serve portal for case updates" },
+  ],
+  real_estate: [
+    { n: "+52%", l: "Increase in qualified leads after launching AI-powered property matching and follow-up" },
+    { n: "67%", l: "Faster lead-to-showing conversion with automated nurture sequences" },
+    { n: "4.1×", l: "Higher client retention for agents using a custom CRM vs generic off-the-shelf tools" },
+  ],
+  fitness: [
+    { n: "+44%", l: "Increase in member retention after launching automated re-engagement and progress tracking" },
+    { n: "78%", l: "Of members prefer digital class booking and check-in over phone or walk-in" },
+    { n: "3.5×", l: "Revenue uplift from automated personal training upsell triggered post-class" },
+  ],
+  education: [
+    { n: "+61%", l: "Improvement in course completion rates with automated progress nudges and check-ins" },
+    { n: "73%", l: "Reduction in admin overhead after launching a self-serve student and parent portal" },
+    { n: "4.2×", l: "Higher re-enrollment rate for students who receive personalised learning path recommendations" },
+  ],
+  finance: [
+    { n: "–58%", l: "Reduction in manual data entry for accountants after automated document parsing" },
+    { n: "91%", l: "Of clients prefer real-time financial dashboards over monthly PDF reports" },
+    { n: "3.9×", l: "Faster client onboarding after replacing manual intake with an automated data room" },
+  ],
+  logistics: [
+    { n: "+37%", l: "Improvement in on-time delivery rate after automated routing and exception management" },
+    { n: "62%", l: "Reduction in customer support calls after launching real-time shipment tracking" },
+    { n: "4.6×", l: "ROI on route optimisation software vs. manual dispatch planning" },
+  ],
+  construction: [
+    { n: "–43%", l: "Reduction in project cost overruns after automated budget tracking and approval workflows" },
+    { n: "71%", l: "Faster tender-to-contract conversion with digital proposals and e-signature" },
+    { n: "3.7×", l: "Improvement in subcontractor coordination after replacing email chains with a project portal" },
+  ],
+  professional_services: [
+    { n: "+39%", l: "Revenue per consultant after deploying automated client reporting and project dashboards" },
+    { n: "76%", l: "Reduction in proposal turnaround time with templated scoping and e-signature" },
+    { n: "4.3×", l: "Client retention improvement for agencies using a branded client portal vs email updates" },
+  ],
   default: [
     { n: "+38%", l: "Average efficiency gain reported after deploying purpose-built automation" },
     { n: "72%", l: "Of customers prefer digital-first service interactions over phone or email" },
@@ -46,6 +89,14 @@ function getStats(industry: string | null): Array<{ n: string; l: string }> {
   if (k.match(/saas|software|tech|ai|platform|dev/)) return STATS.saas!;
   if (k.match(/ecommerce|e-commerce|retail|shop|store/)) return STATS.ecommerce!;
   if (k.match(/health|medical|dental|clinic|therapy/)) return STATS.healthcare!;
+  if (k.match(/legal|law|solicitor|attorney|barrister/)) return STATS.legal!;
+  if (k.match(/real.estate|property|realty|letting|mortgage|estate.agent/)) return STATS.real_estate!;
+  if (k.match(/fitness|gym|yoga|crossfit|sport|training.studio/)) return STATS.fitness!;
+  if (k.match(/education|school|university|college|training|e-learning|tutoring|academy/)) return STATS.education!;
+  if (k.match(/finance|accounting|fintech|bank|insurance|wealth|advisory|bookkeep/)) return STATS.finance!;
+  if (k.match(/logistics|shipping|freight|transport|haulage|delivery|courier/)) return STATS.logistics!;
+  if (k.match(/construction|building|contractor|civil|trades|architecture|surveying/)) return STATS.construction!;
+  if (k.match(/consulting|agency|marketing|pr|recruitment|staffing|advisory/)) return STATS.professional_services!;
   return STATS.default!;
 }
 
@@ -317,54 +368,122 @@ function buildStats(stats: Array<{ n: string; l: string }>): string {
 </div>`;
 }
 
-function buildProcess(companyName: string): string {
+function buildProcess(companyName: string, industry: string | null): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;");
+  const ind = (industry ?? "").toLowerCase();
+  const co = esc(companyName);
+
+  type Step = { h: string; p: string; d: string };
+
+  let title: string;
+  let sub: string;
+  let steps: [Step, Step, Step];
+
+  if (ind.match(/restaurant|food|dining|smokehouse|bbq|hospitality|cafe|bar|beverage/)) {
+    title = "Live in 6 Weeks, Not 6 Months";
+    sub = "No bloated agency timelines. No hand-offs to junior developers. We move fast and hand over a system that's already running before the next busy season.";
+    steps = [
+      { h: "Discovery &amp; Architecture", p: `We map every friction point in your operation — order flow, reservation logic, POS integration, and staff time costs. You get a full technical blueprint before a single line of code is written.`, d: "Week 1" },
+      { h: "Design, Build &amp; Integrate", p: `Your branded platform is built in weekly sprints. ${co} sees working software at every stage — not a slideshow at the end of month three.`, d: "Weeks 2–5" },
+      { h: "Launch &amp; Iterate", p: `Go-live with full team training, a monitored launch, and 90 days of post-launch support. The system is yours — fully documented and handed over.`, d: "Week 6 → ongoing" },
+    ];
+  } else if (ind.match(/saas|software|tech|ai|platform|dev/)) {
+    title = "Your Product, Shipped in 6 Weeks";
+    sub = "No hand-offs to juniors. No missed deadlines. Weekly sprint demos so you see exactly what's being built before it goes live.";
+    steps = [
+      { h: "Discovery &amp; Architecture", p: `We audit your current workflow, define the data model, map integrations, and document every user flow. A complete technical architecture before a single line of code.`, d: "Week 1" },
+      { h: "Build &amp; Ship in Sprints", p: `Your product is built in focused weekly sprints. ${co} reviews every sprint and signs off before we move forward — full transparency at every stage.`, d: "Weeks 2–5" },
+      { h: "Launch &amp; Scale", p: `Production deploy with full test coverage, documentation, and a 90-day support period. You own the code, the infrastructure, and the roadmap from day one.`, d: "Week 6 → ongoing" },
+    ];
+  } else if (ind.match(/ecommerce|e-commerce|retail|shop|store/)) {
+    title = "Your Commerce Platform, Live in 4–6 Weeks";
+    sub = "No templates, no limitations, no agency hand-offs. A store built to your exact workflow, with weekly demos the whole way through.";
+    steps = [
+      { h: "Discovery &amp; Store Design", p: `We map your product catalog, checkout logic, inventory management, and fulfillment flow. A complete platform blueprint — nothing gets built without your sign-off.`, d: "Week 1" },
+      { h: "Build, Integrate &amp; Test", p: `Your store is built with real product data from the start. ${co} sees the platform working with your actual catalog before anything goes live.`, d: "Weeks 2–5" },
+      { h: "Launch &amp; Optimise", p: `Go-live with payment testing, performance tuning, and a monitored launch window. Then 90 days of post-launch support as you scale traffic and revenue.`, d: "Week 6 → ongoing" },
+    ];
+  } else if (ind.match(/health|medical|dental|clinic|therapy|wellness/)) {
+    title = "Your Practice Platform, Live in 6 Weeks";
+    sub = "Purpose-built for your workflow, your compliance requirements, and your patients — not a generic tool bolted together.";
+    steps = [
+      { h: "Discovery &amp; Compliance Review", p: `We map your patient workflow — intake, scheduling, follow-up, and billing — and review compliance requirements from the start. A full technical blueprint before any code is written.`, d: "Week 1" },
+      { h: "Build &amp; Test With Your Team", p: `The platform is built to spec and tested against your real workflows. ${co}'s team reviews every sprint before anything touches patient data.`, d: "Weeks 2–5" },
+      { h: "Launch, Train &amp; Support", p: `Go-live with staff training, a monitored rollout, and 90 days of post-launch support. Full documentation so your team runs it independently from day one.`, d: "Week 6 → ongoing" },
+    ];
+  } else if (ind.match(/real.estate|property|realty|letting|mortgage|estate.agent/)) {
+    title = "Your Property Platform, Live in 6 Weeks";
+    sub = "Built for how you actually work — not another CRM that needs five plug-ins to function.";
+    steps = [
+      { h: "Discovery &amp; Workflow Map", p: `We audit your current lead capture, listing management, and client communication flow. You get a complete platform blueprint — not a demo, a real plan.`, d: "Week 1" },
+      { h: "Build, Brand &amp; Connect", p: `Your platform is built with live listing feeds, CRM integration, and your brand. ${co} reviews every sprint as features are delivered.`, d: "Weeks 2–5" },
+      { h: "Launch, Train &amp; Grow", p: `Go-live with full agent training, a monitored launch, and 90 days of support. You own the platform and control your data — no vendor lock-in.`, d: "Week 6 → ongoing" },
+    ];
+  } else if (ind.match(/legal|law|solicitor|attorney|barrister/)) {
+    title = "Your Legal Platform, Live in 6 Weeks";
+    sub = "Custom-built for your practice — not a generic case management tool that needs three workarounds to handle your workflow.";
+    steps = [
+      { h: "Discovery &amp; Process Map", p: `We map your matter workflow, client intake, billing logic, and document management requirements. A complete technical blueprint — reviewed and signed off before any code is written.`, d: "Week 1" },
+      { h: "Build &amp; Test Against Your Cases", p: `The platform is built with your actual matter types and document templates. ${co}'s team validates every sprint before it handles live client data.`, d: "Weeks 2–5" },
+      { h: "Launch, Train &amp; Support", p: `Go-live with full team training, a monitored rollout, and 90 days of post-launch support. Every process is documented so your team can run it independently.`, d: "Week 6 → ongoing" },
+    ];
+  } else {
+    // Generic professional services / catch-all
+    title = "Your Custom Platform, Live in 6 Weeks";
+    sub = "No bloated agency timelines. No hand-offs to junior developers. Weekly sprint demos so you see exactly what's being built.";
+    steps = [
+      { h: "Discovery &amp; Architecture", p: `We map every friction point in your current operation — workflows, integrations, data flows, and team time costs. A full technical blueprint before a single line of code is written.`, d: "Week 1" },
+      { h: "Design, Build &amp; Integrate", p: `Your platform is built in sprints with weekly demos. ${co} stays in the loop at every stage — you see real progress every week, not a presentation at the end of the project.`, d: "Weeks 2–5" },
+      { h: "Launch &amp; Iterate", p: `Go-live with full team training, a monitored launch window, and 90 days of post-launch support. After that, the system is yours — fully documented and handed over.`, d: "Week 6 → ongoing" },
+    ];
+  }
+
   return `
 <section class="sec reveal">
   <div class="sec-inner">
     <div class="sec-label">How It Works</div>
-    <div class="sec-title">Live in 6 Weeks, Not 6 Months</div>
-    <p class="sec-sub">No bloated agency timelines. No hand-offs to junior developers. We move fast and hand over a system that's already running before the next busy season.</p>
+    <div class="sec-title">${title}</div>
+    <p class="sec-sub">${sub}</p>
     <div class="steps">
       <div class="step reveal reveal-delay-1">
         <div class="step-num">01</div>
-        <h3>Discovery &amp; Architecture</h3>
-        <p>We map every friction point in your current operation — order flow, reservation logic, Square POS setup, and staff time costs. You get a full technical blueprint before a single line of code is written.</p>
-        <span class="duration">Week 1</span>
+        <h3>${steps[0].h}</h3>
+        <p>${steps[0].p}</p>
+        <span class="duration">${steps[0].d}</span>
       </div>
       <div class="step reveal reveal-delay-2">
         <div class="step-num">02</div>
-        <h3>Design, Build &amp; Integrate</h3>
-        <p>Your branded platform is built in sprints with weekly demos. ${esc(companyName)} stays in the loop at every stage — you see progress every week, not at the end of month three.</p>
-        <span class="duration">Weeks 2–5</span>
+        <h3>${steps[1].h}</h3>
+        <p>${steps[1].p}</p>
+        <span class="duration">${steps[1].d}</span>
       </div>
       <div class="step reveal reveal-delay-3">
         <div class="step-num">03</div>
-        <h3>Launch &amp; Iterate</h3>
-        <p>Go-live with full team training, a monitored launch window, and 90 days of post-launch support. After that, the system is yours — we document everything and hand over full ownership.</p>
-        <span class="duration">Week 6 → ongoing</span>
+        <h3>${steps[2].h}</h3>
+        <p>${steps[2].p}</p>
+        <span class="duration">${steps[2].d}</span>
       </div>
     </div>
   </div>
 </section>`;
 }
 
-function buildFooter(companyName: string, estimatedValue: string | undefined): string {
+function buildFooter(companyName: string, estimatedValue: string | undefined, bookingUrl: string): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;");
   const valueNote = estimatedValue
-    ? `<p>Project investment: <strong style="color:var(--text)">${esc(estimatedValue)}</strong> depending on scope. We'll walk you through options on the call.</p>`
+    ? `<p>Project investment: <strong style="color:var(--text)">${esc(estimatedValue)}</strong> depending on scope. We'll walk you through every option on the call — no commitment required.</p>`
     : "";
   return `
 <section class="cta-ft reveal">
   <div class="sec-label">Next Step</div>
   <h2>Ready to build this for ${esc(companyName)}?</h2>
-  <p>Book a 30-minute strategy call. We'll show you a live walkthrough tailored to your operation and give you a clear scope and timeline before any commitment.</p>
+  <p>Book a free 30-minute strategy call. We'll show you a live walkthrough built around your operation and hand you a clear scope, timeline, and price before you commit to anything.</p>
   ${valueNote}
   <div class="cta-group" style="justify-content:center;margin-top:32px">
-    <a href="https://nexoflow.tech" class="btn-p">Book a Strategy Call →</a>
-    <a href="https://nexoflow.tech" class="btn-g">View More Case Studies</a>
+    <a href="${bookingUrl}" class="btn-p">Book a Free Strategy Call →</a>
+    <a href="https://nexoflow.tech/case-studies" class="btn-g">View Case Studies</a>
   </div>
-  <p class="meta">© 2026 NexoFlow · Built specifically for ${esc(companyName)} · <a href="https://nexoflow.tech" style="color:var(--muted);text-decoration:none">nexoflow.tech</a></p>
+  <p class="meta">© 2026 NexoFlow · This demo was built specifically for ${esc(companyName)} · <a href="https://nexoflow.tech" style="color:var(--muted);text-decoration:none">nexoflow.tech</a></p>
 </section>`;
 }
 
@@ -519,7 +638,7 @@ SECTION 3 — <section class="sec reveal"> — Pain Points
 • .sec-label: "What's Costing You"
 • .sec-title: strong title about the cost of staying manual
 • .sec-sub: 1 sentence
-• .grid with 3 .card — top 3 weaknesses. Each card: .card-icon with SVG + <h3> + <p> (2–3 sentences, reference Brixton/Marcus/specific detail) + <span class="tag">Impact</span>
+• .grid with 3 .card — top 3 weaknesses. Each card: .card-icon with SVG + <h3> + <p> (2–3 sentences, reference ${companyName}/${contactName.split(" ")[0]}/specific details from the intel above) + <span class="tag">Impact</span>
 
 SECTION 4 — <section class="sec reveal"> — Solutions
 • .sec-label: "What We Build"
@@ -571,8 +690,8 @@ export async function POST(req: NextRequest) {
   // ── Build deterministic sections ──
   const head        = buildHead({ companyName, primary, secondary, displayFont, bodyFont, fontImport });
   const statsHtml   = buildStats(getStats(industry));
-  const processHtml = buildProcess(companyName);
-  const footerHtml  = buildFooter(companyName, profile?.estimatedValue);
+  const processHtml = buildProcess(companyName, industry);
+  const footerHtml  = buildFooter(companyName, profile?.estimatedValue, BOOKING_URL);
   const jsHtml      = buildJs(leadId);
 
   // ── Build AI prompt ──
@@ -599,7 +718,7 @@ export async function POST(req: NextRequest) {
   // ── Call Claude for hero + pain points + solutions only ──
   const aiResponse = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 4000,
+    max_tokens: 6000,
     messages: [{ role: "user", content: prompt }],
   });
 
