@@ -452,6 +452,13 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
     fontFamily: brandFonts[0] ?? "Inter",
   });
 
+  // Fallback CTA — appended when the model runs out of tokens before section 9
+  const primary = brandColors[0] ?? "#7c5cbf";
+  const secondary = brandColors[1] ?? "#4f8ef7";
+  const fallbackCta = cleanBody.includes('class="cta-section"')
+    ? ""
+    : `\n<!-- SECTION 9: FINAL CTA -->\n<section class="cta-section">\n<div class="container">\n<h2 class="section-h2" style="font-size:48px;color:#fff;line-height:1.15">Ready to build this for ${companyName}?<br><span class="grad-text">Stop losing revenue — start capturing it.</span></h2>\n<p class="section-sub" style="color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0">Most businesses wait until a competitor forces their hand. Don't be that business.</p>\n<a href="https://nexoflow.tech" target="_blank" class="btn-cta" style="display:inline-flex;align-items:center;gap:8px;margin-top:40px">Book a Free 30-Min Call →</a>\n<p class="cta-note">No commitment. We'll scope your project for free.</p>\n<div class="proof-row"><span class="proof-item">⚡ Response within 24h</span><span class="proof-item">🔒 NDA on request</span><span class="proof-item">🇺🇸 US-based team</span></div>\n</div>\n</section>`;
+
   // Fallback footer — appended when the model runs out of tokens before section 10
   const fallbackFooter = cleanBody.includes("<footer")
     ? ""
@@ -466,7 +473,7 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
 ${cssBlock}
 </head>
 <body>
-${cleanBody}${fallbackFooter}
+${cleanBody}${fallbackCta}${fallbackFooter}
 <script>
 (function(){
   var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.12});
