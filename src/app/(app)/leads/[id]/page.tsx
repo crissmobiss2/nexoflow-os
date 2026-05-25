@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/trpc/client";
@@ -71,12 +71,49 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   });
   const [copied, setCopied] = useState(false);
   const [copiedProposal, setCopiedProposal] = useState(false);
+  const [demoGenerating, setDemoGenerating] = useState(false);
+  const [proposalGenerating, setProposalGenerating] = useState(false);
+  const demoPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const proposalPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clean up polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (demoPollingRef.current) clearInterval(demoPollingRef.current);
+      if (proposalPollingRef.current) clearInterval(proposalPollingRef.current);
+    };
+  }, []);
+
   const generateDemo = api.leads.generateDemo.useMutation({
-    onSuccess: () => { refetch(); setActionError(null); },
+    onSuccess: () => {
+      setActionError(null);
+      setDemoGenerating(true);
+      if (demoPollingRef.current) clearInterval(demoPollingRef.current);
+      demoPollingRef.current = setInterval(() => {
+        void refetch().then((result) => {
+          if (result.data?.demoUrl) {
+            setDemoGenerating(false);
+            if (demoPollingRef.current) { clearInterval(demoPollingRef.current); demoPollingRef.current = null; }
+          }
+        });
+      }, 5000);
+    },
     onError: (err) => setActionError(err.message),
   });
   const generateProposal = api.leads.generateProposal.useMutation({
-    onSuccess: () => { refetch(); setActionError(null); },
+    onSuccess: () => {
+      setActionError(null);
+      setProposalGenerating(true);
+      if (proposalPollingRef.current) clearInterval(proposalPollingRef.current);
+      proposalPollingRef.current = setInterval(() => {
+        void refetch().then((result) => {
+          if (result.data?.proposalUrl) {
+            setProposalGenerating(false);
+            if (proposalPollingRef.current) { clearInterval(proposalPollingRef.current); proposalPollingRef.current = null; }
+          }
+        });
+      }, 5000);
+    },
     onError: (err) => setActionError(err.message),
   });
 
@@ -892,12 +929,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               </button>
               <button
                 onClick={() => generateDemo.mutate({ id: lead.id })}
-                disabled={generateDemo.isPending}
+                disabled={generateDemo.isPending || demoGenerating}
                 className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{ background: "var(--brand-gradient)", color: "white" }}
               >
-                {generateDemo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                {generateDemo.isPending ? "Building demo website…" : lead.demoUrl ? "Regenerate Demo" : "Build Demo Website"}
+                {(generateDemo.isPending || demoGenerating) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                {(generateDemo.isPending || demoGenerating) ? "Building demo website…" : lead.demoUrl ? "Regenerate Demo" : "Build Demo Website"}
               </button>
               {lead.demoUrl && (
                 <div
@@ -932,12 +969,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               )}
               <button
                 onClick={() => generateProposal.mutate({ id: lead.id })}
-                disabled={generateProposal.isPending}
+                disabled={generateProposal.isPending || proposalGenerating}
                 className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{ background: "hsl(207 90% 62% / 0.12)", color: "hsl(207, 90%, 62%)" }}
               >
-                {generateProposal.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-                {generateProposal.isPending ? "Writing proposal…" : lead.proposalUrl ? "Regenerate Proposal" : "Generate Proposal"}
+                {(generateProposal.isPending || proposalGenerating) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                {(generateProposal.isPending || proposalGenerating) ? "Writing proposal…" : lead.proposalUrl ? "Regenerate Proposal" : "Generate Proposal"}
               </button>
               {lead.proposalUrl && (
                 <div

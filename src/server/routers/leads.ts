@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
+import { after } from "next/server";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 import {
   leads, leadOutreach, leadCalls, leadOutcomes, leadDemoViews,
@@ -10,6 +11,7 @@ import {
   outreachTemplates,
   type ScrapedProfile, type BusinessProfile,
 } from "../db/schema";
+import { db as drizzleDb } from "../db";
 import { slack } from "@/lib/slack";
 import { scrapeWebsite } from "@/lib/scraper";
 import { generateBusinessProfile } from "@/lib/businessProfile";
@@ -317,6 +319,209 @@ OUTPUT RULES
 - Do NOT truncate, summarise, or skip any section
 - The HTML must be valid and render correctly in a browser with no external dependencies beyond Google Fonts`;
 }
+
+// ─── Background generation helpers (called via next/server after()) ──────────
+// These run AFTER the tRPC response is sent, avoiding Vercel's ~60s edge
+// idle TCP connection timeout that kills long-running Anthropic calls.
+
+async function runDemoGeneration(leadId: string, autoBuildProfile: boolean): Promise<void> {
+  const lead = await drizzleDb.query.leads.findFirst({ where: eq(leads.id, leadId) });
+  if (!lead) return;
+
+  const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Lead";
+  const companyName = lead.company ?? name;
+
+  let profile: BusinessProfile | null = lead.businessProfile;
+  if ((!profile || !profile.summary) && autoBuildProfile) {
+    let scraped: ScrapedProfile | null = lead.scrapedProfile;
+    if (!scraped && lead.website) {
+      scraped = await scrapeWebsite(lead.website);
+      await drizzleDb.update(leads).set({ scrapedProfile: scraped, scrapedAt: new Date() }).where(eq(leads.id, leadId));
+    }
+    let industryAngle: string | null = null;
+    let matchedProfileId: string | null = null;
+    if (lead.industry) {
+      const [match] = await drizzleDb
+        .select({ id: industryProfiles.id, demoAngle: industryProfiles.demoAngle })
+        .from(industryProfiles)
+        .where(and(eq(industryProfiles.industry, lead.industry), eq(industryProfiles.isActive, true)))
+        .limit(1);
+      if (match) { industryAngle = match.demoAngle ?? null; matchedProfileId = match.id; }
+    }
+    profile = await generateBusinessProfile({
+      company: lead.company, industry: lead.industry, website: lead.website,
+      jobTitle: lead.jobTitle, scraped, scrapedDataText: lead.scrapedData,
+      painPoints: lead.painPoints, techStack: lead.techStack, industryAngle,
+    });
+    await drizzleDb.update(leads)
+      .set({ businessProfile: profile, businessProfileAt: new Date(), industryProfileId: matchedProfileId })
+      .where(eq(leads.id, leadId));
+  }
+
+  const brandColors = profile?.brandColors?.length
+    ? profile.brandColors
+    : lead.scrapedProfile?.brandColors?.length ? lead.scrapedProfile.brandColors : ["#7c5cbf", "#4f8ef7", "#0a0a0f"];
+  const brandFonts = profile?.brandFonts?.length ? profile.brandFonts : lead.scrapedProfile?.brandFonts ?? [];
+  const demoAngle = profile?.demoAngle ?? `A clean, modern demo for ${companyName}`;
+  const recommendedFeatures = profile?.recommendedFeatures?.join(", ") ?? "Hero, Features, Tech stack, CTA";
+  const offer = profile?.offer ?? lead.painPoints ?? "their core service";
+  const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? "";
+  const tone = profile?.toneOfVoice ?? "professional";
+  const softwareRecommendations = profile?.softwareRecommendations ?? [];
+
+  const demoPrompt = buildDemoPrompt({
+    companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer,
+    targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts,
+    demoAngle, recommendedFeatures, softwareRecommendations,
+    roiEstimate: profile?.roiEstimate ?? null,
+    urgencySignals: profile?.urgencySignals ?? null,
+    quickWins: profile?.quickWins ?? null,
+    competitorContext: profile?.competitorContext ?? null,
+  });
+
+  const anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const demoResponse = await anthropicClient.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    messages: [{ role: "user", content: demoPrompt }],
+  });
+  const demoHtml = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
+
+  let client = lead.clientId
+    ? (await drizzleDb.select().from(clients).where(eq(clients.id, lead.clientId)).limit(1))[0] ?? null
+    : null;
+  if (!client) {
+    const [newClient] = await drizzleDb.insert(clients).values({
+      name, email: lead.email ?? null, phone: lead.phone ?? null,
+      company: lead.company ?? null, website: lead.website ?? null,
+      industry: lead.industry ?? null, companySize: lead.companySize ?? null,
+      region: lead.region ?? null, existingTech: lead.techStack ?? null,
+      currentChallenges: lead.painPoints ?? null, teamId: lead.teamId ?? null,
+    }).returning();
+    client = newClient!;
+  }
+
+  let project = lead.projectId
+    ? (await drizzleDb.select().from(projects).where(eq(projects.id, lead.projectId)).limit(1))[0] ?? null
+    : null;
+  if (!project) {
+    const [newProject] = await drizzleDb.insert(projects).values({
+      name: `${companyName} — Demo`,
+      clientId: client?.id ?? null,
+      projectType: "web_app",
+      industry: lead.industry ?? null,
+      teamId: lead.teamId ?? null,
+      status: "brief",
+    }).returning();
+    project = newProject!;
+  }
+
+  const shareToken = lead.shareToken ?? genShareToken();
+  const upload = await uploadHtml(`demos/${leadId}.html`, demoHtml);
+  const blobUrl = upload.ok ? upload.url ?? null : null;
+  const demoUrl = `/api/demo/${leadId}?t=${shareToken}`;
+
+  await drizzleDb.update(leads).set({
+    clientId: client?.id ?? null,
+    projectId: project?.id ?? null,
+    demoHtml,
+    demoUrl,
+    demoBlobUrl: blobUrl,
+    shareToken,
+    shareRevokedAt: null,
+    status: "demo_generated",
+    demoGeneratedAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(leads.id, leadId));
+}
+
+async function runProposalGeneration(leadId: string): Promise<void> {
+  const lead = await drizzleDb.query.leads.findFirst({ where: eq(leads.id, leadId) });
+  if (!lead) return;
+
+  const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Valued Partner";
+  const companyName = lead.company ?? name;
+  const profile = lead.businessProfile;
+  const whatWeBuild = profile?.buildOpportunities?.[0]?.title ?? "A custom software solution tailored to your business";
+  const offer = profile?.offer ?? "their business";
+  const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? lead.painPoints ?? "Not specified";
+  const features = profile?.recommendedFeatures?.join(", ") ?? "core feature set";
+  const estimatedValue = profile?.estimatedValue ?? "$10k–$25k";
+
+  let insightsObj: Record<string, unknown> = {};
+  if (lead.aiInsights) { try { insightsObj = JSON.parse(lead.aiInsights); } catch { /* ignore */ } }
+  const techRec = (insightsObj.techRecommendation as string) ?? "Modern, scalable web stack";
+  const scope = (insightsObj.estimatedScope as string) ?? "Medium (1-2 months)";
+
+  const softwareRecs = profile?.softwareRecommendations ?? [];
+  const softwareRecsText = softwareRecs.length > 0
+    ? softwareRecs.map((s) => `- ${s.name} (${s.category}): ${s.reason}`).join("\n")
+    : "Best-in-class tools relevant to their industry";
+
+  const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
+
+Create a COMPLETE, single-file HTML proposal document for:
+Company: ${companyName}
+Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
+Industry: ${lead.industry ?? "Technology"}
+Their offer: ${offer}
+What we'd build: ${whatWeBuild}
+Recommended custom features: ${features}
+Tech stack NexoFlow will use: ${techRec}
+Estimated scope: ${scope}
+Estimated value range: ${estimatedValue}
+Visible weaknesses we'll solve: ${weaknesses}
+Recommended software tools for their business:
+${softwareRecsText}
+
+Requirements:
+- Clean, professional proposal design (white/light background, dark text, purple brand accents #7c5cbf)
+- Sections (ALL required):
+  1. Executive Summary
+  2. Problem Statement (with their specific weaknesses listed)
+  3. Our Proposed Solution (custom software NexoFlow builds for them)
+  4. Recommended Software Ecosystem — a table or card grid showing each recommended tool (name, category, why it's right for them), with a note that NexoFlow integrates all of them. This section is KEY — it shows we're a strategic advisor, not just a vendor.
+  5. Technical Approach (stack NexoFlow will use, architecture overview)
+  6. Project Timeline (3 phases with weeks)
+  7. Investment (30/40/30 milestone payment structure, calculated from ${estimatedValue})
+  8. Next Steps (clear call to action — book discovery call at nexoflow.tech)
+- 30/40/30 payment: 30% to start, 40% at midpoint, 30% on delivery
+- Include NexoFlow company details, prepared for ${companyName}
+- Footer: "Prepared by NexoFlow | nexoflow.tech | hello@nexoflow.tech"
+- Professional typography, subtle borders, clean layout
+- All CSS inline or in <style> tag — no external dependencies
+- Print-friendly (could be converted to PDF)
+- Output the COMPLETE HTML — do not truncate or stop early
+
+Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanation.`;
+
+  const anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const proposalResponse = await anthropicClient.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    messages: [{ role: "user", content: proposalPrompt }],
+  });
+  const proposalHtml = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
+  const proposalUrl = `/api/proposal/${leadId}`;
+
+  const existingVersions = await drizzleDb
+    .select({ version: proposalVersions.version })
+    .from(proposalVersions)
+    .where(eq(proposalVersions.leadId, leadId))
+    .orderBy(desc(proposalVersions.version))
+    .limit(1);
+  const nextVersion = (existingVersions[0]?.version ?? 0) + 1;
+  await drizzleDb.insert(proposalVersions).values({ leadId, version: nextVersion, html: proposalHtml });
+
+  const upload = await uploadHtml(`proposals/${leadId}-v${nextVersion}.html`, proposalHtml);
+  const blobUrl = upload.ok ? upload.url ?? null : null;
+
+  await drizzleDb.update(leads)
+    .set({ proposalHtml, proposalUrl, proposalBlobUrl: blobUrl, updatedAt: new Date() })
+    .where(eq(leads.id, leadId));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const leadsRouter = createTRPCRouter({
   list: protectedProcedure
@@ -787,6 +992,27 @@ Return ONLY valid JSON with this exact structure:
       const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
       if (!lead) throw new Error("Lead not found");
 
+      // Schedule generation to run AFTER this response is sent.
+      // This bypasses Vercel's ~60s edge idle TCP timeout — the client gets
+      // an immediate { status: 'started' } response, then polls for completion.
+      after(async () => {
+        try {
+          await runDemoGeneration(input.id, input.autoBuildProfile);
+        } catch (err) {
+          console.error("[generateDemo] background error:", err instanceof Error ? err.message : err);
+        }
+      });
+
+      return { status: "started" };
+    }),
+
+  // (legacy inline version kept as _generateDemoInline for bulk/internal use)
+  _generateDemoInline: protectedProcedure
+    .input(z.object({ id: z.string().uuid(), autoBuildProfile: z.boolean().default(true) }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
+      if (!lead) throw new Error("Lead not found");
+
       const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Lead";
       const companyName = lead.company ?? name;
 
@@ -1154,91 +1380,16 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
       if (!lead) throw new Error("Lead not found");
 
-      const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Valued Partner";
-      const companyName = lead.company ?? name;
-
-      const profile = lead.businessProfile;
-      const whatWeBuild = profile?.buildOpportunities?.[0]?.title ?? "A custom software solution tailored to your business";
-      const offer = profile?.offer ?? "their business";
-      const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? lead.painPoints ?? "Not specified";
-      const features = profile?.recommendedFeatures?.join(", ") ?? "core feature set";
-      const estimatedValue = profile?.estimatedValue ?? "$10k–$25k";
-
-      let insightsObj: Record<string, unknown> = {};
-      if (lead.aiInsights) { try { insightsObj = JSON.parse(lead.aiInsights); } catch { /* ignore */ } }
-      const techRec = (insightsObj.techRecommendation as string) ?? "Modern, scalable web stack";
-      const scope = (insightsObj.estimatedScope as string) ?? "Medium (1-2 months)";
-
-      const softwareRecs = profile?.softwareRecommendations ?? [];
-      const softwareRecsText = softwareRecs.length > 0
-        ? softwareRecs.map((s) => `- ${s.name} (${s.category}): ${s.reason}`).join("\n")
-        : "Best-in-class tools relevant to their industry";
-
-      const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
-
-Create a COMPLETE, single-file HTML proposal document for:
-Company: ${companyName}
-Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
-Industry: ${lead.industry ?? "Technology"}
-Their offer: ${offer}
-What we'd build: ${whatWeBuild}
-Recommended custom features: ${features}
-Tech stack NexoFlow will use: ${techRec}
-Estimated scope: ${scope}
-Estimated value range: ${estimatedValue}
-Visible weaknesses we'll solve: ${weaknesses}
-Recommended software tools for their business:
-${softwareRecsText}
-
-Requirements:
-- Clean, professional proposal design (white/light background, dark text, purple brand accents #7c5cbf)
-- Sections (ALL required):
-  1. Executive Summary
-  2. Problem Statement (with their specific weaknesses listed)
-  3. Our Proposed Solution (custom software NexoFlow builds for them)
-  4. Recommended Software Ecosystem — a table or card grid showing each recommended tool (name, category, why it's right for them), with a note that NexoFlow integrates all of them. This section is KEY — it shows we're a strategic advisor, not just a vendor.
-  5. Technical Approach (stack NexoFlow will use, architecture overview)
-  6. Project Timeline (3 phases with weeks)
-  7. Investment (30/40/30 milestone payment structure, calculated from ${estimatedValue})
-  8. Next Steps (clear call to action — book discovery call at nexoflow.tech)
-- 30/40/30 payment: 30% to start, 40% at midpoint, 30% on delivery
-- Include NexoFlow company details, prepared for ${companyName}
-- Footer: "Prepared by NexoFlow | nexoflow.tech | hello@nexoflow.tech"
-- Professional typography, subtle borders, clean layout
-- All CSS inline or in <style> tag — no external dependencies
-- Print-friendly (could be converted to PDF)
-- Output the COMPLETE HTML — do not truncate or stop early
-
-Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanation.`;
-
-      const proposalResponse = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 8192,
-        messages: [{ role: "user", content: proposalPrompt }],
+      // Schedule generation to run AFTER this response is sent (same edge-timeout fix as generateDemo)
+      after(async () => {
+        try {
+          await runProposalGeneration(input.id);
+        } catch (err) {
+          console.error("[generateProposal] background error:", err instanceof Error ? err.message : err);
+        }
       });
 
-      const proposalHtml = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
-      const proposalUrl = `/api/proposal/${input.id}`;
-
-      const existingVersions = await ctx.db
-        .select({ version: proposalVersions.version })
-        .from(proposalVersions)
-        .where(eq(proposalVersions.leadId, input.id))
-        .orderBy(desc(proposalVersions.version))
-        .limit(1);
-      const nextVersion = (existingVersions[0]?.version ?? 0) + 1;
-      await ctx.db.insert(proposalVersions).values({ leadId: input.id, version: nextVersion, html: proposalHtml });
-
-      const upload = await uploadHtml(`proposals/${input.id}-v${nextVersion}.html`, proposalHtml);
-      const blobUrl = upload.ok ? upload.url ?? null : null;
-
-      const [updated] = await ctx.db
-        .update(leads)
-        .set({ proposalHtml, proposalUrl, proposalBlobUrl: blobUrl, updatedAt: new Date() })
-        .where(eq(leads.id, input.id))
-        .returning();
-
-      return { lead: updated, proposalUrl };
+      return { status: "started" };
     }),
 
   scoreWithAi: protectedProcedure
