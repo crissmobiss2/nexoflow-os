@@ -53,6 +53,103 @@ function canonicalDedupKey(input: { email?: string | null; company?: string | nu
   return null;
 }
 
+// Pre-built CSS system — keeps CSS OUT of the model's output tokens so the
+// body content always completes within the 8192 output-token budget.
+function buildDemoCSS({ primary, secondary, fontFamily }: {
+  primary: string; secondary: string; fontFamily: string;
+}): string {
+  const font = fontFamily.trim();
+  const fontUrl = font.replace(/ /g, "+");
+  return `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=${fontUrl}:ital,wght@0,300;0,400;0,600;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--primary:${primary};--secondary:${secondary};--bg:#0a0a12;--surface:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.08);--text:#f0f0f7;--text-muted:#9ca3af;--radius:16px;--radius-sm:10px;--max-w:1140px;--sp:100px 24px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'${font}',Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding-top:72px}
+.container{max-width:var(--max-w);margin:0 auto;padding:0 24px}section{padding:var(--sp)}
+.label{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--primary)}
+.section-h2{font-size:40px;font-weight:800;margin-top:8px;line-height:1.2}
+.section-sub{font-size:17px;color:var(--text-muted);margin-top:16px;max-width:640px;line-height:1.6}
+.grad-text{background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sticky-nav{position:fixed;top:0;left:0;width:100%;z-index:100;background:rgba(10,10,18,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 24px;height:72px;display:flex;align-items:center;justify-content:space-between}
+.nav-left{display:flex;align-items:center;gap:4px}
+.nav-logo{font-weight:800;font-size:18px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-sep{margin:0 6px;color:var(--text-muted);font-weight:300;font-size:20px;opacity:.6}
+.nav-company{font-weight:600;color:var(--text-muted);font-size:15px}
+.btn-nav{display:inline-flex;align-items:center;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff!important;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;animation:pulse-glow 2s ease-in-out infinite}
+.hero{min-height:calc(100vh - 72px);background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 60%,#0a0a2e 100%);display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.08) 1px,transparent 0);background-size:32px 32px;pointer-events:none}
+.hero-inner{position:relative;z-index:1;max-width:800px;margin:0 auto}
+.badge{display:inline-block;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);border-radius:100px;padding:6px 16px;font-size:12px;font-weight:600;color:rgba(255,255,255,.9);letter-spacing:.05em}
+.hero-h1{font-size:72px;font-weight:900;line-height:1.1;color:#fff;margin-top:20px}
+.hero-sub{font-size:20px;color:rgba(255,255,255,.75);max-width:580px;margin:20px auto 0}
+.cta-row{display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+.btn-primary{background:#fff;color:var(--primary);border:none;border-radius:12px;height:56px;padding:0 32px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;text-decoration:none;display:inline-flex;align-items:center}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.btn-ghost{border:2px solid rgba(255,255,255,.4);color:#fff!important;background:transparent;border-radius:12px;height:56px;padding:0 28px;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.trust-bar{display:flex;gap:32px;justify-content:center;margin-top:40px;flex-wrap:wrap}
+.trust-item{font-size:13px;color:rgba(255,255,255,.7);font-weight:500}
+.scroll-hint{margin-top:48px;text-align:center;opacity:.5}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:48px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px}
+.card-accent{border-top:3px solid var(--primary)}
+.card-icon{width:48px;height:48px}
+.card-h3{font-size:18px;font-weight:700;margin-top:20px}
+.card-p{font-size:14px;color:var(--text-muted);line-height:1.7;margin-top:8px}
+.pill{display:inline-block;background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);border-radius:100px;font-size:11px;font-weight:700;padding:4px 12px;letter-spacing:.05em;margin-top:16px}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-top:48px}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:24px}
+.tool-cat{display:inline-block;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.1em;padding:4px 10px;text-transform:uppercase}
+.tool-name{font-size:18px;font-weight:700;margin-top:12px}
+.tool-reason{font-size:13px;color:var(--text-muted);margin-top:8px;line-height:1.6}
+.tool-footer{font-size:11px;color:var(--primary);font-weight:600;margin-top:16px;display:flex;align-items:center;gap:4px}
+.callout{background:color-mix(in srgb,var(--primary) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary) 20%,transparent);border-radius:var(--radius);padding:32px;margin-top:32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.callout-quote{font-size:18px;font-style:italic;line-height:1.6;flex:1;min-width:200px}
+.roi-section{background:linear-gradient(135deg,var(--primary),var(--secondary));padding:var(--sp);text-align:center}
+.roi-section .section-h2{color:#fff}.roi-section .section-sub{color:rgba(255,255,255,.8);margin:16px auto 0}
+.stats-row{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin-top:48px}
+.metric-card{background:rgba(255,255,255,.12);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.2);border-radius:var(--radius);padding:40px 32px;text-align:center;min-width:200px}
+.metric-num{font-size:56px;font-weight:900;color:#fff}
+.metric-label{font-size:14px;color:rgba(255,255,255,.75);margin-top:8px}
+.roi-quote{font-size:20px;font-style:italic;color:rgba(255,255,255,.8);max-width:600px;margin:48px auto 0;line-height:1.6}
+.before-col{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:32px}
+.after-col{background:color-mix(in srgb,var(--primary) 6%,transparent);border:1px solid color-mix(in srgb,var(--primary) 20%,transparent);border-radius:var(--radius);padding:32px}
+.col-title-bad{color:#ef4444;font-size:16px;font-weight:700;margin-bottom:20px}
+.col-title-good{color:var(--primary);font-size:16px;font-weight:700;margin-bottom:20px}
+.ba-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.ba-list li{font-size:14px;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.ba-icon-bad{color:#ef4444;flex-shrink:0;font-weight:700}
+.ba-icon-good{color:var(--primary);flex-shrink:0;font-weight:700}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:48px}
+.step{text-align:center}
+.step-circle{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:28px;font-weight:900;color:#fff}
+.step-title{font-size:18px;font-weight:700;margin-top:20px}
+.step-duration{display:inline-block;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);border-radius:100px;font-size:11px;padding:4px 12px;margin-top:8px}
+.step-desc{font-size:14px;color:var(--text-muted);margin-top:12px;line-height:1.7}
+.cta-section{background:#080812;padding:120px 24px;text-align:center}
+.cta-section .section-h2{font-size:48px;color:#fff;line-height:1.15}
+.cta-section .section-sub{color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0}
+.btn-cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff!important;border:none;border-radius:14px;height:64px;padding:0 48px;font-size:18px;font-weight:700;cursor:pointer;margin-top:40px;text-decoration:none;animation:pulse-glow 2s ease-in-out infinite}
+.cta-note{font-size:13px;color:rgba(255,255,255,.4);margin-top:16px}
+.proof-row{display:flex;gap:32px;justify-content:center;margin-top:32px;flex-wrap:wrap}
+.proof-item{font-size:13px;color:rgba(255,255,255,.5)}
+footer{background:var(--bg);border-top:1px solid var(--border);padding:60px 24px}
+.footer-inner{max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:24px}
+.footer-logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.footer-tagline{font-size:13px;color:var(--text-muted);margin-top:4px}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap}
+.footer-links a{font-size:13px;color:var(--text-muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--primary)}
+.footer-bar{text-align:center;font-size:12px;color:var(--text-muted);margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+.animate-in{opacity:0;transform:translateY(32px);transition:opacity .7s,transform .7s}
+.animate-in.visible{opacity:1;transform:none}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--primary) 40%,transparent)}50%{box-shadow:0 0 0 12px transparent}}
+@media(max-width:768px){.hero-h1{font-size:40px!important}.grid-3,.grid-2,.timeline{grid-template-columns:1fr!important}.cta-row,.stats-row,.proof-row,.trust-bar{flex-direction:column!important;align-items:center!important}.footer-inner{flex-direction:column;text-align:center}}
+</style>`;
+}
+
 function buildDemoPrompt({
   companyName, name, jobTitle, industry, offer, targetCustomer, tone,
   weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures,
@@ -126,38 +223,21 @@ Accent: ${accent}
 Font: ${font}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HTML STRUCTURE — CRITICAL: BODY FIRST, CSS LAST
+AVAILABLE CSS CLASSES (pre-built — use these, zero inline styles)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WRITE IN THIS EXACT ORDER to ensure body content is always complete:
-  1. <head> — ONLY font <link> tags and a tiny <style> with :root variables + 3 base rules
-  2. <body> — all 10 sections using class names (no inline style="" — use classes defined below)
-  3. </body>
-  4. <style> — ALL section CSS goes HERE, after </body> (browsers handle this fine)
-  5. </html>
-
-<head> contains ONLY:
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=${fontUrl}:ital,wght@0,300;0,400;0,600;0,700;0,900&display=swap" rel="stylesheet">
-<style>
-:root{--primary:${primary};--secondary:${secondary};--accent:${accent};--bg:[#0a0a12 dark OR #f7f7fb light];--surface:[rgba(255,255,255,0.05) dark OR rgba(0,0,0,0.04) light];--border:[rgba(255,255,255,0.08) dark OR rgba(0,0,0,0.08) light];--text:[#fff dark OR #111827 light];--text-muted:[#9ca3af dark OR #6b7280 light];--radius:16px;--radius-sm:10px;--max-w:1140px}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'${font}',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-</style>
-(Nothing else in head — all section CSS goes after </body>)
-
-CSS CLASSES TO USE IN <body> (define them all in the post-body <style> block):
-  .container, .section, .sticky-nav, .hero, .hero-h1, .cta-row, .stats-row,
-  .grid-2, .grid-3, .card, .animate-in, .animate-in.visible, .badge, .label,
-  .tool-card, .step, .metric-card, .btn-primary, .btn-ghost, .footer
-  + @keyframes pulse-glow, @media (max-width:768px) rules
-
-The <style> block after </body>:
-:root additional values + all component CSS (nav, hero, sections 1-10) +
-@keyframes pulse-glow { 0%,100%{box-shadow:0 0 0 0 ${primary}40} 50%{box-shadow:0 0 0 12px ${primary}00} } +
-.animate-in{opacity:0;transform:translateY(32px);transition:opacity .7s,transform .7s}
-.animate-in.visible{opacity:1;transform:none}
-@media(max-width:768px){.grid-3,.grid-2{grid-template-columns:1fr!important}.hero-h1{font-size:40px!important}.cta-row,.stats-row{flex-direction:column!important}}
+Layout:     .container | section (padding applied) | .grid-2 | .grid-3
+Text:       .label (tiny caps, accent color) | .section-h2 (40px 800) | .section-sub | .grad-text (gradient)
+Nav:        .sticky-nav .nav-inner .nav-left .nav-logo .nav-sep .nav-company .btn-nav
+Hero:       .hero .hero-inner .hero-h1 (72px) .hero-sub .badge .trust-bar .trust-item .scroll-hint
+Buttons:    .btn-primary (white) | .btn-ghost (transparent border) | .btn-cta (gradient pulse)
+Cards:      .card .card-accent (primary top-border) .card-icon .card-h3 .card-p .pill
+Tools:      .tools-grid .tool-card .tool-cat .tool-name .tool-reason .tool-footer .callout .callout-quote
+ROI:        .roi-section (full gradient bg) .stats-row .metric-card .metric-num (56px) .metric-label .roi-quote
+Before/After: .before-col .after-col .col-title-bad .col-title-good .ba-list (li with span.ba-icon-bad/good)
+Timeline:   .timeline .step .step-circle (80px gradient) .step-title .step-duration .step-desc
+CTA:        .cta-section (dark bg) .cta-note .proof-row .proof-item
+Footer:     footer .footer-inner .footer-logo .footer-tagline .footer-links .footer-bar
+Anim:       .animate-in (auto-adds .visible on scroll via IntersectionObserver)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ALL 10 SECTIONS — WRITE EVERY ONE IN FULL
@@ -269,24 +349,6 @@ SECTION 10 — FOOTER
   Bottom bar: "Custom demo built exclusively for ${companyName} · © 2026 NexoFlow · nexoflow.tech · hello@nexoflow.tech"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JAVASCRIPT (at end of </body>)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<script>
-// Scroll animations
-const obs = new IntersectionObserver(
-  (entries) => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
-  { threshold: 0.12 }
-);
-document.querySelectorAll('.animate-in').forEach(el => obs.observe(el));
-
-// Sticky nav scroll effect
-const nav = document.querySelector('.sticky-nav');
-window.addEventListener('scroll', () => {
-  if (nav) nav.style.borderBottomColor = window.scrollY > 20 ? 'var(--border)' : 'transparent';
-});
-</script>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 COPY RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Write every headline as if you personally know ${companyName} and their specific struggles
@@ -300,13 +362,14 @@ COPY RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Return ONLY the complete HTML from <!DOCTYPE html> to </html>
-- No markdown code fences. No explanation. No preamble.
-- CRITICAL ORDER: <head> (fonts + :root only) → <body> (all 10 sections) → </body> → <style> (all CSS) → </html>
-- Write ALL 10 sections in <body> BEFORE writing any section CSS
-- ALL section CSS goes in the <style> block AFTER </body> — NOT in <head>
-- Do NOT truncate, summarise, or skip any section
-- The HTML must render correctly in a browser with no external dependencies beyond Google Fonts`;
+- Output ONLY the HTML that goes BETWEEN <body> and </body> — nothing else
+- Begin your output with <!-- SECTION 1: STICKY NAV --> followed by the <nav> element
+- End your output with </footer> (close of section 10)
+- NO <!DOCTYPE>, NO <html>, NO <head>, NO <style>, NO <link> tags in your output
+- NO inline style="" attributes — use ONLY the class names listed above
+- NO <script> tags — JavaScript is injected separately by the system
+- Do NOT truncate, summarise, or skip any section — write all 10 in full
+- No markdown code fences. No explanation. No preamble.`;
 }
 
 // ─── Background generation helpers (called via next/server after()) ──────────
@@ -374,7 +437,40 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
     max_tokens: 8192,
     messages: [{ role: "user", content: demoPrompt }],
   });
-  const demoHtml = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
+  const rawBody = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
+
+  // Strip any accidental code fences or html/head wrappers the model may have added
+  const cleanBody = rawBody
+    .replace(/^```(?:html)?\n?/i, "").replace(/\n?```\s*$/i, "")
+    .replace(/^[\s\S]*?(?=<!--\s*SECTION\s*1|<nav\b)/i, "")
+    .trim();
+
+  // Assemble the full page: pre-built CSS + model body + scroll/nav JS
+  const cssBlock = buildDemoCSS({
+    primary: brandColors[0] ?? "#7c5cbf",
+    secondary: brandColors[1] ?? "#4f8ef7",
+    fontFamily: brandFonts[0] ?? "Inter",
+  });
+  const demoHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexoFlow × ${companyName} — Custom Demo</title>
+${cssBlock}
+</head>
+<body>
+${cleanBody}
+<script>
+(function(){
+  var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.12});
+  document.querySelectorAll('.animate-in').forEach(function(el){obs.observe(el);});
+  var nav=document.querySelector('.sticky-nav');
+  window.addEventListener('scroll',function(){if(nav)nav.style.borderBottomColor=window.scrollY>20?'var(--border)':'transparent';});
+})();
+<\/script>
+</body>
+</html>`;
 
   let client = lead.clientId
     ? (await drizzleDb.select().from(clients).where(eq(clients.id, lead.clientId)).limit(1))[0] ?? null
