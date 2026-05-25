@@ -192,7 +192,13 @@ function buildDemoPrompt({
     ? `COMPETITOR CONTEXT (use as urgency subtext): ${competitorContext}`
     : "";
 
-  return `You are a world-class UI engineer and conversion copywriter. Build a STUNNING, complete, single-file HTML demo page for a software sales prospect. This page will be sent directly to ${name} at ${companyName} — it must feel like it was built specifically for them by a $1M/yr agency.
+  return `You are a world-class UI engineer and conversion copywriter. Build a STUNNING, complete, single-file HTML demo page for a software sales prospect. This page will be sent directly to ${name} at ${companyName}. It must feel like it was built specifically for them by a premium agency.
+
+WRITING RULES (non-negotiable):
+- Never use em dashes (the -- character) anywhere in the copy. Use commas, colons, or parentheses instead.
+- All copy must be professional, specific to this business, and high-value. No filler phrases.
+- Metrics and numbers must be realistic and believable for a business of this type and size. Do not invent absurd ROI figures.
+- Every headline, subheadline, and body copy must make sense for ${companyName} specifically.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SALES INTELLIGENCE
@@ -276,7 +282,7 @@ SECTION 4 — SOLUTION ("What NexoFlow builds for ${companyName}")
   Background: slightly offset from --bg (use var(--surface) or a subtle gradient).
   Section label: "THE SOLUTION"
   H2 (font-size:40px, font-weight:800): "Custom software engineered for your exact workflow"
-  Subtext: "Every feature below is built from scratch for ${companyName} — not a template, not an off-the-shelf app."
+  Subtext: "Every feature below is built from scratch for ${companyName}. Not a template. Not an off-the-shelf app."
   3–4 card grid (same styling as problem section but with a colored top border: 3px solid --primary):
     Each card: distinct inline SVG icon + feature name from recommendedFeatures + 2-sentence description of what it does and why it matters for THIS company specifically.
     Add a small "Included" badge (background: --primary 15% opacity, color: --primary, border-radius:100px, font-size:11px, padding:3px 10px) on each card.
@@ -284,8 +290,8 @@ SECTION 4 — SOLUTION ("What NexoFlow builds for ${companyName}")
 SECTION 5 — SOFTWARE ECOSYSTEM ("Your complete tech stack, curated by NexoFlow")
   Background: var(--bg). This section is a KEY differentiator — NexoFlow as strategic advisor, not just a vendor.
   Section label: "SOFTWARE ECOSYSTEM"
-  H2 (font-size:40px, font-weight:800): "We don't just build — we architect your entire digital operation"
-  Subtext: "NexoFlow recommends, integrates, and connects the best-in-class tools for ${companyName}'s industry — so you have one seamless system instead of 6 disconnected tabs."
+  H2 (font-size:40px, font-weight:800): "We do not just build. We architect your entire digital operation."
+  Subtext: "NexoFlow recommends, integrates, and connects the best tools for ${companyName}'s industry. One seamless system instead of six disconnected tabs."
   Grid (repeat(auto-fill, minmax(200px, 1fr)), gap:20px, margin-top:48px):
     Each tool card (background:var(--surface), border:1px solid var(--border), border-radius:var(--radius-sm), padding:24px, class="animate-in"):
       - Category badge (background: --primary 12% opacity, color: --primary, border-radius:100px, font-size:10px, font-weight:700, letter-spacing:0.1em, padding:4px 10px)
@@ -293,8 +299,8 @@ SECTION 5 — SOFTWARE ECOSYSTEM ("Your complete tech stack, curated by NexoFlow
       - Reason text (font-size:13px, color:var(--text-muted), margin-top:8px, line-height:1.6): Use WHY text from RECOMMENDED SOFTWARE TOOLS — must be specific to ${companyName}
       - Footer row: "✓ NexoFlow integrates this" (font-size:11px, color: --primary, font-weight:600, margin-top:16px, display:flex, align-items:center, gap:4px)
   Callout box below grid (background: linear-gradient(135deg, --primary 10% opacity, --secondary 10% opacity), border:1px solid --primary 20% opacity, border-radius:var(--radius), padding:32px, margin-top:32px, display:flex, align-items:center, gap:24px):
-    Large quote: "The difference between good software and great software is the ecosystem it lives in. NexoFlow builds the custom core — and wires it to the tools you already use."
-    CTA button: "Talk to us about your stack →" linking to https://nexoflow.tech
+    Large quote: "The difference between good software and great software is the ecosystem it lives in. NexoFlow builds the custom core and connects it to the tools you already use."
+    CTA button: "Talk to us about your stack" linking to https://nexoflow.tech
 
 SECTION 6 — ROI / VALUE ("The numbers behind the decision")
   Background: linear-gradient(135deg, --primary, --secondary). Full-width. Text white.
@@ -309,7 +315,7 @@ SECTION 6 — ROI / VALUE ("The numbers behind the decision")
 SECTION 7 — BEFORE / AFTER ("The transformation")
   Background: var(--bg). This section creates contrast and urgency.
   Section label: "BEFORE & AFTER"
-  H2 (font-size:40px, font-weight:800): "How ${companyName} operates today — and where you're headed"
+  H2 (font-size:40px, font-weight:800): "How ${companyName} operates today, and where you are headed"
   2-column grid (class="grid-2", gap:24px, margin-top:48px):
     LEFT — "Today" (background:rgba(239,68,68,0.06), border:1px solid rgba(239,68,68,0.2), border-radius:var(--radius), padding:32px):
       H3 (color:#ef4444, font-size:16px, font-weight:700): "⚠ Without NexoFlow"
@@ -321,7 +327,7 @@ SECTION 7 — BEFORE / AFTER ("The transformation")
 SECTION 8 — HOW IT WORKS ("From kickoff to launch in 8 weeks")
   Background: slightly different shade from main bg (use var(--surface) or similar).
   Section label: "THE PROCESS"
-  H2 (font-size:40px, font-weight:800): "From first call to live system — here's how we work"
+  H2 (font-size:40px, font-weight:800): "From first call to live system: here is how we work"
   Subtext: "No bloated agency processes. NexoFlow moves fast without cutting corners."
   3-step horizontal timeline (display:grid, grid-template-columns:repeat(3,1fr), gap:32px, margin-top:48px, position:relative):
     Add connector line between steps: ::before pseudo-element, height:2px, gradient --primary→--secondary, top:40px, left:calc(50% + 50px), width:calc(100% - 100px) (hide on mobile).
@@ -336,12 +342,12 @@ SECTION 8 — HOW IT WORKS ("From kickoff to launch in 8 weeks")
 SECTION 9 — FINAL CTA (the close)
   Background: very dark (#080812 for dark theme, #1a1a2e for any theme). Full-width.
   Centered content, max-width:640px, margin:0 auto.
-  H2 (font-size:48px, font-weight:900, color:#fff, line-height:1.15): "Ready to build this for ${companyName}?" — then a line break + gradient text (--primary→--secondary): "[specific transformation in 6 words or less]"
+  H2 (font-size:48px, font-weight:900, color:#fff, line-height:1.15): "Ready to build this for ${companyName}?" then a line break + gradient text (--primary to --secondary): "[specific transformation in 6 words or less, no em dashes]"
   Subtext (color:rgba(255,255,255,0.65), font-size:18px, margin-top:16px): Reference the urgency signal (competitor context or market timing) in one sentence.
-  CTA button (margin-top:40px, background: linear-gradient(135deg, --primary, --secondary), color:#fff, border:none, border-radius:14px, height:64px, padding:0 48px, font-size:18px, font-weight:700, cursor:pointer, animation: pulse-glow 2s ease-in-out infinite, display:inline-flex, align-items:center, gap:10px): "Book a Free 30-Min Call →" — link to https://nexoflow.tech
-  Below CTA: "No commitment. We'll scope your project for free and tell you exactly what it would cost." (font-size:13px, color:rgba(255,255,255,0.4), margin-top:16px)
+  CTA button (margin-top:40px, background: linear-gradient(135deg, --primary, --secondary), color:#fff, border:none, border-radius:14px, height:64px, padding:0 48px, font-size:18px, font-weight:700, cursor:pointer, animation: pulse-glow 2s ease-in-out infinite, display:inline-flex, align-items:center, gap:10px): "Book a Free 30-Min Call" linking to https://nexoflow.tech
+  Below CTA: "No commitment. We will scope your project for free and tell you exactly what it would cost." (font-size:13px, color:rgba(255,255,255,0.4), margin-top:16px)
   3 proof points (display:flex, gap:32px, justify-content:center, margin-top:32px, flex-wrap:wrap):
-    "⚡ Response within 24h" · "🔒 NDA on request" · "🇺🇸 US-based team"
+    "Response within 24h" | "NDA on request" | "US-based team"
 
 SECTION 10 — FOOTER
   Background: var(--bg). Border-top: 1px solid var(--border).
@@ -457,7 +463,7 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
   const secondary = brandColors[1] ?? "#4f8ef7";
   const fallbackCta = cleanBody.includes('class="cta-section"')
     ? ""
-    : `\n<!-- SECTION 9: FINAL CTA -->\n<section class="cta-section">\n<div class="container">\n<h2 class="section-h2" style="font-size:48px;color:#fff;line-height:1.15">Ready to build this for ${companyName}?<br><span class="grad-text">Stop losing revenue — start capturing it.</span></h2>\n<p class="section-sub" style="color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0">Most businesses wait until a competitor forces their hand. Don't be that business.</p>\n<a href="https://nexoflow.tech" target="_blank" class="btn-cta" style="display:inline-flex;align-items:center;gap:8px;margin-top:40px">Book a Free 30-Min Call →</a>\n<p class="cta-note">No commitment. We'll scope your project for free.</p>\n<div class="proof-row"><span class="proof-item">⚡ Response within 24h</span><span class="proof-item">🔒 NDA on request</span><span class="proof-item">🇺🇸 US-based team</span></div>\n</div>\n</section>`;
+    : `\n<!-- SECTION 9: FINAL CTA -->\n<section class="cta-section">\n<div class="container">\n<h2 class="section-h2" style="font-size:48px;color:#fff;line-height:1.15">Ready to build this for ${companyName}?<br><span class="grad-text">Stop losing revenue. Start capturing it.</span></h2>\n<p class="section-sub" style="color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0">Most businesses wait until a competitor forces their hand. Don't be that business.</p>\n<a href="https://nexoflow.tech" target="_blank" class="btn-cta" style="display:inline-flex;align-items:center;gap:8px;margin-top:40px">Book a Free 30-Min Call</a>\n<p class="cta-note">No commitment. We will scope your project for free.</p>\n<div class="proof-row"><span class="proof-item">Response within 24h</span><span class="proof-item">NDA on request</span><span class="proof-item">US-based team</span></div>\n</div>\n</section>`;
 
   // Fallback footer — appended when the model runs out of tokens before section 10
   const fallbackFooter = cleanBody.includes("<footer")
@@ -469,7 +475,7 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexoFlow × ${companyName} — Custom Demo</title>
+<title>NexoFlow x ${companyName}: Custom Demo</title>
 ${cssBlock}
 </head>
 <body>
@@ -504,7 +510,7 @@ ${cleanBody}${fallbackCta}${fallbackFooter}
     : null;
   if (!project) {
     const [newProject] = await drizzleDb.insert(projects).values({
-      name: `${companyName} — Demo`,
+      name: `${companyName}: Demo`,
       clientId: client?.id ?? null,
       projectType: "web_app",
       industry: lead.industry ?? null,
@@ -618,10 +624,22 @@ export async function runProposalGeneration(leadId: string): Promise<void> {
 
   const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
 
+WRITING RULES (non-negotiable):
+- Never use em dashes (the -- character) anywhere in this proposal. Use commas, colons, semicolons, or parentheses instead.
+- Write in clear, professional English. No filler phrases or empty corporate speak.
+- Every statement must be specific to ${companyName} and their industry. No generic boilerplate.
+
+PRICING RULES (critical):
+- The investment amounts in section 8 MUST come directly from the estimated value range provided below.
+- If the estimated value range is low (under $10K), the payment amounts must reflect that. Do not inflate.
+- Pricing must be realistic and achievable for a business of this type and size (${lead.industry ?? "their industry"}, ${lead.companySize ?? "their size"}).
+- Frame all pricing around the ROI and business value, not the effort. Make it feel like a clear business decision.
+
 Write the BODY CONTENT of a professional HTML proposal for:
 Company: ${companyName}
 Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
 Industry: ${lead.industry ?? "Technology"}
+Company Size: ${lead.companySize ?? "Unknown"}
 Their offer: ${offer}
 What we'd build: ${whatWeBuild}
 Recommended custom features: ${features}
@@ -681,7 +699,7 @@ OUTPUT RULES:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexoFlow Proposal — ${companyName}</title>
+<title>NexoFlow Proposal for ${companyName}</title>
 ${proposalCss}
 </head>
 <body>
@@ -895,7 +913,7 @@ export const leadsRouter = createTRPCRouter({
             client = newClient!;
           }
           const [project] = await ctx.db.insert(projects).values({
-            name: `${companyName} — Demo`,
+            name: `${companyName}: Demo`,
             clientId: client?.id ?? null,
             projectType: "web_app",
             industry: lead.industry ?? null,
@@ -1114,55 +1132,93 @@ BUSINESS PROFILE (from website analysis):
 - Competitor context: ${profile.competitorContext ?? "?"}
 - Quick wins available: ${profile.quickWins?.map((w) => `${w.title} (${w.timeline})`).join("; ") ?? "?"}` : "";
 
-      const prompt = `You are NexoFlow's senior sales strategist. Generate a complete, actionable sales brief that an account executive can use before their first call with this lead. Be specific, opinionated, and direct — generic advice is useless.
+      const prompt = `You are NexoFlow's senior sales strategist. Generate a complete, actionable sales brief that an account executive can use before their first call with this lead. Be specific, opinionated, and direct. Generic advice is useless.
+
+WRITING RULES (non-negotiable):
+- Never use em dashes (the -- character). Use commas, colons, semicolons, or parentheses instead.
+- Write in plain, professional English. No filler phrases.
+- Keep every field concise. Do not pad responses to hit a word count.
+
+PRICING RULES (critical):
+- Pricing MUST be realistic and achievable for a business of this type and size.
+- A local restaurant, trade contractor, or small service business cannot afford $40K+ projects. Suggest $3K-$12K for small/local businesses.
+- A mid-size regional business or growing startup can typically afford $10K-$30K. Use that range.
+- Only suggest $30K+ for established multi-location businesses, franchises, or companies with clear digital revenue to protect.
+- Always anchor to the ROI context from the business profile. The price must feel like a no-brainer given the payback period.
+- Never suggest pricing that would bankrupt or strain the business relationship.
 
 LEAD DATA:
 Name: ${name}
 Company: ${lead.company ?? "Unknown"}
 Title: ${lead.jobTitle ?? "Unknown"}
 Industry: ${lead.industry ?? "Unknown"}
+Company Size: ${lead.companySize ?? "Unknown"}
 Website: ${lead.website ?? "None"}
 Tech Stack: ${lead.techStack ?? "Unknown"}
 Pain Points: ${lead.painPoints ?? "Not captured"}
 AI Score: ${lead.aiScore ?? "Not scored"}
 ${profileContext}
 
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON with this exact structure (no trailing text after the closing brace):
 {
-  "summary": "3 sentences: who they are, what they do, and why NexoFlow is a strong fit right now. Be specific — no generic filler.",
+  "summary": "3 sentences: who they are, what they do, and why NexoFlow is a strong fit right now. Be specific. No generic filler.",
 
-  "whatWeBuild": "Specific 2-3 sentence description of the exact thing NexoFlow proposes to build for them. Reference their industry and their actual gaps. Name the product type (booking system, client portal, AI chatbot, etc.).",
+  "whatWeBuild": "Specific 2-3 sentence description of the exact thing NexoFlow proposes to build for them. Reference their industry and actual gaps. Name the product type (booking system, client portal, AI chatbot, etc.).",
 
-  "techRecommendation": "Exact stack NexoFlow would use for this project and why it's right for their scale and needs. Use real technology names.",
+  "techRecommendation": "Exact stack NexoFlow would use for this project and why it fits their scale and needs. Use real technology names.",
 
-  "estimatedScope": "Small (1–4 weeks) | Medium (5–10 weeks) | Large (3–6 months)",
+  "estimatedScope": "Small (1-4 weeks) | Medium (5-10 weeks) | Large (3-6 months)",
 
   "talkingPoints": [
-    "5 highly specific talking points for the discovery call. Each must reference a real detail about their business. Format: '[Problem/opportunity observed] → [How NexoFlow addresses it] → [Expected outcome]'. Never use generic statements."
+    "Talking point 1 specific to this business",
+    "Talking point 2 specific to this business",
+    "Talking point 3 specific to this business",
+    "Talking point 4 specific to this business",
+    "Talking point 5 specific to this business"
   ],
 
-  "openingHook": "The single most compelling opening line for the first email or call — references something specific to their business that shows you've done your homework. 1-2 sentences.",
+  "openingHook": "The single most compelling opening line for the first email or call. References something specific to their business that shows you have done your homework. 1-2 sentences.",
 
   "objectionHandlers": [
-    { "objection": "Likely objection they'll raise", "response": "Exactly how to handle it — specific to their business context" }
+    { "objection": "Most likely objection 1", "response": "How to handle it, specific to their context" },
+    { "objection": "Most likely objection 2", "response": "How to handle it, specific to their context" },
+    { "objection": "Most likely objection 3", "response": "How to handle it, specific to their context" }
   ],
 
-  "redFlags": ["Genuine risks or concerns that could kill the deal — be honest. If budget mismatch, unclear decision maker, or low urgency, say so."],
+  "redFlags": [
+    "Red flag 1 if any",
+    "Red flag 2 if any"
+  ],
 
-  "pricingAnchor": "Suggested opening price range and how to frame it. Reference the estimated value range and ROI context. Example: 'Open at $18K–$22K, anchored to the $45K/yr savings from eliminating manual scheduling.'",
+  "pricingAnchor": "Realistic price range for this specific business type and size. Frame it around the ROI and payback period. Example: 'Open at $6K-$9K for the online ordering system, framed around recovering the 15% they lose to third-party delivery fees each month.'",
 
-  "nextAction": "The single most important next step — specific and time-bound. What should happen in the next 48 hours?"
+  "nextAction": "The single most important next step, specific and time-bound. What should happen in the next 48 hours?"
 }`;
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 2048,
+        max_tokens: 4000,
         messages: [{ role: "user", content: prompt }],
       });
 
       const text = response.content[0]?.type === "text" ? response.content[0].text : "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const insights = jsonMatch ? jsonMatch[0] : text;
+      let insights = jsonMatch ? jsonMatch[0] : text;
+
+      // Validate JSON is parseable — if truncated, attempt to repair by closing open structures
+      try {
+        JSON.parse(insights);
+      } catch {
+        // Count unclosed brackets/braces and close them
+        let repaired = insights.trimEnd();
+        // Remove trailing comma if present before repair
+        repaired = repaired.replace(/,\s*$/, "");
+        const opens = (repaired.match(/\[/g) ?? []).length - (repaired.match(/\]/g) ?? []).length;
+        const braces = (repaired.match(/\{/g) ?? []).length - (repaired.match(/\}/g) ?? []).length;
+        for (let i = 0; i < opens; i++) repaired += "]";
+        for (let i = 0; i < braces; i++) repaired += "}";
+        try { JSON.parse(repaired); insights = repaired; } catch { /* leave as-is */ }
+      }
 
       const [updated] = await ctx.db
         .update(leads)
@@ -1302,7 +1358,7 @@ Return ONLY valid JSON with this exact structure:
       const [project] = await ctx.db
         .insert(projects)
         .values({
-          name: `${companyName} — Demo`,
+          name: `${companyName}: Demo`,
           clientId: client?.id ?? null,
           projectType: "web_app",
           industry: lead.industry ?? null,

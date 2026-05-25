@@ -26,7 +26,12 @@ interface BusinessProfileInput {
 export async function generateBusinessProfile(input: BusinessProfileInput): Promise<BusinessProfile> {
   const scrapedSummary = summarizeScraped(input.scraped, input.scrapedDataText);
 
-  const prompt = `You are NexoFlow's senior research analyst and sales strategist. Produce a deep "Business Intelligence Profile" — the definitive brief that NexoFlow's sales team and AI engine will use to generate a custom demo, proposal, and sales playbook for this prospect. Every field must be specific, grounded in the data, and immediately usable.
+  const prompt = `You are NexoFlow's senior research analyst and sales strategist. Produce a deep Business Intelligence Profile: the definitive brief that NexoFlow's sales team and AI engine will use to generate a custom demo, proposal, and sales playbook for this prospect. Every field must be specific, grounded in the data, and immediately usable.
+
+WRITING RULES (non-negotiable):
+- Never use em dashes (the character) anywhere in this profile. Use commas, colons, semicolons, or parentheses instead.
+- Write in clear, professional English. No filler.
+- All pricing and ROI estimates must be realistic for this specific business type and size.
 
 # Prospect data
 Company: ${input.company ?? "Unknown"}
@@ -78,7 +83,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     }
   ],
 
-  "roiEstimate": "A specific, credible narrative of the financial return on investment this company would see from working with NexoFlow. Example: 'An online booking system for this dental practice would eliminate ~15 hrs/week of phone scheduling (worth ~$18K/yr at a receptionist wage), while reducing no-shows by 30% through automated reminders — adding back roughly $45K in annual revenue. Total project ROI in Year 1: ~3.5×.' Be specific to their industry and size.",
+  "roiEstimate": "A specific, credible narrative of the financial return on investment this company would see from working with NexoFlow. Example: 'An online booking system for this dental practice would eliminate about 15 hrs/week of phone scheduling (worth about $18K/yr at a receptionist wage), reducing no-shows by 30% through automated reminders and adding back roughly $45K in annual revenue. Total project ROI in Year 1: about 3.5x.' Be specific to their industry and size. Do not use em dashes.",
 
   "urgencySignals": [
     "Specific, credible reasons WHY they should act now rather than later. Examples: 'Competitors in their zip code already have online booking', 'Their site hasn't been updated in 3+ years based on copyright footer', 'Google reviews mention long wait times / hard to reach — a known conversion killer', 'Their industry is seeing rapid digital adoption — laggards lose 20-30% market share in 2 years'. Ground in evidence where possible."
@@ -102,11 +107,12 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     "Specific custom-built features to showcase in the demo — name them concretely (e.g. 'Automated appointment reminder SMS flow', 'Client-facing project dashboard with live status', 'AI-powered quote generator'). Not generic ('contact form', 'about page')."
   ],
 
-  "estimatedValue": "Specific project investment range using NexoFlow's pricing framework. Examples: '$12K–$18K', '$35K–$55K'. Base it on the scope implied by their build opportunities."
+  "estimatedValue": "Realistic project investment range for a business of THIS type and size. Small local businesses (restaurant, solo trade, single-location retail): '$3K–$8K'. Growing SMBs with 10-50 staff: '$8K–$20K'. Multi-location or high-revenue operations: '$15K–$35K'. Only go above $35K for enterprises or complex SaaS integrations. The range must feel achievable for this business. Use en dashes between numbers (e.g. '$8K–$15K')."
 }
 
 RULES:
 - Every field must be specific. Generic answers like "modern website" or "improve user experience" are REJECTED.
+- Never use em dashes (the character) in any field. Use commas, colons, or en dashes for ranges.
 - softwareRecommendations: 5-7 tools. Industry examples: dental→(Dentrix, SimplePractice, NexHealth, Birdeye, Google Ads); law→(Clio, MyCase, LawPay, Calendly, Birdeye); restaurant→(Toast, OpenTable, 7shifts, Mailchimp, Google Ads); ecommerce→(Shopify, Klaviyo, Gorgias, Recharge, Triple Whale); saas→(Stripe, Intercom, Mixpanel, Segment, LaunchDarkly); hvac→(ServiceTitan, Jobber, Google Local Services Ads, Podium, Mailchimp); fitness→(Mindbody, Acuity, Mailchimp, Instagram Ads, Google Analytics). Always include at least one analytics tool and one customer communication tool.
 - quickWins: 3 items, each deliverable in ≤1 month, with visible impact the client can see immediately.
 - urgencySignals: 2-4 items. At least one must reference market/competitive pressure, one must reference an observable gap from their site data.
