@@ -3,7 +3,6 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
-import { after } from "next/server";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 import {
   leads, leadOutreach, leadCalls, leadOutcomes, leadDemoViews,
@@ -324,7 +323,7 @@ OUTPUT RULES
 // These run AFTER the tRPC response is sent, avoiding Vercel's ~60s edge
 // idle TCP connection timeout that kills long-running Anthropic calls.
 
-async function runDemoGeneration(leadId: string, autoBuildProfile: boolean): Promise<void> {
+export async function runDemoGeneration(leadId: string, autoBuildProfile: boolean): Promise<void> {
   const lead = await drizzleDb.query.leads.findFirst({ where: eq(leads.id, leadId) });
   if (!lead) return;
 
@@ -435,7 +434,7 @@ async function runDemoGeneration(leadId: string, autoBuildProfile: boolean): Pro
   }).where(eq(leads.id, leadId));
 }
 
-async function runProposalGeneration(leadId: string): Promise<void> {
+export async function runProposalGeneration(leadId: string): Promise<void> {
   const lead = await drizzleDb.query.leads.findFirst({ where: eq(leads.id, leadId) });
   if (!lead) return;
 
@@ -992,16 +991,23 @@ Return ONLY valid JSON with this exact structure:
       const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
       if (!lead) throw new Error("Lead not found");
 
-      // Schedule generation to run AFTER this response is sent.
-      // This bypasses Vercel's ~60s edge idle TCP timeout — the client gets
-      // an immediate { status: 'started' } response, then polls for completion.
-      after(async () => {
-        try {
-          await runDemoGeneration(input.id, input.autoBuildProfile);
-        } catch (err) {
-          console.error("[generateDemo] background error:", err instanceof Error ? err.message : err);
-        }
-      });
+      // Fire-and-forget to a dedicated background API route.
+      // This runs in its own Vercel function invocation (up to 300s maxDuration),
+      // completely independent of the tRPC request lifecycle or edge idle timeout.
+      // AbortSignal.timeout(2000) gives up waiting for a response after 2s, but
+      // the background function continues running on Vercel regardless.
+      const origin = "url" in ctx.req && typeof (ctx.req as Request).url === "string"
+        ? new URL((ctx.req as Request).url).origin
+        : (process.env.NEXTAUTH_URL ?? "https://nexoflow-os.vercel.app");
+      void fetch(`${origin}/api/background/demo/${input.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-secret": process.env.CRON_SECRET ?? process.env.ADMIN_REGEN_SECRET ?? "",
+        },
+        body: JSON.stringify({ autoBuildProfile: input.autoBuildProfile }),
+        signal: AbortSignal.timeout(2000),
+      }).catch(() => { /* fire-and-forget — abort after 2s, background route keeps running */ });
 
       return { status: "started" };
     }),
@@ -1380,14 +1386,18 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
       if (!lead) throw new Error("Lead not found");
 
-      // Schedule generation to run AFTER this response is sent (same edge-timeout fix as generateDemo)
-      after(async () => {
-        try {
-          await runProposalGeneration(input.id);
-        } catch (err) {
-          console.error("[generateProposal] background error:", err instanceof Error ? err.message : err);
-        }
-      });
+      // Same fire-and-forget pattern as generateDemo
+      const origin = "url" in ctx.req && typeof (ctx.req as Request).url === "string"
+        ? new URL((ctx.req as Request).url).origin
+        : (process.env.NEXTAUTH_URL ?? "https://nexoflow-os.vercel.app");
+      void fetch(`${origin}/api/background/proposal/${input.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-secret": process.env.CRON_SECRET ?? process.env.ADMIN_REGEN_SECRET ?? "",
+        },
+        signal: AbortSignal.timeout(2000),
+      }).catch(() => { /* fire-and-forget */ });
 
       return { status: "started" };
     }),

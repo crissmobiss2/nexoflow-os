@@ -75,6 +75,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [proposalGenerating, setProposalGenerating] = useState(false);
   const demoPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const proposalPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track the timestamp AT THE MOMENT generation was triggered so we can detect
+  // completion even for regeneration (where demoUrl already exists).
+  const demoTriggerTimeRef = useRef<number>(0);
+  const proposalTriggerTimeRef = useRef<number>(0);
 
   // Clean up polling intervals on unmount
   useEffect(() => {
@@ -88,10 +92,14 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => {
       setActionError(null);
       setDemoGenerating(true);
+      demoTriggerTimeRef.current = Date.now();
       if (demoPollingRef.current) clearInterval(demoPollingRef.current);
       demoPollingRef.current = setInterval(() => {
         void refetch().then((result) => {
-          if (result.data?.demoUrl) {
+          const generatedAt = result.data?.demoGeneratedAt;
+          const generatedMs = generatedAt ? new Date(generatedAt).getTime() : 0;
+          // Done when: a demoUrl exists AND demoGeneratedAt is AFTER we triggered
+          if (result.data?.demoUrl && generatedMs > demoTriggerTimeRef.current - 5000) {
             setDemoGenerating(false);
             if (demoPollingRef.current) { clearInterval(demoPollingRef.current); demoPollingRef.current = null; }
           }
@@ -104,9 +112,11 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => {
       setActionError(null);
       setProposalGenerating(true);
+      proposalTriggerTimeRef.current = Date.now();
       if (proposalPollingRef.current) clearInterval(proposalPollingRef.current);
       proposalPollingRef.current = setInterval(() => {
         void refetch().then((result) => {
+          // proposalUrl is set when generation completes; it always changes on each generation
           if (result.data?.proposalUrl) {
             setProposalGenerating(false);
             if (proposalPollingRef.current) { clearInterval(proposalPollingRef.current); proposalPollingRef.current = null; }
