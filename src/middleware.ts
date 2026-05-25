@@ -16,6 +16,8 @@ const PUBLIC_PATHS = new Set([
   "/api/integration",   // External intake forms
   "/portal",            // Client portals (token-validated in route)
   "/showcase",          // Public showcase page
+  "/ref",               // Affiliate referral redirect links
+  "/api/ref",           // Affiliate click-tracking API
 ]);
 
 function isPublicPath(pathname: string): boolean {

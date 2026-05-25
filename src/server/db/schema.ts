@@ -982,14 +982,86 @@ export const affiliateReferrals = pgTable(
   (t) => [index("nf_affiliate_refs_affiliate_idx").on(t.affiliateId)],
 );
 
+// ─── Affiliate Clicks (server-side click tracking for /ref/[code]) ────────────
+
+export const affiliateClicks = pgTable(
+  "nf_affiliate_clicks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    affiliateId: uuid("affiliate_id")
+      .references(() => affiliates.id, { onDelete: "cascade" })
+      .notNull(),
+    referralCode: varchar("referral_code", { length: 32 }).notNull(),
+    // SHA-256 of IP — no raw IPs stored
+    ipHash: varchar("ip_hash", { length: 64 }),
+    userAgent: varchar("user_agent", { length: 500 }),
+    landingPage: varchar("landing_page", { length: 500 }),
+    utmSource: varchar("utm_source", { length: 100 }),
+    utmMedium: varchar("utm_medium", { length: 100 }),
+    utmCampaign: varchar("utm_campaign", { length: 100 }),
+    // ISO-3166-1 alpha-2 from CF-IPCountry header — free, no API needed
+    country: varchar("country", { length: 2 }),
+    converted: boolean("converted").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_affiliate_clicks_affiliate_idx").on(t.affiliateId),
+    index("nf_affiliate_clicks_created_idx").on(t.createdAt),
+    index("nf_affiliate_clicks_converted_idx").on(t.converted),
+  ],
+);
+
+// ─── Affiliate Payouts ────────────────────────────────────────────────────────
+
+export const affiliatePayoutStatusEnum = pgEnum("nf_affiliate_payout_status", [
+  "pending", "processing", "completed", "failed",
+]);
+
+export const affiliatePayoutMethodEnum = pgEnum("nf_affiliate_payout_method", [
+  "bank_transfer", "paypal", "wise", "stripe",
+]);
+
+export const affiliatePayouts = pgTable(
+  "nf_affiliate_payouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    affiliateId: uuid("affiliate_id")
+      .references(() => affiliates.id, { onDelete: "cascade" })
+      .notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    method: affiliatePayoutMethodEnum("method").default("paypal").notNull(),
+    reference: varchar("reference", { length: 255 }),
+    status: affiliatePayoutStatusEnum("status").default("pending").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+  },
+  (t) => [
+    index("nf_affiliate_payouts_affiliate_idx").on(t.affiliateId),
+    index("nf_affiliate_payouts_status_idx").on(t.status),
+  ],
+);
+
+// ─── Relations ────────────────────────────────────────────────────────────────
+
 export const affiliateRelations = relations(affiliates, ({ many }) => ({
   referrals: many(affiliateReferrals),
+  clicks: many(affiliateClicks),
+  payouts: many(affiliatePayouts),
 }));
 
 export const affiliateReferralRelations = relations(affiliateReferrals, ({ one }) => ({
   affiliate: one(affiliates, { fields: [affiliateReferrals.affiliateId], references: [affiliates.id] }),
   lead: one(leads, { fields: [affiliateReferrals.leadId], references: [leads.id] }),
   project: one(projects, { fields: [affiliateReferrals.projectId], references: [projects.id] }),
+}));
+
+export const affiliateClickRelations = relations(affiliateClicks, ({ one }) => ({
+  affiliate: one(affiliates, { fields: [affiliateClicks.affiliateId], references: [affiliates.id] }),
+}));
+
+export const affiliatePayoutRelations = relations(affiliatePayouts, ({ one }) => ({
+  affiliate: one(affiliates, { fields: [affiliatePayouts.affiliateId], references: [affiliates.id] }),
 }));
 
 // ─── Case Studies ─────────────────────────────────────────────────────────────
