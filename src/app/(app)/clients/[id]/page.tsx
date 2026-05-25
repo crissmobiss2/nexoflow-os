@@ -267,7 +267,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
           <Section title="Commercial">
             <div className="space-y-3">
               <InfoRow label="Typical Budget" value={client.typicalBudget} />
-              <InfoRow label="Urgency" value={client.urgency ? { exploring: "Exploring options", planning: "Planning (1–3 months)", urgent: "Urgent — start ASAP" }[client.urgency] : null} />
+              <InfoRow label="Urgency" value={client.urgency ? { exploring: "Exploring options", planning: "Planning (1–3 months)", urgent: "Urgent: start ASAP" }[client.urgency] : null} />
               <InfoRow label="Decision Maker" value={client.decisionMakerRole} />
             </div>
           </Section>

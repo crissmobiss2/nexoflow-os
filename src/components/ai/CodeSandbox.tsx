@@ -122,7 +122,7 @@ export function CodeSandbox({ code, language, sandboxEnabled }: CodeSandboxProps
     setTimeout(() => {
       if (status === "running") {
         setStatus("success");
-        setOutput("Code executed — see result in sandbox iframe above");
+        setOutput("Code executed. See result in sandbox iframe above.");
         clearTimeout(timeoutId);
         window.removeEventListener("message", messageHandler);
       }

@@ -41,7 +41,7 @@ export default function ArchitecturePage({ params }: { params: Promise<{ id: str
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${project?.name ?? "architecture"} — Architecture.md`;
+    a.download = `${project?.name ?? "architecture"} - Architecture.md`;
     a.click();
     URL.revokeObjectURL(url);
   };

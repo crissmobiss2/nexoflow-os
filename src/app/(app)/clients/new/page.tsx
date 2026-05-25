@@ -82,7 +82,7 @@ export default function NewClientPage() {
             Onboard New Client
           </h1>
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Capture the full client profile — this context flows into every brief, scope, and architecture document.
+            Capture the full client profile. This context flows into every brief, scope, and architecture document.
           </p>
         </div>
 
@@ -167,7 +167,7 @@ export default function NewClientPage() {
           {step === 3 && (
             <>
               <SectionTitle icon={Lightbulb} title="Business Context" />
-              <Field label="What does their business do?" required hint="Be specific — this feeds every AI prompt">
+              <Field label="What does their business do?" required hint="Be specific: this feeds every AI prompt">
                 <textarea
                   autoFocus
                   value={form.businessDescription}

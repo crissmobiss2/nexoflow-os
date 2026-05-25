@@ -290,7 +290,7 @@ export default function KnowledgePage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={activeCategory ? `Search in ${activeCategory}…` : "Search 67,607 snippets — React, Postgres, Docker, OWASP, CAP theorem…"}
+              placeholder={activeCategory ? `Search in ${activeCategory}…` : "Search 67,607 snippets: React, Postgres, Docker, OWASP, CAP theorem…"}
               className="nf-input pl-10 pr-4 w-full"
             />
             {query && (

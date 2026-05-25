@@ -13,7 +13,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { CodeSandbox, splitMarkdownIntoSegments } from "@/components/ai/CodeSandbox";
 
 const MODES = [
-  { id: "general",      label: "General",      icon: Brain,       desc: "Ask anything — full second brain context",           color: "hsl(220, 90%, 62%)" },
+  { id: "general",      label: "General",      icon: Brain,       desc: "Ask anything, full second brain context",            color: "hsl(220, 90%, 62%)" },
   { id: "architect",    label: "Architect",     icon: Zap,         desc: "System design & architecture decisions",             color: "hsl(262, 83%, 68%)" },
   { id: "tech_advisor", label: "Tech Advisor",  icon: Code,        desc: "Stack recommendations & technology choices",         color: "hsl(142, 68%, 52%)" },
   { id: "code_review",  label: "Code Review",   icon: FileText,    desc: "Review code for bugs, security & performance",       color: "hsl(207, 90%, 60%)" },
@@ -386,7 +386,7 @@ function AiStudioInner() {
                 {activeMode.label}
               </h2>
               <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-                {activeMode.desc}. Backed by NexoFlow&apos;s complete second brain &mdash; 67,607 snippets across 123 categories.
+                {activeMode.desc}. Backed by NexoFlow&apos;s complete second brain: 67,607 snippets across 123 categories.
               </p>
               {/* Suggested prompts */}
               <div className="grid grid-cols-1 gap-2 w-full">
@@ -496,7 +496,7 @@ function getSuggestedPrompts(mode: Mode): string[] {
     tech_advisor: ["What stack should I use for a React Native app with offline sync?", "Postgres vs MongoDB for a real-time collaboration tool?", "Should I use tRPC or REST for a mobile app backend?"],
     code_review:  ["Review this Drizzle ORM query for N+1 issues: [paste code]", "Is this auth middleware secure? [paste code]", "Review this React component for performance issues: [paste code]"],
     security:     ["What are the most common Next.js security vulnerabilities I should check?", "How do I properly implement RBAC in a multi-tenant app?", "Review my authentication flow for security issues: [paste code]"],
-    performance:  ["My Next.js page has a 4s LCP — where do I start?", "How do I identify and fix N+1 queries in Drizzle ORM?", "What's the most impactful thing I can do to speed up a Postgres query?"],
+    performance:  ["My Next.js page has a 4s LCP. Where do I start?", "How do I identify and fix N+1 queries in Drizzle ORM?", "What's the most impactful thing I can do to speed up a Postgres query?"],
     estimator:    ["Estimate a job board SaaS MVP with employer and candidate portals", "How long to build a React Native app with push notifications and offline sync?", "Estimate a multi-tenant project management tool similar to Asana"],
     scope_writer: ["Write a scope document for a dental practice booking system", "Create a scope for a B2B invoice management SaaS", "Draft a scope for an e-commerce platform with Shopify integration"],
   };

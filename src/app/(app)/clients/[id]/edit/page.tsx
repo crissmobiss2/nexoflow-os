@@ -163,7 +163,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
           <div>
             <SectionTitle icon={Lightbulb} title="Business Context" />
             <div className="space-y-5 mt-5">
-              <Field label="What does their business do?" hint="Be specific — this feeds every AI prompt">
+              <Field label="What does their business do?" hint="Be specific: this feeds every AI prompt">
                 <textarea
                   value={form.businessDescription ?? ""}
                   onChange={set("businessDescription")}

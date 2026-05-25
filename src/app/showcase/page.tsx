@@ -6,7 +6,7 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 export const revalidate = 300;
 
 export const metadata = {
-  title: "NexoFlow — Demo Wall",
+  title: "NexoFlow: Demo Wall",
   description: "A showcase of custom demos built by NexoFlow for clients we've worked with.",
 };
 
@@ -51,7 +51,7 @@ export default async function ShowcasePage() {
       {visible.length === 0 ? (
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: 24 }}>
           <div style={{ padding: 48, textAlign: "center", color: "rgba(255,255,255,0.5)", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 16 }}>
-            No demos to show yet — they appear here after a lead is marked as Won with a live demo link.
+            No demos to show yet. They appear here after a lead is marked as Won with a live demo link.
           </div>
         </div>
       ) : (

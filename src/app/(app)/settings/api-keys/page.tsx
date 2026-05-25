@@ -67,7 +67,7 @@ export default function ApiKeysPage() {
             <Key className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "var(--status-success)" }} />
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--status-success)" }}>
-                API Key Created — Copy it now!
+                API Key Created: Copy it now!
               </h3>
               <p className="text-xs mb-3" style={{ color: "var(--text-secondary)" }}>
                 You won't be able to see this key again. Store it somewhere safe.

@@ -128,7 +128,7 @@ export default async function DashboardPage() {
             Second Brain: {knowledgeStats.total.toLocaleString()} snippets across {knowledgeStats.categories} categories
           </div>
           <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-            Architecture · Security · Performance · Frontend · Backend · Mobile · DevOps · AI · Testing · Design Patterns — all searchable and automatically injected into every AI generation.
+            Architecture · Security · Performance · Frontend · Backend · Mobile · DevOps · AI · Testing · Design Patterns: all searchable and automatically injected into every AI generation.
           </div>
         </div>
         <div className="flex gap-2 shrink-0">

@@ -196,7 +196,7 @@ export default function CaseStudiesPage() {
       {(isNew || editing) && (
         <div className="rounded-2xl p-6 mb-8" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
           <h2 className="text-sm font-semibold mb-5" style={{ color: "var(--text-primary)" }}>
-            {isNew ? "New Case Study" : `Editing — ${editing?.clientName}`}
+            {isNew ? "New Case Study" : `Editing: ${editing?.clientName}`}
           </h2>
 
           {saveError && (

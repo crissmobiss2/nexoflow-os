@@ -41,7 +41,7 @@ export default function ScopePage({ params }: { params: Promise<{ id: string }> 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${project?.name ?? "scope"} — Scope Document.md`;
+    a.download = `${project?.name ?? "scope"} - Scope Document.md`;
     a.click();
     URL.revokeObjectURL(url);
   };

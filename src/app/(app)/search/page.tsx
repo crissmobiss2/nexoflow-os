@@ -245,7 +245,7 @@ export default function SearchPage() {
           {!vaultAvailable && (
             <div className="mt-6 flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "hsl(39, 80%, 50%, 0.1)", color: "hsl(39, 80%, 50%)", border: "1px solid hsl(39, 80%, 50%, 0.2)" }}>
               <Notebook className="w-3 h-3" />
-              Obsidian vault not available — set OBSIDIAN_LOCAL_API_URL to enable
+              Obsidian vault not available. Set OBSIDIAN_LOCAL_API_URL to enable.
             </div>
           )}
         </div>
@@ -272,7 +272,7 @@ export default function SearchPage() {
               {!vaultAvailable && (
                 <div className="mt-4 flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "hsl(39, 80%, 50%, 0.1)", color: "hsl(39, 80%, 50%)", border: "1px solid hsl(39, 80%, 50%, 0.2)" }}>
                   <Notebook className="w-3 h-3" />
-                  Obsidian vault unavailable — results limited to database
+                  Obsidian vault unavailable: results limited to database
                 </div>
               )}
             </div>

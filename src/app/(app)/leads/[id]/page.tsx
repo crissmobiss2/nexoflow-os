@@ -652,7 +652,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4" style={{ color: "hsl(207, 90%, 62%)" }} />
                   <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                    Site scraped — ready to build profile
+                    Site scraped: ready to build profile
                   </span>
                 </div>
                 <button

@@ -291,7 +291,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               {invoiceCreated !== null && (
                 <div className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(142, 68%, 52%)" }}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Invoice created — <Link href="/invoices" className="underline">view invoices</Link>
+                  Invoice created. <Link href="/invoices" className="underline">View invoices</Link>
                 </div>
               )}
             </div>

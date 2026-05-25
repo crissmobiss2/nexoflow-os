@@ -121,7 +121,7 @@ function NewProjectInner() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>New Project</h1>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          Link to a client, pick the category, fill in the brief — Claude does the rest.
+          Link to a client, pick the category, fill in the brief. Claude does the rest.
         </p>
       </div>
 
@@ -273,7 +273,7 @@ function NewProjectInner() {
                 className="ml-auto text-xs transition-opacity hover:opacity-70"
                 style={{ color: "var(--text-muted)" }}
               >
-                Skip — no client
+                Skip (no client)
               </button>
             </div>
           </div>

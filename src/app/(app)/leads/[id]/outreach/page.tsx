@@ -31,7 +31,7 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
       if (result.sentSuccessfully) {
         router.push(`/leads/${id}`);
       } else {
-        setSendError(result.providerError ?? "Send failed — outreach recorded but not delivered.");
+        setSendError(result.providerError ?? "Send failed: outreach recorded but not delivered.");
       }
     },
     onError: (err) => setSendError(err.message),
@@ -259,7 +259,7 @@ export default function OutreachPage({ params }: { params: Promise<{ id: string 
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="Template name (e.g. 'Cold opener — HVAC')"
+              placeholder="Template name (e.g. 'Cold opener for HVAC')"
               className="w-full px-3 py-2 rounded-lg text-xs outline-none"
               style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--text-primary)" }}
               autoFocus

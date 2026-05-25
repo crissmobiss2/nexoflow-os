@@ -69,7 +69,7 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
             margin: 0.75in 0.85in;
             size: A4;
             @top-center {
-              content: "NexoFlow OS — Proposal";
+              content: "NexoFlow OS: Proposal";
               font-size: 8px;
               color: #999;
               font-family: system-ui, sans-serif;
@@ -376,7 +376,7 @@ export default function ProposalPage({ params }: { params: Promise<{ id: string 
                   </li>
                 </ul>
                 <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                  All invoices are <strong style={{ color: "var(--text-primary)" }}>Net-15</strong> — payment is due within 15 calendar days of the invoice date.
+                  All invoices are <strong style={{ color: "var(--text-primary)" }}>Net-15</strong>: payment is due within 15 calendar days of the invoice date.
                   Late payments may incur a 1.5% monthly service charge on the outstanding balance.
                 </p>
               </div>

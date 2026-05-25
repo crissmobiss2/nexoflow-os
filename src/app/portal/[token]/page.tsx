@@ -224,7 +224,7 @@ function PortalInner({ token }: { token: string }) {
             >
               <Users className="w-3 h-3" />
               {project.client.name}
-              {project.client.company ? ` — ${project.client.company}` : ""}
+              {project.client.company ? ` · ${project.client.company}` : ""}
             </span>
           )}
 
@@ -491,7 +491,7 @@ function PortalInner({ token }: { token: string }) {
             style={{ zIndex: 0 }}
           >
             <div className="flex items-center justify-center h-full text-lg font-bold tracking-widest rotate-[-15deg] whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-              Confidential — NexoFlow Methodology
+              Confidential: NexoFlow Methodology
             </div>
           </div>
 
@@ -608,7 +608,7 @@ function PortalInner({ token }: { token: string }) {
                   className="text-center mt-6 text-[10px] font-semibold tracking-widest uppercase"
                   style={{ color: "hsl(222, 22%, 25%)" }}
                 >
-                  Confidential — NexoFlow Methodology
+                  Confidential: NexoFlow Methodology
                 </div>
               </div>
             ) : (
@@ -635,7 +635,7 @@ function PortalInner({ token }: { token: string }) {
           className="text-[11px] tracking-wider"
           style={{ color: "var(--text-muted)" }}
         >
-          Powered by <span className="font-semibold" style={{ color: "var(--text-secondary)" }}>NexoFlow</span> &mdash; Build Intelligence System
+          Powered by <span className="font-semibold" style={{ color: "var(--text-secondary)" }}>NexoFlow</span> &middot; Build Intelligence System
         </p>
       </footer>
     </div>

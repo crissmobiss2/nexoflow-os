@@ -831,7 +831,7 @@ export default function AnalyticsPage() {
             </button>
           </div>
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Claude analyzes your last 7 days — leads, deals, revenue — and emails a strategic summary to crissmobiss@gmail.com.
+            Claude analyzes your last 7 days (leads, deals, revenue) and emails a strategic summary to crissmobiss@gmail.com.
           </p>
           {weeklyReport.data && (
             <div className="mt-3 p-3 rounded-lg text-xs whitespace-pre-wrap" style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)" }}>

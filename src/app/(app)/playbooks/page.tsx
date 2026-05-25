@@ -120,7 +120,7 @@ const PLAYBOOKS = [
       "Stripe webhooks verified with signing secret",
       "Subscription state synced to DB on every webhook event",
       "Trial-to-paid conversion email sequence live",
-      "Org isolation verified — no cross-tenant data leaks",
+      "Org isolation verified: no cross-tenant data leaks",
       "Feature flags per subscription tier enforced",
       "Customer portal for self-serve billing changes",
       "Usage limits enforced server-side, not just UI",
