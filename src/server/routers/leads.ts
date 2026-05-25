@@ -54,18 +54,25 @@ function canonicalDedupKey(input: { email?: string | null; company?: string | nu
 
 function buildDemoPrompt({
   companyName, name, jobTitle, industry, offer, targetCustomer, tone,
-  weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures,
+  weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations,
 }: {
   companyName: string; name: string; jobTitle?: string | null; industry?: string | null;
   offer: string; targetCustomer?: string | null; tone: string; weaknesses: string;
   brandColors: string[]; brandFonts: string[]; demoAngle: string; recommendedFeatures: string;
+  softwareRecommendations: { name: string; category: string; reason: string; url?: string }[];
 }): string {
   const primary = brandColors[0] ?? "#7c5cbf";
   const secondary = brandColors[1] ?? "#4f8ef7";
   const accent = brandColors[2] ?? "#0a0a0f";
   const fonts = brandFonts.length > 0 ? brandFonts.join(", ") : "Inter, system-ui";
 
-  return `You are a senior UI engineer and award-winning web designer. Produce a STUNNING, conversion-optimised single-file demo page for a sales prospect. Every pixel must look like it was built by a $300K/yr agency.
+  const softwareSection = softwareRecommendations.length > 0
+    ? softwareRecommendations.map((s) =>
+        `      TOOL: ${s.name} | CATEGORY: ${s.category} | WHY FOR THIS CLIENT: ${s.reason}${s.url ? ` | URL: ${s.url}` : ""}`,
+      ).join("\n")
+    : "      (infer 4-6 best-in-class tools for their industry)";
+
+  return `You are a senior UI engineer and award-winning web designer. Produce a STUNNING, conversion-optimised single-file demo page for a sales prospect. Every pixel must look like it was built by a $500K/yr agency. This page must be COMPLETE — do not stop generating until all sections including the footer are written.
 
 BUSINESS CONTEXT
 Company: ${companyName}
@@ -76,7 +83,10 @@ Their target customers: ${targetCustomer ?? "their clients"}
 Their tone of voice: ${tone}
 Pain points we fix: ${weaknesses || "operational inefficiencies and manual workflows"}
 Demo angle: ${demoAngle}
-Features to showcase: ${recommendedFeatures}
+Custom features NexoFlow will build: ${recommendedFeatures}
+
+RECOMMENDED SOFTWARE STACK FOR THIS CLIENT:
+${softwareSection}
 
 BRAND
 Primary color: ${primary}
@@ -100,7 +110,8 @@ MANDATORY DESIGN RULES — follow every one, no exceptions:
 
 2. GOOGLE FONTS — import ${fonts.split(",")[0]?.trim()} at top of <style>: @import url('https://fonts.googleapis.com/css2?family=${(fonts.split(",")[0]?.trim() ?? "Inter").replace(/ /g, "+")}:wght@400;600;700;900&display=swap');
 
-3. SECTIONS (in this exact order):
+3. SECTIONS (in this EXACT order — ALL 8 are required):
+
    a. HERO — full-viewport-height, gradient background using --primary → --secondary (135deg), centered content:
       - Pill badge: "Custom demo for ${companyName}" with border: 1px solid rgba(255,255,255,0.2)
       - H1 (72px desktop / 40px mobile, font-weight:900): A powerful, specific headline referencing their exact problem
@@ -113,39 +124,53 @@ MANDATORY DESIGN RULES — follow every one, no exceptions:
       - Inline SVG icon (40px, colored --primary), bold problem title, 2-sentence description using THEIR specific pain points
 
    c. SOLUTION — "What NexoFlow builds for ${companyName}" — same card grid:
-      - 3-4 feature cards from recommendedFeatures, each with distinct inline SVG icon
+      - 3-4 feature cards from "Custom features NexoFlow will build", each with distinct inline SVG icon
       - Feature title + description written specifically for their business context
 
-   d. STATS BAR — full-width gradient strip (--primary to --secondary), 3 large metrics in a flex row:
+   d. SOFTWARE STACK — "Your complete software ecosystem" — THIS IS CRITICAL FOR VALUE:
+      - Section subtitle: "NexoFlow doesn't just build custom software — we architect your entire tech stack. Here's what we recommend for ${companyName}:"
+      - Render each tool from RECOMMENDED SOFTWARE STACK as a card in a grid (repeat(auto-fit, minmax(220px,1fr))):
+        * Category badge (small pill, --primary color, e.g. "CRM", "Payments", "Analytics")
+        * Tool name (large, bold)
+        * Why this tool text (the reason from RECOMMENDED SOFTWARE STACK — 1-2 sentences, specific to their business)
+        * "✓ NexoFlow integrates this" footer on each card
+      - Below the grid, add a callout box: "NexoFlow connects all these tools together into one seamless workflow — no more copy-pasting between 6 different tabs."
+
+   e. STATS BAR — full-width gradient strip (--primary to --secondary), 3 large metrics in a flex row:
       - Numbers must be industry-relevant (e.g. "↓ 70% manual work", "↑ 40% faster ops", "$120K saved/yr")
       - Large number (56px, bold white) + label underneath
 
-   e. HOW IT WORKS — 3-step timeline (horizontal on desktop, vertical on mobile):
-      - Step numbers in circles (gradient border), step title + 1-line description
+   f. HOW IT WORKS — "How we build it" — 3-step process (horizontal on desktop, vertical on mobile):
+      - Step numbers in gradient-border circles, step title + 1-line description
+      - Steps: 1) Discovery & Planning (1 week), 2) Build & Integrate (4-8 weeks), 3) Launch & Support
 
-   f. CTA SECTION — full-width, dark background (#080810 or white depending on scheme):
+   g. CTA SECTION — full-width, semi-dark background:
       - Large headline: "Ready to build this for ${companyName}?"
-      - Subtext referencing their specific transformation
-      - Single large CTA button: "Book a call with NexoFlow →" linking to https://nexoflow.tech
-      - Below: "No commitment. 30-min discovery call."
+      - Subtext: specific transformation they'll experience
+      - Single large CTA button: "Book a free discovery call →" linking to https://nexoflow.tech
+      - Below button: "No commitment. 30-min call. We'll scope your project for free."
+      - Three proof points inline: "⚡ Response in 24h", "🏆 100% satisfaction", "🔒 NDA on request"
 
-   g. FOOTER — minimal:
-      - "Custom demo built for ${companyName} · NexoFlow © 2026"
-      - nexoflow.tech link
+   h. FOOTER — minimal:
+      - "Custom demo built exclusively for ${companyName} · NexoFlow © 2026"
+      - nexoflow.tech | hello@nexoflow.tech
 
 4. ANIMATIONS — CSS keyframes only:
    @keyframes fadeInUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
-   Add this 10-line IntersectionObserver to animate .animate-in elements when they enter the viewport:
-   <script>new IntersectionObserver((e,o)=>{e.forEach(i=>{if(i.isIntersecting){i.target.classList.add('visible');o.unobserve(i.target)}})},{threshold:0.15}).observe(document.querySelectorAll('.animate-in'));</script>
-   (Replace .observe() with forEach)
+   .animate-in { opacity:0; transform:translateY(24px) }
+   .animate-in.visible { animation: fadeInUp 0.6s ease forwards }
+   Add IntersectionObserver script at end of body:
+   <script>const obs=new IntersectionObserver((e)=>{e.forEach(i=>{if(i.isIntersecting){i.target.classList.add('visible');obs.unobserve(i.target)}})},{threshold:0.15});document.querySelectorAll('.animate-in').forEach(el=>obs.observe(el));</script>
 
 5. RESPONSIVE — mobile-first, single breakpoint at 768px. Grid collapses to single column. Hero H1 shrinks to 40px. CTA buttons stack vertically.
 
 6. COPY TONE — write as if you know this company personally. Reference their specific industry, their actual pain points (${weaknesses || "manual processes, slow operations"}), and their target customers (${targetCustomer ?? "their clients"}). Zero generic business-speak.
 
-7. ALL ICONS — inline SVG only (24-40px). No external icon libraries. Draw relevant icons (chart, lightning, shield, rocket, etc.) directly in the HTML.
+7. ALL ICONS — inline SVG only (24-40px). No external icon libraries. Draw relevant icons (chart, lightning, shield, rocket, code brackets, etc.) directly in the HTML.
 
 8. NO external images. Background textures via CSS gradients and SVG patterns only.
+
+CRITICAL: You MUST output the COMPLETE HTML from <!DOCTYPE html> to </html>. Do not stop early. Do not truncate. Do not summarise sections — write them all out in full.
 
 Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown fences. No explanation.`;
 }
@@ -303,11 +328,12 @@ export const leadsRouter = createTRPCRouter({
           const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? "";
           const tone = profile?.toneOfVoice ?? "professional";
 
-          const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures });
+          const softwareRecommendations = profile?.softwareRecommendations ?? [];
+          const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations });
 
           const demoResponse = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 4500,
+            max_tokens: 8192,
             messages: [{ role: "user", content: demoPrompt }],
           });
           const demoHtml = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
@@ -636,11 +662,12 @@ Respond in JSON with this exact structure:
       const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? "";
       const tone = profile?.toneOfVoice ?? "professional";
 
-      const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures });
+      const softwareRecommendations = profile?.softwareRecommendations ?? [];
+      const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations });
 
       const demoResponse = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 4500,
+        max_tokens: 8192,
         messages: [{ role: "user", content: demoPrompt }],
       });
 
@@ -961,6 +988,11 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       const techRec = (insightsObj.techRecommendation as string) ?? "Modern, scalable web stack";
       const scope = (insightsObj.estimatedScope as string) ?? "Medium (1-2 months)";
 
+      const softwareRecs = profile?.softwareRecommendations ?? [];
+      const softwareRecsText = softwareRecs.length > 0
+        ? softwareRecs.map((s) => `- ${s.name} (${s.category}): ${s.reason}`).join("\n")
+        : "Best-in-class tools relevant to their industry";
+
       const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
 
 Create a COMPLETE, single-file HTML proposal document for:
@@ -969,21 +1001,32 @@ Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
 Industry: ${lead.industry ?? "Technology"}
 Their offer: ${offer}
 What we'd build: ${whatWeBuild}
-Recommended features: ${features}
-Tech stack: ${techRec}
+Recommended custom features: ${features}
+Tech stack NexoFlow will use: ${techRec}
 Estimated scope: ${scope}
 Estimated value range: ${estimatedValue}
 Visible weaknesses we'll solve: ${weaknesses}
+Recommended software tools for their business:
+${softwareRecsText}
 
 Requirements:
 - Clean, professional proposal design (white/light background, dark text, purple brand accents #7c5cbf)
-- Sections: Executive Summary, Problem Statement (with their specific weaknesses), Our Proposed Solution, Technical Approach, Project Timeline (3 phases), Investment (use 30/40/30 milestone payment structure, calculate from ${estimatedValue}), Next Steps
+- Sections (ALL required):
+  1. Executive Summary
+  2. Problem Statement (with their specific weaknesses listed)
+  3. Our Proposed Solution (custom software NexoFlow builds for them)
+  4. Recommended Software Ecosystem — a table or card grid showing each recommended tool (name, category, why it's right for them), with a note that NexoFlow integrates all of them. This section is KEY — it shows we're a strategic advisor, not just a vendor.
+  5. Technical Approach (stack NexoFlow will use, architecture overview)
+  6. Project Timeline (3 phases with weeks)
+  7. Investment (30/40/30 milestone payment structure, calculated from ${estimatedValue})
+  8. Next Steps (clear call to action — book discovery call at nexoflow.tech)
 - 30/40/30 payment: 30% to start, 40% at midpoint, 30% on delivery
 - Include NexoFlow company details, prepared for ${companyName}
 - Footer: "Prepared by NexoFlow | nexoflow.tech | hello@nexoflow.tech"
 - Professional typography, subtle borders, clean layout
 - All CSS inline or in <style> tag — no external dependencies
 - Print-friendly (could be converted to PDF)
+- Output the COMPLETE HTML — do not truncate or stop early
 
 Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanation.`;
 

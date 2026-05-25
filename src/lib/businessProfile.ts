@@ -60,6 +60,9 @@ Return ONLY valid JSON in this exact shape:
   "industryFit": "one of: hvac, dental, law, restaurant, ecommerce, saas, agency, real_estate, healthcare, fitness, education, finance, other",
   "demoAngle": "one paragraph: how the demo should feel and what to lead with",
   "recommendedFeatures": ["specific features to include in the demo"],
+  "softwareRecommendations": [
+    { "name": "Tool Name", "category": "Category (CRM|Payments|Analytics|Automation|Marketing|Scheduling|Communication|Security|HR|Finance)", "reason": "1-2 sentences: WHY this specific tool for THIS specific company — reference their industry/size/use-case", "url": "https://tool.com" }
+  ],
   "estimatedValue": "rough project value range eg '$10k–$25k'"
 }
 
@@ -67,6 +70,7 @@ Important:
 - Use the brand colors from the scrape data if available. If only 1-2 are present, derive a complementary palette. If none, suggest tasteful colors that match their industry and tone.
 - visibleWeaknesses must be concrete and grounded in the scrape data when possible. Don't invent.
 - buildOpportunities should be 3-5 items that NexoFlow can realistically deliver and that match the company's stage.
+- softwareRecommendations: provide 4-6 best-in-class tools for this specific business. These are NOT custom builds — these are commercial SaaS tools NexoFlow recommends and can integrate. Examples by industry: dental (Dentrix, Kareo, SimplePractice), law (Clio, LawPay, MyCase), restaurant (Toast, OpenTable, 7shifts), ecommerce (Shopify, Klaviyo, Gorgias), saas (Stripe, Intercom, Mixpanel, Segment), hvac (ServiceTitan, Jobber), fitness (Mindbody, Acuity). Always include at least one analytics tool and one communication tool.
 - Be specific. Generic answers ("modern responsive website") are useless. Lean into industry signals.`;
 
   const response = await anthropic.messages.create({

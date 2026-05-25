@@ -870,6 +870,7 @@ export type BusinessProfile = {
   brandFonts?: string[];
   visibleWeaknesses?: string[];
   buildOpportunities?: { title: string; description: string; effort: string }[];
+  softwareRecommendations?: { name: string; category: string; reason: string; url?: string }[];
   industryFit?: string;
   demoAngle?: string;
   recommendedFeatures?: string[];
