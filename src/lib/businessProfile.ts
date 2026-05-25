@@ -115,7 +115,7 @@ RULES:
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 2600,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -157,7 +157,9 @@ function summarizeScraped(scraped: ScrapedProfile | null | undefined, fallbackTe
   if (scraped.contactEmails?.length) parts.push(`Contact emails: ${scraped.contactEmails.join(", ")}`);
   if (scraped.pages?.length) parts.push(`Pages crawled: ${scraped.pages.slice(0, 10).map((p) => p.url).join(", ")}`);
   if (scraped.rawMarkdown) {
-    parts.push(`Raw markdown sample (first 3000 chars):\n${scraped.rawMarkdown.slice(0, 3000)}`);
+    // Keep snippet short — structured fields above carry the signal; large rawMarkdown
+    // inflates the prompt and causes slow Anthropic responses that hit edge timeouts.
+    parts.push(`Raw markdown sample (first 400 chars):\n${scraped.rawMarkdown.slice(0, 400)}`);
   }
   if (scraped.errors?.length) parts.push(`Scrape errors: ${scraped.errors.join(" | ")}`);
 
