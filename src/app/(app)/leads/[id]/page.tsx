@@ -9,6 +9,7 @@ import {
   Linkedin, Loader2, Sparkles, Zap, Send, ExternalLink, Tag, FolderKanban,
   ChevronDown, CheckCircle2, AlertCircle, Target, Trash2, Copy, Monitor, FileText,
   PhoneCall, Plus, Clock, Search, Palette, Eye, Award, Lock, Unlock, RotateCw, X,
+  MessageCircle,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -175,12 +176,22 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => { refetch(); setActionError(null); },
     onError: (err) => setActionError(err.message),
   });
+  const sendDemoEmail = api.leads.sendDemoEmail.useMutation({
+    onSuccess: () => { setEmailSent(true); setActionError(null); setTimeout(() => setEmailSent(false), 4000); },
+    onError: (err) => setActionError(err.message),
+  });
+  const sendDemoWhatsApp = api.leads.sendDemoWhatsApp.useMutation({
+    onSuccess: () => { setWhatsappSent(true); setActionError(null); setTimeout(() => setWhatsappSent(false), 4000); },
+    onError: (err) => setActionError(err.message),
+  });
   const recordOutcome = api.leads.recordOutcome.useMutation({
     onSuccess: () => { refetch(); setActionError(null); setShowOutcomeForm(false); },
     onError: (err) => setActionError(err.message),
   });
   const [showOutcomeForm, setShowOutcomeForm] = useState(false);
   const [outcomeForm, setOutcomeForm] = useState({ outcome: "won" as "won"|"lost"|"ghosted"|"not_a_fit"|"follow_up", valueUsd: "", notes: "" });
+  const [emailSent, setEmailSent] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
   const { data: proposalVersions } = api.leads.getProposalVersions.useQuery({ leadId: id });
   const { data: demoViews } = api.leads.getDemoViews.useQuery({ leadId: id });
   const { data: outcomes } = api.leads.getOutcomes.useQuery({ leadId: id });
@@ -976,6 +987,46 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                     </button>
                   </div>
                 </div>
+              )}
+              {/* Send demo via email — only shown when demo is ready and email exists */}
+              {lead.demoUrl && lead.email && (
+                <button
+                  onClick={() => sendDemoEmail.mutate({ leadId: lead.id })}
+                  disabled={sendDemoEmail.isPending || emailSent}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    background: emailSent ? "hsl(142 68% 52% / 0.2)" : "hsl(220 90% 62% / 0.12)",
+                    color: emailSent ? "hsl(142, 68%, 52%)" : "var(--brand-primary)",
+                    border: emailSent ? "1px solid hsl(142 68% 52% / 0.3)" : "none",
+                  }}
+                >
+                  {sendDemoEmail.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : emailSent
+                    ? <CheckCircle2 className="w-3.5 h-3.5" />
+                    : <Mail className="w-3.5 h-3.5" />}
+                  {sendDemoEmail.isPending ? "Sending email…" : emailSent ? "✓ Demo email sent!" : "Send Demo via Email"}
+                </button>
+              )}
+              {/* Send demo via WhatsApp — only shown when demo is ready and phone exists */}
+              {lead.demoUrl && lead.phone && (
+                <button
+                  onClick={() => sendDemoWhatsApp.mutate({ leadId: lead.id })}
+                  disabled={sendDemoWhatsApp.isPending || whatsappSent}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{
+                    background: whatsappSent ? "hsl(142 68% 52% / 0.2)" : "hsl(142 68% 52% / 0.1)",
+                    color: "hsl(142, 68%, 52%)",
+                    border: whatsappSent ? "1px solid hsl(142 68% 52% / 0.3)" : "1px solid hsl(142 68% 52% / 0.15)",
+                  }}
+                >
+                  {sendDemoWhatsApp.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : whatsappSent
+                    ? <CheckCircle2 className="w-3.5 h-3.5" />
+                    : <MessageCircle className="w-3.5 h-3.5" />}
+                  {sendDemoWhatsApp.isPending ? "Sending WhatsApp…" : whatsappSent ? "✓ WhatsApp sent!" : "Send Demo via WhatsApp"}
+                </button>
               )}
               <button
                 onClick={() => generateProposal.mutate({ id: lead.id })}

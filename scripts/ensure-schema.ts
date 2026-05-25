@@ -73,10 +73,13 @@ async function main() {
     DO $$ BEGIN
       CREATE TYPE nf_notification_type AS ENUM (
         'project_status','sprint_task','comment','invoice',
-        'team_invite','ai_conversation','client_onboarding'
+        'team_invite','ai_conversation','client_onboarding','demo_view','lead_activity'
       );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
+  // Backfill new values for existing installs
+  await run("enum nf_notification_type add demo_view",    `ALTER TYPE nf_notification_type ADD VALUE IF NOT EXISTS 'demo_view'`);
+  await run("enum nf_notification_type add lead_activity",`ALTER TYPE nf_notification_type ADD VALUE IF NOT EXISTS 'lead_activity'`);
 
   // ── Core project enums (created by drizzle-kit; ensure they exist for fresh DBs) ─
   await run("enum nf_project_type", `

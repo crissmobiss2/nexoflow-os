@@ -7,7 +7,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers";
 import {
   Target, Plus, Upload, Globe, Mail, Phone, Building2,
-  Loader2, ArrowRight, Sparkles, ChevronDown, Trash2, CheckSquare, Square, X, Award,
+  Loader2, ArrowRight, Sparkles, ChevronDown, Trash2, CheckSquare, Square, X, Award, Zap,
 } from "lucide-react";
 
 const PIPELINE_STAGES: { key: string; label: string; color: string; bg: string }[] = [
@@ -29,6 +29,7 @@ type ViewMode = "table" | "kanban";
 export default function LeadsPage() {
   const [view, setView] = useState<ViewMode>("table");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const [filterHot, setFilterHot] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
@@ -37,9 +38,15 @@ export default function LeadsPage() {
     setTimeout(() => setToast(null), 4000);
   }
 
-  const { data: allLeads = [], isLoading, refetch } = api.leads.list.useQuery(
-    filterStatus ? { status: filterStatus as any } : undefined,
-  );
+  // Always fetch all leads and filter client-side so counts are always accurate
+  const { data: rawLeads = [], isLoading, refetch } = api.leads.list.useQuery(undefined);
+  const allLeads = (() => {
+    let leads = rawLeads;
+    if (filterHot) leads = leads.filter((l) => (l.aiScore ?? 0) >= 70);
+    if (filterStatus) leads = leads.filter((l) => l.status === filterStatus);
+    return leads;
+  })();
+  const hotCount = rawLeads.filter((l) => (l.aiScore ?? 0) >= 70).length;
 
   const bulkDelete = api.leads.bulkDelete.useMutation({
     onSuccess: () => { setSelected(new Set()); void refetch(); },
@@ -63,6 +70,14 @@ export default function LeadsPage() {
     },
     onError: (e) => showToast(e.message, "error"),
   });
+  const bulkRunPipeline = api.leads.bulkRunPipeline.useMutation({
+    onSuccess: (r) => {
+      showToast(`Pipeline complete: ${r.succeeded} succeeded${r.failed ? ` · ${r.failed} failed` : ""}`, r.failed ? "error" : "success");
+      setSelected(new Set());
+      void refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
 
   function toggleSelect(id: string) {
     setSelected((s) => {
@@ -78,8 +93,9 @@ export default function LeadsPage() {
     setSelected(new Set());
   }
 
+  // Counts always computed from the full unfiltered dataset
   const counts = PIPELINE_STAGES.reduce<Record<string, number>>((acc, s) => {
-    acc[s.key] = allLeads.filter((l) => l.status === s.key).length;
+    acc[s.key] = rawLeads.filter((l) => l.status === s.key).length;
     return acc;
   }, {});
 
@@ -108,9 +124,10 @@ export default function LeadsPage() {
             <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Lead Pipeline</h1>
           </div>
           <p className="text-sm pl-3.5" style={{ color: "var(--text-secondary)" }}>
-            {allLeads.length} lead{allLeads.length !== 1 ? "s" : ""}
-            {" · "}{allLeads.filter((l) => l.status === "won").length} won
-            {" · "}{allLeads.filter((l) => ["sent", "replied"].includes(l.status)).length} active outreach
+            {rawLeads.length} lead{rawLeads.length !== 1 ? "s" : ""}
+            {hotCount > 0 && <span style={{ color: "hsl(35, 90%, 60%)" }}> · 🔥 {hotCount} hot</span>}
+            {" · "}{rawLeads.filter((l) => l.status === "won").length} won
+            {" · "}{rawLeads.filter((l) => ["sent", "replied"].includes(l.status)).length} active
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -153,16 +170,30 @@ export default function LeadsPage() {
       {/* Stage filter bar */}
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
-          onClick={() => setFilterStatus(undefined)}
+          onClick={() => { setFilterStatus(undefined); setFilterHot(false); }}
           className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
           style={
-            !filterStatus
+            !filterStatus && !filterHot
               ? { background: "var(--brand-gradient)", color: "white" }
               : { background: "var(--surface-card)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }
           }
         >
-          All ({allLeads.length})
+          All ({rawLeads.length})
         </button>
+        {/* 🔥 Hot Leads filter — AI score >= 70 */}
+        {hotCount > 0 && (
+          <button
+            onClick={() => { setFilterHot((v) => !v); setFilterStatus(undefined); }}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+            style={
+              filterHot
+                ? { background: "hsl(35, 90%, 60%)", color: "white" }
+                : { background: "hsl(35 90% 60% / 0.12)", color: "hsl(35, 90%, 60%)", border: "1px solid hsl(35 90% 60% / 0.3)" }
+            }
+          >
+            🔥 Hot Leads ({hotCount})
+          </button>
+        )}
         {PIPELINE_STAGES.filter((s) => counts[s.key]! > 0 || !filterStatus).map((s) => (
           <button
             key={s.key}
@@ -209,13 +240,28 @@ export default function LeadsPage() {
                   bulkGenerateDemo.mutate({ ids: [...selected] });
                 }
               }}
-              disabled={bulkGenerateDemo.isPending || bulkScrape.isPending}
+              disabled={bulkGenerateDemo.isPending || bulkScrape.isPending || bulkRunPipeline.isPending}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold"
               style={{ background: "rgba(255,255,255,0.15)" }}
               title="Auto-scrape, profile, and generate demos for up to 10 leads"
             >
               {bulkGenerateDemo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
               Generate Demos
+            </button>
+            <button
+              onClick={() => {
+                if (selected.size > 5) { alert("Full Pipeline is limited to 5 leads per batch (Sonnet + scrape + demo)."); return; }
+                if (confirm(`Run full pipeline (scrape → profile → demo) on ${selected.size} lead${selected.size !== 1 ? "s" : ""}? Takes ~${selected.size * 60}s.`)) {
+                  bulkRunPipeline.mutate({ ids: [...selected] });
+                }
+              }}
+              disabled={bulkRunPipeline.isPending || bulkScrape.isPending || bulkGenerateDemo.isPending}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)" }}
+              title="Full pipeline: scrape → business profile → custom demo (max 5)"
+            >
+              {bulkRunPipeline.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+              {bulkRunPipeline.isPending ? "Running Pipeline…" : "⚡ Full Pipeline"}
             </button>
             <select
               onChange={(e) => {

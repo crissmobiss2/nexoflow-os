@@ -16,6 +16,8 @@ import {
   Activity,
   CreditCard,
   UserPlus,
+  Eye,
+  Zap,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -27,6 +29,8 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   team_invite: Users,
   ai_conversation: Bot,
   client_onboarding: UserPlus,
+  demo_view: Eye,
+  lead_activity: Zap,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -37,6 +41,8 @@ const TYPE_COLORS: Record<string, string> = {
   team_invite: "hsl(187, 80%, 55%)",
   ai_conversation: "hsl(30, 90%, 55%)",
   client_onboarding: "hsl(160, 80%, 50%)",
+  demo_view: "hsl(35, 90%, 58%)",
+  lead_activity: "hsl(262, 83%, 68%)",
 };
 
 export function NotificationDropdown() {

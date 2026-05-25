@@ -1952,6 +1952,260 @@ Return ONLY valid JSON: {
         .orderBy(desc(leadOutcomes.capturedAt));
     }),
 
+  // ─── One-click Send Demo Email ───────────────────────────────────────────────
+
+  sendDemoEmail: protectedProcedure
+    .input(z.object({ leadId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.leadId) });
+      if (!lead) throw new Error("Lead not found");
+      if (!lead.demoUrl) throw new Error("Generate the demo first before sending");
+      if (!lead.email) throw new Error("No email address — add one to this lead");
+
+      const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "there";
+      const firstName = lead.firstName ?? name.split(" ")[0] ?? "there";
+      const companyName = lead.company ?? name;
+      const baseUrl = process.env.NEXTAUTH_URL ?? "https://nexoflow.tech";
+      const shareToken = lead.shareToken;
+      const demoLink = shareToken && !lead.demoUrl.includes("t=")
+        ? `${baseUrl}${lead.demoUrl}&t=${shareToken}`
+        : `${baseUrl}${lead.demoUrl}`;
+
+      const profile = lead.businessProfile;
+      const buildOpportunity = profile?.buildOpportunities?.[0]?.title ?? "custom software";
+      const offer = profile?.offer ?? "their business";
+
+      // AI-written personalised email
+      const emailResponse = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 450,
+        messages: [{
+          role: "user",
+          content: `Write a short, personalized outreach email from Chris at NexoFlow to ${firstName} at ${companyName}.
+
+Context:
+- NexoFlow built a custom demo website specifically for ${companyName}
+- Their industry: ${lead.industry ?? "their industry"}
+- What we built for them: ${buildOpportunity}
+- Their business: ${offer}
+
+Rules:
+- Address ${firstName} by first name
+- 3-4 sentences maximum. Conversational but professional.
+- Reference their specific business or industry — make it personal
+- Never use em dashes
+- Tell them we built something specifically for them and invite them to view the demo
+- Sign off naturally as Chris from NexoFlow
+- Output format: first line is "Subject: [subject]", then a blank line, then the email body`,
+        }],
+      });
+
+      const responseText = emailResponse.content[0]?.type === "text" ? emailResponse.content[0].text : "";
+      let subject = `We built something specifically for ${companyName}`;
+      let body = responseText;
+      const subjectMatch = responseText.match(/Subject:\s*(.+)/i);
+      const bodyAfterSubject = responseText.replace(/Subject:.*\n\n?/i, "").trim();
+      if (subjectMatch) subject = subjectMatch[1]!.trim();
+      if (bodyAfterSubject) body = bodyAfterSubject;
+
+      const resendClient = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY ?? "not_configured");
+      const result = await resendClient.emails.send({
+        from: "NexoFlow <hello@nexoflow.tech>",
+        to: [lead.email],
+        subject,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;color:#1a1a2e;background:#fff;">
+          <div style="margin-bottom:28px"><span style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#7c5cbf,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">NexoFlow</span></div>
+          <div style="font-size:15px;line-height:1.75;color:#2d2d44">${body.replace(/\n/g, "<br>")}</div>
+          <p style="margin-top:28px">
+            <a href="${demoLink}" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#7c5cbf,#4f8ef7);color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+              View Your Custom Demo →
+            </a>
+          </p>
+          <p style="margin-top:48px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:20px">
+            Sent via <a href="${baseUrl}" style="color:#7c5cbf;text-decoration:none">NexoFlow</a>
+          </p>
+        </div>`,
+      });
+
+      const data = (result as { data?: { id?: string } | null }).data;
+      const error = (result as { error?: { message?: string } | null }).error;
+      if (error) throw new Error(error.message ?? "Email send failed");
+
+      await ctx.db.insert(leadOutreach).values({
+        leadId: input.leadId,
+        channel: "email",
+        subject,
+        message: body,
+        shareLink: demoLink,
+        providerMessageId: data?.id ?? null,
+        providerStatus: data?.id ? "sent" : "failed",
+        sentBy: ctx.user?.id ?? null,
+      });
+
+      await ctx.db.update(leads)
+        .set({ status: "sent", updatedAt: new Date() })
+        .where(eq(leads.id, input.leadId));
+
+      return { sent: true, messageId: data?.id, subject };
+    }),
+
+  // ─── One-click Send Demo via WhatsApp ─────────────────────────────────────
+
+  sendDemoWhatsApp: protectedProcedure
+    .input(z.object({ leadId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.leadId) });
+      if (!lead) throw new Error("Lead not found");
+      if (!lead.demoUrl) throw new Error("Generate the demo first before sending");
+      if (!lead.phone) throw new Error("No phone number — add one to this lead");
+      if (!twilioConfigured("whatsapp")) throw new Error("WhatsApp (Twilio) is not configured");
+
+      const firstName = lead.firstName ?? lead.company ?? "there";
+      const companyName = lead.company ?? firstName;
+      const baseUrl = process.env.NEXTAUTH_URL ?? "https://nexoflow.tech";
+      const shareToken = lead.shareToken;
+      const demoLink = shareToken && !lead.demoUrl.includes("t=")
+        ? `${baseUrl}${lead.demoUrl}&t=${shareToken}`
+        : `${baseUrl}${lead.demoUrl}`;
+
+      const body = `Hi ${firstName} — Chris from NexoFlow here. We built a custom demo specifically for ${companyName}. Take 60 seconds to have a look: ${demoLink}`;
+
+      const result = await sendWhatsApp({ to: lead.phone, body });
+      const waMessageId = result.ok ? result.messageId : null;
+      const waError = result.ok ? null : result.error;
+
+      await ctx.db.insert(leadOutreach).values({
+        leadId: input.leadId,
+        channel: "whatsapp",
+        message: body,
+        shareLink: demoLink,
+        providerMessageId: waMessageId,
+        providerStatus: result.ok ? "sent" : "failed",
+        providerError: waError,
+        sentBy: ctx.user?.id ?? null,
+      });
+
+      if (result.ok) {
+        await ctx.db.update(leads)
+          .set({ status: "sent", updatedAt: new Date() })
+          .where(eq(leads.id, input.leadId));
+      }
+
+      return { sent: result.ok, error: waError };
+    }),
+
+  // ─── Bulk Full Pipeline (scrape → profile → demo for multiple leads) ────────
+
+  bulkRunPipeline: protectedProcedure
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(5) }))
+    .mutation(async ({ ctx, input }) => {
+      const results: { id: string; ok: boolean; demoUrl?: string; error?: string }[] = [];
+
+      for (const id of input.ids) {
+        try {
+          const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, id) });
+          if (!lead) { results.push({ id, ok: false, error: "not found" }); continue; }
+
+          const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.company || "Lead";
+          const companyName = lead.company ?? name;
+
+          // Step 1: Scrape
+          let scraped = lead.scrapedProfile;
+          if (!scraped && lead.website) {
+            scraped = await scrapeWebsite(lead.website);
+            await ctx.db.update(leads).set({ scrapedProfile: scraped, scrapedAt: new Date() }).where(eq(leads.id, id));
+          }
+
+          // Step 2: Business Profile
+          let profile = lead.businessProfile;
+          if (!profile?.summary) {
+            let industryAngle: string | null = null;
+            let matchedProfileId: string | null = null;
+            if (lead.industry) {
+              const [match] = await ctx.db
+                .select({ id: industryProfiles.id, demoAngle: industryProfiles.demoAngle })
+                .from(industryProfiles)
+                .where(and(eq(industryProfiles.industry, lead.industry), eq(industryProfiles.isActive, true)))
+                .limit(1);
+              if (match) { industryAngle = match.demoAngle ?? null; matchedProfileId = match.id; }
+            }
+            profile = await generateBusinessProfile({
+              company: lead.company, industry: lead.industry, website: lead.website,
+              jobTitle: lead.jobTitle, scraped, scrapedDataText: lead.scrapedData,
+              painPoints: lead.painPoints, techStack: lead.techStack, industryAngle,
+            });
+            await ctx.db.update(leads)
+              .set({ businessProfile: profile, businessProfileAt: new Date(), industryProfileId: matchedProfileId })
+              .where(eq(leads.id, id));
+          }
+
+          // Step 3: Demo
+          const brandColors = profile?.brandColors?.length ? profile.brandColors
+            : scraped?.brandColors?.length ? scraped.brandColors : ["#7c5cbf", "#4f8ef7", "#0a0a0f"];
+          const brandFonts = profile?.brandFonts?.length ? profile.brandFonts : scraped?.brandFonts ?? [];
+          const demoAngle = profile?.demoAngle ?? `A modern demo for ${companyName}`;
+          const recommendedFeatures = profile?.recommendedFeatures?.join(", ") ?? "Hero, Features, Tech stack, CTA";
+          const offer = profile?.offer ?? lead.painPoints ?? "their core service";
+          const weaknesses = profile?.visibleWeaknesses?.join("; ") ?? "";
+          const tone = profile?.toneOfVoice ?? "professional";
+
+          const demoPrompt = buildDemoPrompt({
+            companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer,
+            targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts,
+            demoAngle, recommendedFeatures, softwareRecommendations: profile?.softwareRecommendations ?? [],
+            roiEstimate: profile?.roiEstimate ?? null, urgencySignals: profile?.urgencySignals ?? null,
+            quickWins: profile?.quickWins ?? null, competitorContext: profile?.competitorContext ?? null,
+          });
+
+          const demoResponse = await anthropic.messages.create({
+            model: "claude-sonnet-4-6", max_tokens: 8192,
+            messages: [{ role: "user", content: demoPrompt }],
+          });
+          const demoHtml = demoResponse.content[0]?.type === "text" ? demoResponse.content[0].text : "";
+
+          let client = lead.clientId
+            ? (await ctx.db.select().from(clients).where(eq(clients.id, lead.clientId)).limit(1))[0] ?? null
+            : null;
+          if (!client) {
+            const [newClient] = await ctx.db.insert(clients).values({
+              name, email: lead.email ?? null, phone: lead.phone ?? null,
+              company: lead.company ?? null, website: lead.website ?? null,
+              industry: lead.industry ?? null, companySize: lead.companySize ?? null,
+              region: lead.region ?? null, existingTech: lead.techStack ?? null,
+              currentChallenges: lead.painPoints ?? null, teamId: lead.teamId ?? null,
+            }).returning();
+            client = newClient!;
+          }
+          const [project] = await ctx.db.insert(projects).values({
+            name: `${companyName}: Demo`, clientId: client?.id ?? null,
+            projectType: "web_app", industry: lead.industry ?? null,
+            teamId: lead.teamId ?? null, status: "brief",
+          }).returning();
+
+          const shareToken = lead.shareToken ?? genShareToken();
+          const upload = await uploadHtml(`demos/${id}.html`, demoHtml);
+          const blobUrl = upload.ok ? upload.url ?? null : null;
+          const demoUrl = `/api/demo/${id}?t=${shareToken}`;
+
+          await ctx.db.update(leads).set({
+            clientId: client?.id ?? null, projectId: project?.id ?? null,
+            demoHtml, demoUrl, demoBlobUrl: blobUrl, shareToken, shareRevokedAt: null,
+            status: "demo_generated", demoGeneratedAt: new Date(), updatedAt: new Date(),
+          }).where(eq(leads.id, id));
+
+          results.push({ id, ok: true, demoUrl });
+        } catch (err) {
+          results.push({ id, ok: false, error: err instanceof Error ? err.message : "unknown" });
+        }
+      }
+
+      return {
+        results,
+        succeeded: results.filter((r) => r.ok).length,
+        failed: results.filter((r) => !r.ok).length,
+      };
+    }),
+
   // ─── Public showcase (for /showcase page) ──────────────────────────────────
 
   publicShowcase: publicProcedure.query(async ({ ctx }) => {

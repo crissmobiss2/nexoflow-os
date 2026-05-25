@@ -1,14 +1,14 @@
 export const revalidate = 30;
 
 import { db } from "@/server/db";
-import { projects, clients, aiConversations, knowledgeSnippets } from "@/server/db/schema";
-import { desc, sql, count } from "drizzle-orm";
+import { projects, clients, aiConversations, knowledgeSnippets, leads } from "@/server/db/schema";
+import { desc, sql, count, eq, gte } from "drizzle-orm";
 import Link from "next/link";
 import { formatScore } from "@/lib/utils";
 import {
   Users, FolderKanban, Brain, BookOpen, Plus, ArrowRight,
   Zap, TrendingUp, Sparkles, Shield, BarChart2, Code,
-  ChevronRight,
+  ChevronRight, Target,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,6 +31,7 @@ export default async function DashboardPage() {
     totalProjects,
     totalConversations,
     knowledgeStats,
+    leadStats,
   ] = await Promise.all([
     db.query.projects.findMany({
       limit: 6,
@@ -44,6 +45,12 @@ export default async function DashboardPage() {
       total: sql<number>`count(*)::int`,
       categories: sql<number>`count(distinct ${knowledgeSnippets.category})::int`,
     }).from(knowledgeSnippets).then((r) => r[0] ?? { total: 0, categories: 0 }),
+    Promise.all([
+      db.select({ count: count() }).from(leads).then((r) => r[0]?.count ?? 0),
+      db.select({ count: count() }).from(leads).where(gte(leads.aiScore, 70)).then((r) => r[0]?.count ?? 0),
+      db.select({ count: count() }).from(leads).where(eq(leads.status, "demo_generated")).then((r) => r[0]?.count ?? 0),
+      db.select({ count: count() }).from(leads).where(eq(leads.status, "won")).then((r) => r[0]?.count ?? 0),
+    ]).then(([total, hot, demoReady, won]) => ({ total, hot, demoReady, won })),
   ]);
 
   return (
@@ -87,6 +94,42 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Lead Pipeline quick stats */}
+      {leadStats.total > 0 && (
+        <div
+          className="rounded-xl p-5"
+          style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "hsl(262 83% 68% / 0.12)" }}>
+                <Target className="w-4 h-4" style={{ color: "hsl(262, 83%, 68%)" }} />
+              </div>
+              <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Lead Pipeline</h2>
+            </div>
+            <Link href="/leads" className="text-xs hover:underline" style={{ color: "var(--brand-primary)" }}>View all →</Link>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Total Leads", value: leadStats.total, color: "hsl(220, 90%, 62%)", href: "/leads" },
+              { label: "🔥 Hot Leads", value: leadStats.hot, color: "hsl(35, 90%, 60%)", href: "/leads" },
+              { label: "Demo Ready", value: leadStats.demoReady, color: "hsl(262, 83%, 68%)", href: "/leads" },
+              { label: "Won", value: leadStats.won, color: "hsl(142, 80%, 45%)", href: "/leads" },
+            ].map((s) => (
+              <Link
+                key={s.label}
+                href={s.href}
+                className="rounded-xl px-4 py-3 text-center transition-all hover:scale-[1.02]"
+                style={{ background: `${s.color}0d`, border: `1px solid ${s.color}25` }}
+              >
+                <div className="text-2xl font-bold mb-0.5" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>{s.label}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Studio modes */}
       <div>

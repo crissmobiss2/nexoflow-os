@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/server/db";
-import { leadDemoViews, leads } from "@/server/db/schema";
+import { leadDemoViews, leads, teamMembers, notifications } from "@/server/db/schema";
 
 export async function POST(
   req: NextRequest,
@@ -85,7 +85,7 @@ export async function POST(
       lastSeenAt: now,
     });
 
-    await db
+    const updatedLead = await db
       .update(leads)
       .set({
         demoViewCount: sql`${leads.demoViewCount} + 1`,
@@ -93,7 +93,38 @@ export async function POST(
         demoLastViewedAt: now,
         updatedAt: now,
       })
-      .where(eq(leads.id, leadId));
+      .where(eq(leads.id, leadId))
+      .returning({ teamId: leads.teamId, company: leads.company, firstName: leads.firstName, lastName: leads.lastName, demoViewCount: leads.demoViewCount });
+
+    // Fire in-app notification to all team members on every new unique session view
+    void (async () => {
+      try {
+        const lead = updatedLead[0];
+        if (!lead?.teamId) return;
+        const members = await db
+          .select({ userId: teamMembers.userId })
+          .from(teamMembers)
+          .where(eq(teamMembers.teamId, lead.teamId));
+        if (members.length === 0) return;
+        const companyName = lead.company ?? [lead.firstName, lead.lastName].filter(Boolean).join(" ") ?? "A lead";
+        const newViewCount = (lead.demoViewCount ?? 0) + 1; // +1 because returning() gives pre-update value
+        const title = newViewCount <= 1
+          ? `🔥 ${companyName} just viewed their demo for the first time`
+          : `👀 ${companyName} viewed their demo again (${newViewCount} total views)`;
+        await db.insert(notifications).values(
+          members.map((m) => ({
+            userId: m.userId,
+            type: "demo_view" as const,
+            title,
+            message: "Call now — they are looking at it.",
+            link: `/leads/${leadId}`,
+            read: false,
+          })),
+        );
+      } catch {
+        /* non-fatal — never block the track response */
+      }
+    })();
   }
 
   return NextResponse.json({ ok: true });

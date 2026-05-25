@@ -587,6 +587,7 @@ export const projectTemplateItemRelations = relations(projectTemplateItems, ({ o
 
 export const notificationTypeEnum = pgEnum("nf_notification_type", [
   "project_status", "sprint_task", "comment", "invoice", "team_invite", "ai_conversation", "client_onboarding",
+  "demo_view", "lead_activity",
 ]);
 
 export const notifications = pgTable(
