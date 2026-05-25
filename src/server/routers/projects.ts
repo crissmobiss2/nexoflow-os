@@ -255,6 +255,17 @@ export const projectsRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  rename: teamProcedure
+    .input(z.object({ id: z.string().uuid(), name: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const [project] = await ctx.db
+        .update(projects)
+        .set({ name: input.name, updatedAt: new Date() })
+        .where(eq(projects.id, input.id))
+        .returning();
+      return project;
+    }),
+
   updateStatus: publicProcedure
     .input(
       z.object({
