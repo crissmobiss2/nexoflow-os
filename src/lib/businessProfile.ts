@@ -119,17 +119,18 @@ RULES:
 - buildOpportunities: 3-5 items ordered by business impact (highest first). The first one is what the demo and proposal should lead with.
 - Be specific. Infer confidently. A good analyst doesn't say "unknown" — they reason from available signals.`;
 
-  // Attempt generation with 1 automatic retry on JSON parse failure.
-  // max_tokens=2600 keeps Anthropic latency ~30-40s, under Vercel's ~60s
-  // edge idle-connection timeout. The retry handles the rare case where the
-  // model produces a malformed JSON on first attempt.
+  // max_tokens=4000: safe now that the tRPC route has maxDuration=300.
+  // With 2600 tokens, rich profiles (9+ weaknesses, 7 recs) were truncating
+  // at ~8600 chars. 4000 gives healthy headroom for the full JSON.
+  // Retry loop: if the model truncates mid-JSON on the first attempt, try
+  // repairing the JSON before retrying the full API call.
   let parsed: BusinessProfile | null = null;
   let lastErr: Error | null = null;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2600,
+      max_tokens: 4000,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -140,12 +141,26 @@ RULES:
       continue;
     }
 
+    let raw = jsonMatch[0];
+
+    // Try to parse as-is first
     try {
-      parsed = JSON.parse(jsonMatch[0]) as BusinessProfile;
+      parsed = JSON.parse(raw) as BusinessProfile;
       break; // success — exit loop
-    } catch (err) {
-      lastErr = new Error(`BusinessProfile: JSON parse failed: ${err instanceof Error ? err.message : "unknown"}`);
-      // continue to retry
+    } catch {
+      // Attempt structural repair: close any unclosed arrays/objects
+      let repaired = raw.trimEnd().replace(/,\s*$/, "");
+      const unclosedArrays = (repaired.match(/\[/g) ?? []).length - (repaired.match(/\]/g) ?? []).length;
+      const unclosedObjects = (repaired.match(/\{/g) ?? []).length - (repaired.match(/\}/g) ?? []).length;
+      for (let i = 0; i < unclosedArrays; i++) repaired += "]";
+      for (let i = 0; i < unclosedObjects; i++) repaired += "}";
+      try {
+        parsed = JSON.parse(repaired) as BusinessProfile;
+        break; // repair succeeded
+      } catch (err2) {
+        lastErr = new Error(`BusinessProfile: JSON parse failed: ${err2 instanceof Error ? err2.message : "unknown"}`);
+        // continue to full retry
+      }
     }
   }
 
