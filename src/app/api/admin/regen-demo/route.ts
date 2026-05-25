@@ -555,6 +555,10 @@ function buildPrompt(params: {
   recommendedFeatures: string[];
   demoAngle: string;
   estimatedValue: string;
+  roiEstimate: string | null;
+  urgencySignals: string[];
+  competitorContext: string | null;
+  industryFit: string | null;
   primary: string;
   secondary: string;
 }): string {
@@ -562,23 +566,41 @@ function buildPrompt(params: {
     companyName, contactName, jobTitle, industry, painPoints,
     summary, offer, positioning, targetCustomer, toneOfVoice,
     weaknesses, buildOpportunities, recommendedFeatures, demoAngle,
-    estimatedValue, primary,
+    estimatedValue, roiEstimate, urgencySignals, competitorContext, industryFit,
   } = params;
 
   const topWeaknesses = weaknesses.slice(0, 5);
   const topOpportunities = buildOpportunities.slice(0, 4);
   const topFeatures = recommendedFeatures.slice(0, 6);
+  const firstName = contactName.split(" ")[0];
 
   const contactLine = [contactName, jobTitle].filter(Boolean).join(", ");
+
+  const roiBlock = roiEstimate
+    ? `\nROI ESTIMATE:\n${roiEstimate}`
+    : "";
+
+  const urgencyBlock = urgencySignals.length > 0
+    ? `\nURGENCY SIGNALS (use in hero-sub or card copy):\n${urgencySignals.map((s) => `• ${s}`).join("\n")}`
+    : "";
+
+  const competitorBlock = competitorContext
+    ? `\nCOMPETITOR / MARKET CONTEXT:\n${competitorContext}`
+    : "";
+
+  const industryFitBlock = industryFit
+    ? `\nWHY NEXOFLOW FITS THIS INDUSTRY:\n${industryFit}`
+    : "";
 
   return `You are a senior conversion copywriter at NexoFlow, a custom software agency. Write personalized HTML for a sales demo page.
 
 OUTPUT RULES — read these before writing anything:
 - Output ONLY raw HTML starting with <nav> — no markdown, no \`\`\`, no <!DOCTYPE, no <head>, no <style>
-- Every sentence must reference ${companyName}, ${contactName.split(" ")[0]}, or a specific detail from the intel below
+- Every sentence must reference ${companyName}, ${firstName}, or a specific detail from the CLIENT INTEL below
 - Write in a ${toneOfVoice}, direct, founder-to-founder tone — never corporate or generic
 - Keep card <p> descriptions to 2–3 sentences each, punchy and specific
-- H1: exactly 8–12 words, no fluff, speaks directly to their biggest pain
+- H1: exactly 8–12 words, no fluff, speaks directly to their single biggest pain
+- Use urgency signals and ROI data wherever they appear below — these are conversion gold
 - End ONLY with </body></html> (no extra tags after)
 
 ═══════════════════ CLIENT INTEL ═══════════════════
@@ -596,13 +618,13 @@ PAIN POINTS (from direct intake):
 ${painPoints ?? "Manual workflows, no digital infrastructure, losing customers to competitors"}
 
 TOP 5 WEAKNESSES (from website audit):
-${topWeaknesses.map((w, i) => `${i + 1}. ${w}`).join("\n")}
+${topWeaknesses.map((w, i) => `${i + 1}. ${w}`).join("\n")}${roiBlock}${urgencyBlock}${competitorBlock}${industryFitBlock}
 
 WHAT NEXOFLOW BUILDS FOR THEM:
 ${topOpportunities.map((o, i) => `${i + 1}. ${o.title} [${o.effort} effort]\n   → ${o.description}`).join("\n\n")}
 
 KEY FEATURES:
-${topFeatures.map((f, i) => `• ${f}`).join("\n")}
+${topFeatures.map((f) => `• ${f}`).join("\n")}
 
 PROJECT VALUE: ${estimatedValue}
 
@@ -624,27 +646,27 @@ SVG ICONS — use inline SVG inside <div class="card-icon"><svg viewBox="0 0 24 
 SECTION 1 — <nav>
 <nav>
   <span class="logo">[Company] × NexoFlow</span>
-  <a href="https://nexoflow.tech" class="nav-cta">Book a Strategy Call</a>
+  <a href="${BOOKING_URL}" class="nav-cta">Book a Free Call</a>
 </nav>
 
 SECTION 2 — <section class="hero"> (animate: .pill then h1 then .hero-sub then .cta-group then .trust)
-• <div class="pill"> — "Custom demo for [Company]"
-• <h1> — 8–12 word punch line targeting their #1 pain. Use <em> tag on 1–3 key words.
-• <p class="hero-sub"> — 2 sentences. Reference their situation specifically (competitor, holiday season, phone orders, etc.)
-• <div class="cta-group"> — .btn-p "See the Full Demo" + .btn-g "Book a Strategy Call"
-• <div class="trust"> — 3 <div class="trust-item"> each with <strong>[stat]</strong><span>[label]</span>. Use real, specific numbers from their pain points.
+• <div class="pill"> — "Built specifically for ${companyName}"
+• <h1> — 8–12 word punch line targeting their #1 pain. Use <em> on 1–3 key words. Draw from urgency signals if available.
+• <p class="hero-sub"> — 2 sentences. Reference their specific situation from the intel (competitor context, urgency signals, a weakness they're clearly suffering from right now).
+• <div class="cta-group"> — .btn-p "Book a Free Strategy Call →" linking to ${BOOKING_URL} + .btn-g "See What We Build" linking to #solutions
+• <div class="trust"> — 3 <div class="trust-item"> with <strong>[stat]</strong><span>[label]</span>. Draw from ROI estimate and pain points — make numbers specific and credible.
 
-SECTION 3 — <section class="sec reveal"> — Pain Points
+SECTION 3 — <section class="sec reveal" id="pain"> — Pain Points
 • .sec-label: "What's Costing You"
-• .sec-title: strong title about the cost of staying manual
-• .sec-sub: 1 sentence
-• .grid with 3 .card — top 3 weaknesses. Each card: .card-icon with SVG + <h3> + <p> (2–3 sentences, reference ${companyName}/${contactName.split(" ")[0]}/specific details from the intel above) + <span class="tag">Impact</span>
+• .sec-title: strong, specific title about the cost of staying the same — not generic
+• .sec-sub: 1 sentence tying to ${companyName}'s exact situation
+• .grid with 3 .card — top 3 weaknesses. Each card: .card-icon with SVG + <h3> (problem name) + <p> (2–3 sentences referencing ${companyName}/${firstName}/specific details from the intel) + <span class="tag">Impact</span>
 
-SECTION 4 — <section class="sec reveal"> — Solutions
+SECTION 4 — <section class="sec reveal" id="solutions"> — Solutions
 • .sec-label: "What We Build"
-• .sec-title: "Your Complete [Industry] Platform"
-• .sec-sub: 1 sentence referencing the demo angle
-• .grid.grid-4 with 4 .card — top 4 build opportunities. Each card: .card-icon with SVG + <h3> + <p> (2–3 sentences with outcome + specific metric or reference) + <span class="tag">[Effort] build</span>
+• .sec-title: "Your Complete ${industry ?? "Business"} Platform" — make it feel purpose-built
+• .sec-sub: 1 sentence referencing the demo angle and ${companyName} specifically
+• .grid.grid-4 with 4 .card — top 4 build opportunities. Each card: .card-icon with SVG + <h3> (feature/system name) + <p> (2–3 sentences: what it does + the specific outcome for ${companyName} + a metric or reference) + <span class="tag">[Effort] build</span>
 
 END: close with </body></html>`;
 }
@@ -711,6 +733,10 @@ export async function POST(req: NextRequest) {
     recommendedFeatures: profile?.recommendedFeatures ?? ["Online ordering", "Automation", "CRM", "Analytics"],
     demoAngle: profile?.demoAngle ?? `Show ${companyName} a complete digital platform that solves their biggest operational challenges.`,
     estimatedValue: profile?.estimatedValue ?? "Contact us for pricing",
+    roiEstimate: profile?.roiEstimate ?? null,
+    urgencySignals: profile?.urgencySignals ?? [],
+    competitorContext: profile?.competitorContext ?? null,
+    industryFit: profile?.industryFit ?? null,
     primary,
     secondary,
   });
