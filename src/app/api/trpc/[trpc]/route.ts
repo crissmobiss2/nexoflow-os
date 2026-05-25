@@ -3,6 +3,10 @@ import { type NextRequest } from "next/server";
 import { appRouter } from "@/server/routers";
 import { createTRPCContext } from "@/server/trpc";
 
+// Allow long-running mutations (generateBusinessProfile, generateInsights, etc.)
+// to complete without hitting the default Vercel function timeout.
+export const maxDuration = 300;
+
 const handler = (req: NextRequest) =>
   fetchRequestHandler({
     endpoint: "/api/trpc",

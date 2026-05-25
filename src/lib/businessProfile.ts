@@ -107,7 +107,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     "Specific custom-built features to showcase in the demo — name them concretely (e.g. 'Automated appointment reminder SMS flow', 'Client-facing project dashboard with live status', 'AI-powered quote generator'). Not generic ('contact form', 'about page')."
   ],
 
-  "estimatedValue": "Realistic project investment range for a business of THIS type and size. Small local businesses (restaurant, solo trade, single-location retail): '$3K–$8K'. Growing SMBs with 10-50 staff: '$8K–$20K'. Multi-location or high-revenue operations: '$15K–$35K'. Only go above $35K for enterprises or complex SaaS integrations. The range must feel achievable for this business. Use en dashes between numbers (e.g. '$8K–$15K')."
+  "estimatedValue": "Realistic project investment range for a business of THIS type and size. Use THESE hard ceilings by industry: Restaurants and food/beverage (any size, even famous ones): '$8K–$22K' max — owners think in kitchen costs, not software budgets, and will not pay agency rates. Trades and home services (HVAC, plumbing, landscaping): '$5K–$15K'. Healthcare/dental solo or small practice: '$8K–$18K'. Law firms (solo to boutique): '$8K–$20K'. Fitness studios: '$5K–$12K'. Retail/ecommerce (single location): '$6K–$18K'. Growing SMBs (10-50 staff, B2B services): '$12K–$28K'. Multi-location chains or high-revenue B2B: '$20K–$40K'. SaaS or tech companies: '$25K–$60K'. The range must feel achievable — something the owner would say yes to after one good sales call. Use en dashes between numbers (e.g. '$8K–$15K')."
 }
 
 RULES:
