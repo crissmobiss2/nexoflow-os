@@ -451,6 +451,12 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
     secondary: brandColors[1] ?? "#4f8ef7",
     fontFamily: brandFonts[0] ?? "Inter",
   });
+
+  // Fallback footer — appended when the model runs out of tokens before section 10
+  const fallbackFooter = cleanBody.includes("<footer")
+    ? ""
+    : `\n<!-- SECTION 10: FOOTER -->\n<footer>\n<div class="footer-inner">\n<div><div class="footer-logo">NexoFlow</div><div class="footer-tagline">We build software that works.</div></div>\n<div class="footer-links"><a href="https://nexoflow.tech" target="_blank" rel="noopener">Website</a><a href="mailto:hello@nexoflow.tech">hello@nexoflow.tech</a></div>\n</div>\n<div class="footer-bar">Custom demo built exclusively for ${companyName} · © 2026 NexoFlow · <a href="https://nexoflow.tech" style="color:inherit">nexoflow.tech</a></div>\n</footer>`;
+
   const demoHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -460,7 +466,7 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
 ${cssBlock}
 </head>
 <body>
-${cleanBody}
+${cleanBody}${fallbackFooter}
 <script>
 (function(){
   var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.12});
