@@ -126,50 +126,38 @@ Accent: ${accent}
 Font: ${font}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CSS SETUP (use exactly)
+HTML STRUCTURE — CRITICAL: BODY FIRST, CSS LAST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-In <head>:
-  @import url('https://fonts.googleapis.com/css2?family=${fontUrl}:wght@300;400;600;700;900&display=swap');
+WRITE IN THIS EXACT ORDER to ensure body content is always complete:
+  1. <head> — ONLY font <link> tags and a tiny <style> with :root variables + 3 base rules
+  2. <body> — all 10 sections using class names (no inline style="" — use classes defined below)
+  3. </body>
+  4. <style> — ALL section CSS goes HERE, after </body> (browsers handle this fine)
+  5. </html>
 
-:root {
-  --primary: ${primary};
-  --secondary: ${secondary};
-  --accent: ${accent};
-  --bg: [dark #0a0a12 for tech/bold brands OR light #f7f7fb for service/professional brands];
-  --surface: [rgba(255,255,255,0.05) for dark OR rgba(0,0,0,0.04) for light];
-  --border: [rgba(255,255,255,0.08) for dark OR rgba(0,0,0,0.08) for light];
-  --text: [#ffffff for dark OR #111827 for light];
-  --text-muted: [#9ca3af for dark OR #6b7280 for light];
-  --text-sub: [rgba(255,255,255,0.6) for dark OR #374151 for light];
-  --radius: 16px;
-  --radius-sm: 10px;
-  --section-pad: 100px 24px;
-  --max-w: 1140px;
-}
+<head> contains ONLY:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=${fontUrl}:ital,wght@0,300;0,400;0,600;0,700;0,900&display=swap" rel="stylesheet">
+<style>
+:root{--primary:${primary};--secondary:${secondary};--accent:${accent};--bg:[#0a0a12 dark OR #f7f7fb light];--surface:[rgba(255,255,255,0.05) dark OR rgba(0,0,0,0.04) light];--border:[rgba(255,255,255,0.08) dark OR rgba(0,0,0,0.08) light];--text:[#fff dark OR #111827 light];--text-muted:[#9ca3af dark OR #6b7280 light];--radius:16px;--radius-sm:10px;--max-w:1140px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'${font}',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+</style>
+(Nothing else in head — all section CSS goes after </body>)
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: '${font}', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-.container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+CSS CLASSES TO USE IN <body> (define them all in the post-body <style> block):
+  .container, .section, .sticky-nav, .hero, .hero-h1, .cta-row, .stats-row,
+  .grid-2, .grid-3, .card, .animate-in, .animate-in.visible, .badge, .label,
+  .tool-card, .step, .metric-card, .btn-primary, .btn-ghost, .footer
+  + @keyframes pulse-glow, @media (max-width:768px) rules
 
-.animate-in { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
-.animate-in.visible { opacity: 1; transform: translateY(0); }
-.animate-in.delay-1 { transition-delay: 0.15s; }
-.animate-in.delay-2 { transition-delay: 0.3s; }
-.animate-in.delay-3 { transition-delay: 0.45s; }
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 ${primary}40; }
-  50% { box-shadow: 0 0 0 12px ${primary}00; }
-}
-
-@media (max-width: 768px) {
-  :root { --section-pad: 72px 20px; }
-  .grid-3 { grid-template-columns: 1fr !important; }
-  .grid-2 { grid-template-columns: 1fr !important; }
-  .hero-h1 { font-size: 40px !important; line-height: 1.15 !important; }
-  .cta-row { flex-direction: column !important; }
-  .stats-row { flex-direction: column !important; gap: 32px !important; }
-}
+The <style> block after </body>:
+:root additional values + all component CSS (nav, hero, sections 1-10) +
+@keyframes pulse-glow { 0%,100%{box-shadow:0 0 0 0 ${primary}40} 50%{box-shadow:0 0 0 12px ${primary}00} } +
+.animate-in{opacity:0;transform:translateY(32px);transition:opacity .7s,transform .7s}
+.animate-in.visible{opacity:1;transform:none}
+@media(max-width:768px){.grid-3,.grid-2{grid-template-columns:1fr!important}.hero-h1{font-size:40px!important}.cta-row,.stats-row{flex-direction:column!important}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ALL 10 SECTIONS — WRITE EVERY ONE IN FULL
@@ -314,9 +302,11 @@ OUTPUT RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Return ONLY the complete HTML from <!DOCTYPE html> to </html>
 - No markdown code fences. No explanation. No preamble.
-- ALL 10 sections must be present and fully written out
+- CRITICAL ORDER: <head> (fonts + :root only) → <body> (all 10 sections) → </body> → <style> (all CSS) → </html>
+- Write ALL 10 sections in <body> BEFORE writing any section CSS
+- ALL section CSS goes in the <style> block AFTER </body> — NOT in <head>
 - Do NOT truncate, summarise, or skip any section
-- The HTML must be valid and render correctly in a browser with no external dependencies beyond Google Fonts`;
+- The HTML must render correctly in a browser with no external dependencies beyond Google Fonts`;
 }
 
 // ─── Background generation helpers (called via next/server after()) ──────────
