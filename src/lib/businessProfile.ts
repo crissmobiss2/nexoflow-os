@@ -113,23 +113,38 @@ RULES:
 - buildOpportunities: 3-5 items ordered by business impact (highest first). The first one is what the demo and proposal should lead with.
 - Be specific. Infer confidently. A good analyst doesn't say "unknown" — they reason from available signals.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 3500,
-    messages: [{ role: "user", content: prompt }],
-  });
+  // Attempt generation with 1 automatic retry on JSON parse failure.
+  // max_tokens=2600 keeps Anthropic latency ~30-40s, under Vercel's ~60s
+  // edge idle-connection timeout. The retry handles the rare case where the
+  // model produces a malformed JSON on first attempt.
+  let parsed: BusinessProfile | null = null;
+  let lastErr: Error | null = null;
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("BusinessProfile: no JSON in model response");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2600,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      lastErr = new Error("BusinessProfile: no JSON in model response");
+      continue;
+    }
+
+    try {
+      parsed = JSON.parse(jsonMatch[0]) as BusinessProfile;
+      break; // success — exit loop
+    } catch (err) {
+      lastErr = new Error(`BusinessProfile: JSON parse failed: ${err instanceof Error ? err.message : "unknown"}`);
+      // continue to retry
+    }
   }
 
-  let parsed: BusinessProfile;
-  try {
-    parsed = JSON.parse(jsonMatch[0]) as BusinessProfile;
-  } catch (err) {
-    throw new Error(`BusinessProfile: JSON parse failed: ${err instanceof Error ? err.message : "unknown"}`);
+  if (!parsed) {
+    throw lastErr ?? new Error("BusinessProfile: generation failed after 2 attempts");
   }
 
   parsed.generatedAt = new Date().toISOString();
