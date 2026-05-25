@@ -526,6 +526,66 @@ ${cleanBody}${fallbackFooter}
   }).where(eq(leads.id, leadId));
 }
 
+// Pre-built proposal CSS — same rationale as buildDemoCSS: keeps CSS out of
+// model output tokens so all 8 body sections complete within 8192 token budget.
+function buildProposalCSS(): string {
+  return `<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{font-size:16px;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#fafaf8;color:#1a1a1a;line-height:1.7}
+:root{--purple:#7c5cbf;--purple-light:#f3efff;--border:#e5e5e3;--muted:#6b7280}
+.proposal-wrapper{max-width:860px;margin:0 auto;padding:60px 40px}
+.proposal-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:40px;border-bottom:3px solid var(--purple);margin-bottom:48px}
+.header-logo{font-size:22px;font-weight:800;color:var(--purple);letter-spacing:-.5px}
+.header-meta{text-align:right}
+.header-meta p{font-size:13px;color:var(--muted);line-height:1.8}
+.header-title{margin-bottom:24px}
+.header-title h1{font-size:30px;font-weight:700;line-height:1.25;color:#111}
+.header-title .subtitle{font-size:16px;color:var(--muted);margin-top:8px}
+.prepared-for{background:var(--purple-light);border-left:4px solid var(--purple);border-radius:4px;padding:16px 20px;margin-bottom:48px}
+.prepared-for p{font-size:14px;color:#444}
+.prepared-for strong{color:var(--purple)}
+.section{margin-bottom:52px}
+.section-num{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
+.section h2{font-size:24px;font-weight:700;color:#111;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.section p{font-size:15px;color:#333;margin-bottom:12px}
+.section ul,.section ol{padding-left:20px;margin-bottom:12px}
+.section li{font-size:15px;color:#333;margin-bottom:6px;line-height:1.6}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:20px}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px}
+.card-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--purple);margin-bottom:8px}
+.card h3{font-size:16px;font-weight:700;color:#111;margin-bottom:8px}
+.card p{font-size:13px;color:var(--muted);line-height:1.6}
+.tool-table{width:100%;border-collapse:collapse;margin-top:20px}
+.tool-table th{background:var(--purple);color:#fff;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:10px 14px;text-align:left}
+.tool-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:top}
+.tool-table tr:nth-child(even) td{background:#f9f9f7}
+.cat-badge{display:inline-block;background:var(--purple-light);color:var(--purple);border-radius:100px;font-size:11px;font-weight:600;padding:2px 10px}
+.timeline{display:flex;gap:0;margin-top:32px;position:relative}
+.timeline::before{content:'';position:absolute;top:20px;left:0;right:0;height:2px;background:var(--border)}
+.phase{flex:1;text-align:center;padding-top:44px;position:relative}
+.phase-dot{position:absolute;top:0;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:var(--purple);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.phase h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.phase .duration{font-size:12px;color:var(--purple);font-weight:600;margin-bottom:8px}
+.phase p{font-size:13px;color:var(--muted);padding:0 12px}
+.payment-row{display:flex;gap:16px;margin-top:20px}
+.payment-card{flex:1;background:#fff;border:2px solid var(--border);border-radius:12px;padding:24px;text-align:center}
+.payment-card.highlight{border-color:var(--purple);background:var(--purple-light)}
+.payment-pct{font-size:36px;font-weight:800;color:var(--purple)}
+.payment-label{font-size:13px;font-weight:700;color:#333;margin-top:4px}
+.payment-desc{font-size:12px;color:var(--muted);margin-top:6px}
+.payment-amount{font-size:18px;font-weight:700;color:#111;margin-top:8px}
+.cta-box{background:var(--purple);border-radius:14px;padding:40px;text-align:center;margin-top:20px}
+.cta-box h3{font-size:22px;font-weight:700;color:#fff;margin-bottom:12px}
+.cta-box p{font-size:15px;color:rgba(255,255,255,.8);margin-bottom:24px}
+.cta-btn{display:inline-block;background:#fff;color:var(--purple);border-radius:8px;padding:14px 32px;font-size:16px;font-weight:700;text-decoration:none}
+.proposal-footer{border-top:2px solid var(--border);padding-top:32px;margin-top:64px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-brand{font-size:16px;font-weight:700;color:var(--purple)}
+.footer-info{font-size:13px;color:var(--muted)}
+@media print{body{background:white}.proposal-wrapper{padding:40px 0}}
+@media(max-width:640px){.proposal-wrapper{padding:32px 20px}.payment-row,.timeline{flex-direction:column!important}.proposal-header{flex-direction:column;gap:16px}}
+</style>`;
+}
+
 export async function runProposalGeneration(leadId: string): Promise<void> {
   const lead = await drizzleDb.query.leads.findFirst({ where: eq(leads.id, leadId) });
   if (!lead) return;
@@ -551,7 +611,7 @@ export async function runProposalGeneration(leadId: string): Promise<void> {
 
   const proposalPrompt = `You are generating a formal project proposal for NexoFlow, a software development agency.
 
-Create a COMPLETE, single-file HTML proposal document for:
+Write the BODY CONTENT of a professional HTML proposal for:
 Company: ${companyName}
 Contact: ${name}${lead.jobTitle ? ` (${lead.jobTitle})` : ""}
 Industry: ${lead.industry ?? "Technology"}
@@ -565,26 +625,33 @@ Visible weaknesses we'll solve: ${weaknesses}
 Recommended software tools for their business:
 ${softwareRecsText}
 
-Requirements:
-- Clean, professional proposal design (white/light background, dark text, purple brand accents #7c5cbf)
-- Sections (ALL required):
-  1. Executive Summary
-  2. Problem Statement (with their specific weaknesses listed)
-  3. Our Proposed Solution (custom software NexoFlow builds for them)
-  4. Recommended Software Ecosystem — a table or card grid showing each recommended tool (name, category, why it's right for them), with a note that NexoFlow integrates all of them. This section is KEY — it shows we're a strategic advisor, not just a vendor.
-  5. Technical Approach (stack NexoFlow will use, architecture overview)
-  6. Project Timeline (3 phases with weeks)
-  7. Investment (30/40/30 milestone payment structure, calculated from ${estimatedValue})
-  8. Next Steps (clear call to action — book discovery call at nexoflow.tech)
-- 30/40/30 payment: 30% to start, 40% at midpoint, 30% on delivery
-- Include NexoFlow company details, prepared for ${companyName}
-- Footer: "Prepared by NexoFlow | nexoflow.tech | hello@nexoflow.tech"
-- Professional typography, subtle borders, clean layout
-- All CSS inline or in <style> tag — no external dependencies
-- Print-friendly (could be converted to PDF)
-- Output the COMPLETE HTML — do not truncate or stop early
+AVAILABLE CSS CLASSES (pre-built — use these, no inline styles, no <style> tags):
+Layout: .proposal-wrapper (outer) | .section (each section) | .section-num (tiny label above h2) | .card-grid | .card .card-label .card h3 .card p
+Header: .proposal-header .header-logo .header-meta .header-title .prepared-for
+Tools: .tool-table (thead with th, tbody with td) | .cat-badge (category pill)
+Timeline: .timeline > .phase (each phase has .phase-dot + h3 + .duration + p)
+Payment: .payment-row > .payment-card (.highlight for middle card) | .payment-pct .payment-label .payment-desc .payment-amount
+CTA: .cta-box .cta-box h3 .cta-box p .cta-btn (anchor)
+Footer: .proposal-footer .footer-brand .footer-info
 
-Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanation.`;
+REQUIRED SECTIONS (write ALL 8 in full):
+1. Header block: .proposal-header with .header-logo ("NexoFlow") left, .header-meta (date, prepared for) right; then .prepared-for pill block.
+2. Executive Summary (.section): 2–3 paragraphs — what NexoFlow will build, why it matters for ${companyName}, and the headline ROI/transformation.
+3. Problem Statement (.section): Specific weaknesses as a <ul>. Each bullet names the exact cost or risk. Draw from: "${weaknesses}"
+4. Our Proposed Solution (.section): .card-grid with 3–4 .card blocks — one per key feature from "${features}". Each card has .card-label (feature category), h3 (feature name), p (what it does + outcome).
+5. Recommended Software Ecosystem (.section): .tool-table with columns: Tool | Category | Why it fits ${companyName}. One row per tool from the software recs. End section with a note: "NexoFlow integrates all of the above into a single seamless system."
+6. Technical Approach (.section): Architecture overview — what stack (${techRec}), why it's right, how NexoFlow handles hosting/security/scalability.
+7. Project Timeline (.section): .timeline with 3 .phase blocks. Each phase has a .phase-dot div (1/2/3), h3, .duration, p. Phases: (1) Discovery & Design 1 week, (2) Build & Integrate ${scope}, (3) Launch & Support ongoing.
+8. Investment (.section): .payment-row with 3 .payment-card blocks — 30% (Start, .highlight), 40% (Midpoint), 30% (Delivery). Show calculated dollar amount from "${estimatedValue}" in .payment-amount. Then a .cta-box with "Book Your Free Discovery Call" .cta-btn linking to https://nexoflow.tech.
+
+End with .proposal-footer: .footer-brand ("NexoFlow") left, .footer-info ("Prepared exclusively for ${companyName} · nexoflow.tech · hello@nexoflow.tech · © 2026") right.
+
+OUTPUT RULES:
+- Output ONLY the HTML between <body> and </body> — start with <div class="proposal-wrapper"> end with </div> after the footer
+- NO <!DOCTYPE>, NO <html>, NO <head>, NO <style>, NO <script> tags
+- NO inline style="" attributes — class names only
+- Do NOT truncate or skip any section — write all 8 in full
+- No markdown. No explanation.`;
 
   const anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const proposalResponse = await anthropicClient.messages.create({
@@ -592,7 +659,28 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdow
     max_tokens: 8192,
     messages: [{ role: "user", content: proposalPrompt }],
   });
-  const proposalHtml = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
+  const rawProposal = proposalResponse.content[0]?.type === "text" ? proposalResponse.content[0].text : "";
+
+  // Strip any accidental wrappers
+  const cleanProposal = rawProposal
+    .replace(/^```(?:html)?\n?/i, "").replace(/\n?```\s*$/i, "")
+    .replace(/^[\s\S]*?(?=<div\s+class="proposal-wrapper"|<header\b)/i, "")
+    .trim();
+
+  // Assemble full HTML with pre-built CSS
+  const proposalCss = buildProposalCSS();
+  const proposalHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexoFlow Proposal — ${companyName}</title>
+${proposalCss}
+</head>
+<body>
+${cleanProposal}
+</body>
+</html>`;
   const proposalUrl = `/api/proposal/${leadId}`;
 
   const existingVersions = await drizzleDb
