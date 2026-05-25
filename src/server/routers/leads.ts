@@ -994,20 +994,21 @@ Return ONLY valid JSON with this exact structure:
       // Fire-and-forget to a dedicated background API route.
       // This runs in its own Vercel function invocation (up to 300s maxDuration),
       // completely independent of the tRPC request lifecycle or edge idle timeout.
-      // AbortSignal.timeout(2000) gives up waiting for a response after 2s, but
-      // the background function continues running on Vercel regardless.
+      // await the fetch so the HTTP connection is established before Vercel freezes
+      // the tRPC function post-response. The background route returns 202 instantly
+      // (<100ms) via after(), so this await doesn't add meaningful latency.
       const origin = "url" in ctx.req && typeof (ctx.req as Request).url === "string"
         ? new URL((ctx.req as Request).url).origin
         : (process.env.NEXTAUTH_URL ?? "https://nexoflow-os.vercel.app");
-      void fetch(`${origin}/api/background/demo/${input.id}`, {
+      await fetch(`${origin}/api/background/demo/${input.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-internal-secret": process.env.CRON_SECRET ?? process.env.ADMIN_REGEN_SECRET ?? "",
         },
         body: JSON.stringify({ autoBuildProfile: input.autoBuildProfile }),
-        signal: AbortSignal.timeout(2000),
-      }).catch(() => { /* fire-and-forget — abort after 2s, background route keeps running */ });
+        signal: AbortSignal.timeout(10000),
+      }).catch(() => { /* ignore — background route may already be running */ });
 
       return { status: "started" };
     }),
@@ -1386,18 +1387,19 @@ Write a concise, personalized outreach message. ${channel === "email" ? "Include
       const lead = await ctx.db.query.leads.findFirst({ where: eq(leads.id, input.id) });
       if (!lead) throw new Error("Lead not found");
 
-      // Same fire-and-forget pattern as generateDemo
+      // await the fetch so the HTTP connection is established before Vercel freezes
+      // the tRPC function post-response. The background route returns 202 instantly.
       const origin = "url" in ctx.req && typeof (ctx.req as Request).url === "string"
         ? new URL((ctx.req as Request).url).origin
         : (process.env.NEXTAUTH_URL ?? "https://nexoflow-os.vercel.app");
-      void fetch(`${origin}/api/background/proposal/${input.id}`, {
+      await fetch(`${origin}/api/background/proposal/${input.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-internal-secret": process.env.CRON_SECRET ?? process.env.ADMIN_REGEN_SECRET ?? "",
         },
-        signal: AbortSignal.timeout(2000),
-      }).catch(() => { /* fire-and-forget */ });
+        signal: AbortSignal.timeout(10000),
+      }).catch(() => { /* ignore — background route may already be running */ });
 
       return { status: "started" };
     }),
