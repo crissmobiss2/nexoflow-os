@@ -115,7 +115,7 @@ RULES:
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2600,
+    max_tokens: 3500,
     messages: [{ role: "user", content: prompt }],
   });
 
