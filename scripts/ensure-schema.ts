@@ -710,6 +710,54 @@ async function main() {
   `);
   await run("nf_affiliate_refs_affiliate_idx", `CREATE INDEX IF NOT EXISTS nf_affiliate_refs_affiliate_idx ON nf_affiliate_referrals (affiliate_id)`);
 
+  // ── nf_affiliate_clicks ───────────────────────────────────────────────────
+  await run("nf_affiliate_clicks table", `
+    CREATE TABLE IF NOT EXISTS nf_affiliate_clicks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      affiliate_id UUID NOT NULL REFERENCES nf_affiliates(id) ON DELETE CASCADE,
+      referral_code VARCHAR(32) NOT NULL,
+      ip_hash VARCHAR(64),
+      user_agent VARCHAR(500),
+      landing_page VARCHAR(500),
+      utm_source VARCHAR(100),
+      utm_medium VARCHAR(100),
+      utm_campaign VARCHAR(100),
+      country VARCHAR(2),
+      converted BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_affiliate_clicks_affiliate_idx", `CREATE INDEX IF NOT EXISTS nf_affiliate_clicks_affiliate_idx ON nf_affiliate_clicks (affiliate_id)`);
+  await run("nf_affiliate_clicks_created_idx",   `CREATE INDEX IF NOT EXISTS nf_affiliate_clicks_created_idx ON nf_affiliate_clicks (created_at)`);
+  await run("nf_affiliate_clicks_converted_idx", `CREATE INDEX IF NOT EXISTS nf_affiliate_clicks_converted_idx ON nf_affiliate_clicks (converted)`);
+
+  // ── nf_affiliate_payouts ──────────────────────────────────────────────────
+  await run("enum nf_affiliate_payout_status", `
+    DO $$ BEGIN
+      CREATE TYPE nf_affiliate_payout_status AS ENUM ('pending','processing','completed','failed');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("enum nf_affiliate_payout_method", `
+    DO $$ BEGIN
+      CREATE TYPE nf_affiliate_payout_method AS ENUM ('bank_transfer','paypal','wise','stripe');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+  await run("nf_affiliate_payouts table", `
+    CREATE TABLE IF NOT EXISTS nf_affiliate_payouts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      affiliate_id UUID NOT NULL REFERENCES nf_affiliates(id) ON DELETE CASCADE,
+      amount_cents INTEGER NOT NULL,
+      method nf_affiliate_payout_method NOT NULL DEFAULT 'paypal',
+      reference VARCHAR(255),
+      status nf_affiliate_payout_status NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ
+    )
+  `);
+  await run("nf_affiliate_payouts_affiliate_idx", `CREATE INDEX IF NOT EXISTS nf_affiliate_payouts_affiliate_idx ON nf_affiliate_payouts (affiliate_id)`);
+  await run("nf_affiliate_payouts_status_idx",    `CREATE INDEX IF NOT EXISTS nf_affiliate_payouts_status_idx ON nf_affiliate_payouts (status)`);
+
   // ── nf_case_studies ───────────────────────────────────────────────────────
   await run("nf_case_studies table", `
     CREATE TABLE IF NOT EXISTS nf_case_studies (
