@@ -54,125 +54,268 @@ function canonicalDedupKey(input: { email?: string | null; company?: string | nu
 
 function buildDemoPrompt({
   companyName, name, jobTitle, industry, offer, targetCustomer, tone,
-  weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations,
+  weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures,
+  softwareRecommendations, roiEstimate, urgencySignals, quickWins, competitorContext,
 }: {
   companyName: string; name: string; jobTitle?: string | null; industry?: string | null;
   offer: string; targetCustomer?: string | null; tone: string; weaknesses: string;
   brandColors: string[]; brandFonts: string[]; demoAngle: string; recommendedFeatures: string;
   softwareRecommendations: { name: string; category: string; reason: string; url?: string }[];
+  roiEstimate?: string | null;
+  urgencySignals?: string[] | null;
+  quickWins?: { title: string; description: string; timeline: string }[] | null;
+  competitorContext?: string | null;
 }): string {
   const primary = brandColors[0] ?? "#7c5cbf";
   const secondary = brandColors[1] ?? "#4f8ef7";
   const accent = brandColors[2] ?? "#0a0a0f";
-  const fonts = brandFonts.length > 0 ? brandFonts.join(", ") : "Inter, system-ui";
+  const font = (brandFonts[0] ?? "Inter").trim();
+  const fontUrl = font.replace(/ /g, "+");
 
-  const softwareSection = softwareRecommendations.length > 0
-    ? softwareRecommendations.map((s) =>
-        `      TOOL: ${s.name} | CATEGORY: ${s.category} | WHY FOR THIS CLIENT: ${s.reason}${s.url ? ` | URL: ${s.url}` : ""}`,
+  const softwareList = softwareRecommendations.length > 0
+    ? softwareRecommendations.map((s, i) =>
+        `  TOOL ${i + 1}: ${s.name} | CATEGORY: ${s.category} | WHY: ${s.reason}${s.url ? ` | URL: ${s.url}` : ""}`,
       ).join("\n")
-    : "      (infer 4-6 best-in-class tools for their industry)";
+    : "  (generate 5-6 best-in-class tools for their industry)";
 
-  return `You are a senior UI engineer and award-winning web designer. Produce a STUNNING, conversion-optimised single-file demo page for a sales prospect. Every pixel must look like it was built by a $500K/yr agency. This page must be COMPLETE — do not stop generating until all sections including the footer are written.
+  const roiBlock = roiEstimate
+    ? `ROI NARRATIVE (use this to write the ROI section): ${roiEstimate}`
+    : `ROI NARRATIVE: Calculate a credible ROI for a ${industry ?? "business"} investing in this project.`;
 
-BUSINESS CONTEXT
+  const urgencyBlock = urgencySignals?.length
+    ? `URGENCY SIGNALS (use in CTA and intro copy):\n${urgencySignals.map((s) => `  - ${s}`).join("\n")}`
+    : "";
+
+  const quickWinsBlock = quickWins?.length
+    ? `QUICK WINS (show in How It Works):\n${quickWins.map((w) => `  - ${w.title} (${w.timeline}): ${w.description}`).join("\n")}`
+    : "";
+
+  const competitorBlock = competitorContext
+    ? `COMPETITOR CONTEXT (use as urgency subtext): ${competitorContext}`
+    : "";
+
+  return `You are a world-class UI engineer and conversion copywriter. Build a STUNNING, complete, single-file HTML demo page for a software sales prospect. This page will be sent directly to ${name} at ${companyName} — it must feel like it was built specifically for them by a $1M/yr agency.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SALES INTELLIGENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Company: ${companyName}
 Industry: ${industry ?? "Technology"}
 Contact: ${name}${jobTitle ? ` (${jobTitle})` : ""}
-What NexoFlow solves for them: ${offer}
-Their target customers: ${targetCustomer ?? "their clients"}
-Their tone of voice: ${tone}
-Pain points we fix: ${weaknesses || "operational inefficiencies and manual workflows"}
-Demo angle: ${demoAngle}
-Custom features NexoFlow will build: ${recommendedFeatures}
+What NexoFlow will build for them: ${offer}
+Their customers: ${targetCustomer ?? "their clients"}
+Brand tone: ${tone}
+Their current pain points: ${weaknesses || "manual processes, slow operations, missed revenue"}
+Demo angle (how to position this): ${demoAngle}
+Custom features to showcase: ${recommendedFeatures}
+${roiBlock}
+${urgencyBlock}
+${quickWinsBlock}
+${competitorBlock}
 
-RECOMMENDED SOFTWARE STACK FOR THIS CLIENT:
-${softwareSection}
+RECOMMENDED SOFTWARE TOOLS FOR ${companyName.toUpperCase()}:
+${softwareList}
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BRAND
-Primary color: ${primary}
-Secondary color: ${secondary}
-Accent/background tone: ${accent}
-Fonts: ${fonts}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Primary: ${primary}
+Secondary: ${secondary}
+Accent: ${accent}
+Font: ${font}
 
-MANDATORY DESIGN RULES — follow every one, no exceptions:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CSS SETUP (use exactly)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In <head>:
+  @import url('https://fonts.googleapis.com/css2?family=${fontUrl}:wght@300;400;600;700;900&display=swap');
 
-1. CSS VARIABLES
-   :root {
-     --primary: ${primary};
-     --secondary: ${secondary};
-     --accent: ${accent};
-     --bg: /* choose dark (#0d0d14) for bold/tech brands, near-white (#f8f8fc) for premium/light brands */;
-     --surface: /* semi-transparent card bg: rgba(255,255,255,0.06) for dark, rgba(0,0,0,0.04) for light */;
-     --text: /* #ffffff for dark bg, #111111 for light bg */;
-     --text-muted: /* #a0a0b0 for dark, #666677 for light */;
-     --radius: 16px;
-   }
+:root {
+  --primary: ${primary};
+  --secondary: ${secondary};
+  --accent: ${accent};
+  --bg: [dark #0a0a12 for tech/bold brands OR light #f7f7fb for service/professional brands];
+  --surface: [rgba(255,255,255,0.05) for dark OR rgba(0,0,0,0.04) for light];
+  --border: [rgba(255,255,255,0.08) for dark OR rgba(0,0,0,0.08) for light];
+  --text: [#ffffff for dark OR #111827 for light];
+  --text-muted: [#9ca3af for dark OR #6b7280 for light];
+  --text-sub: [rgba(255,255,255,0.6) for dark OR #374151 for light];
+  --radius: 16px;
+  --radius-sm: 10px;
+  --section-pad: 100px 24px;
+  --max-w: 1140px;
+}
 
-2. GOOGLE FONTS — import ${fonts.split(",")[0]?.trim()} at top of <style>: @import url('https://fonts.googleapis.com/css2?family=${(fonts.split(",")[0]?.trim() ?? "Inter").replace(/ /g, "+")}:wght@400;600;700;900&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: '${font}', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
 
-3. SECTIONS (in this EXACT order — ALL 8 are required):
+.animate-in { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.animate-in.visible { opacity: 1; transform: translateY(0); }
+.animate-in.delay-1 { transition-delay: 0.15s; }
+.animate-in.delay-2 { transition-delay: 0.3s; }
+.animate-in.delay-3 { transition-delay: 0.45s; }
 
-   a. HERO — full-viewport-height, gradient background using --primary → --secondary (135deg), centered content:
-      - Pill badge: "Custom demo for ${companyName}" with border: 1px solid rgba(255,255,255,0.2)
-      - H1 (72px desktop / 40px mobile, font-weight:900): A powerful, specific headline referencing their exact problem
-      - Subheadline (20px, --text-muted): One sentence on the transformation NexoFlow delivers for them
-      - Two CTAs side-by-side: primary button (solid --primary, 56px height, border-radius:12px, hover: scale(1.04) + box-shadow), ghost button (border: 2px solid rgba(255,255,255,0.3))
-      - Below CTAs: 3 trust micro-stats inline (e.g. "⚡ Built in 6 weeks", "🔒 SOC2-ready", "📈 3× faster") relevant to their industry
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 ${primary}40; }
+  50% { box-shadow: 0 0 0 12px ${primary}00; }
+}
 
-   b. PROBLEM — "The challenge ${companyName} faces today" — 3 cards in a CSS grid (repeat(auto-fit, minmax(280px,1fr))):
-      - Each card: backdrop-filter:blur(20px), background:var(--surface), border:1px solid rgba(255,255,255,0.08), border-radius:var(--radius)
-      - Inline SVG icon (40px, colored --primary), bold problem title, 2-sentence description using THEIR specific pain points
+@media (max-width: 768px) {
+  :root { --section-pad: 72px 20px; }
+  .grid-3 { grid-template-columns: 1fr !important; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .hero-h1 { font-size: 40px !important; line-height: 1.15 !important; }
+  .cta-row { flex-direction: column !important; }
+  .stats-row { flex-direction: column !important; gap: 32px !important; }
+}
 
-   c. SOLUTION — "What NexoFlow builds for ${companyName}" — same card grid:
-      - 3-4 feature cards from "Custom features NexoFlow will build", each with distinct inline SVG icon
-      - Feature title + description written specifically for their business context
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALL 10 SECTIONS — WRITE EVERY ONE IN FULL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   d. SOFTWARE STACK — "Your complete software ecosystem" — THIS IS CRITICAL FOR VALUE:
-      - Section subtitle: "NexoFlow doesn't just build custom software — we architect your entire tech stack. Here's what we recommend for ${companyName}:"
-      - Render each tool from RECOMMENDED SOFTWARE STACK as a card in a grid (repeat(auto-fit, minmax(220px,1fr))):
-        * Category badge (small pill, --primary color, e.g. "CRM", "Payments", "Analytics")
-        * Tool name (large, bold)
-        * Why this tool text (the reason from RECOMMENDED SOFTWARE STACK — 1-2 sentences, specific to their business)
-        * "✓ NexoFlow integrates this" footer on each card
-      - Below the grid, add a callout box: "NexoFlow connects all these tools together into one seamless workflow — no more copy-pasting between 6 different tabs."
+SECTION 1 — STICKY NAV (position:fixed, top:0, width:100%, z-index:100)
+  Background: rgba(bg-color, 0.92) with backdrop-filter:blur(20px)
+  Border-bottom: 1px solid var(--border)
+  Left side: "NexoFlow" logo text (font-weight:800, gradient text --primary→--secondary) + " × " + companyName (font-weight:600, --text-muted)
+  Right side: "Book a Call →" button (gradient bg --primary→--secondary, border-radius:8px, padding:10px 20px, font-size:13px, font-weight:600, animation: pulse-glow 2s ease-in-out infinite)
+  Body must have padding-top:72px to offset nav.
 
-   e. STATS BAR — full-width gradient strip (--primary to --secondary), 3 large metrics in a flex row:
-      - Numbers must be industry-relevant (e.g. "↓ 70% manual work", "↑ 40% faster ops", "$120K saved/yr")
-      - Large number (56px, bold white) + label underneath
+SECTION 2 — HERO (min-height:100vh, background: linear-gradient(135deg, --primary 0%, --secondary 60%, darken-of-secondary 100%))
+  Center all content. Subtle SVG mesh/dot pattern overlay at 5% opacity.
+  - Small pill badge (border:1px solid rgba(255,255,255,0.25), background:rgba(255,255,255,0.1), border-radius:100px, padding:6px 16px, font-size:12px, font-weight:600): "✦ Built exclusively for ${companyName}"
+  - H1 class="hero-h1" (font-size:72px, font-weight:900, line-height:1.1, color:#fff, margin-top:20px): Write a POWERFUL, SPECIFIC headline that names their industry and the transformation. NOT generic. Example for HVAC: "Stop losing $8K/month to missed service calls" — make it specific to THIS company's pain.
+  - Subheadline (font-size:20px, color:rgba(255,255,255,0.75), max-width:580px, margin:20px auto): One sentence on the exact transformation. Reference their specific offer and who they serve.
+  - CTA row (class="cta-row", display:flex, gap:12px, justify-content:center, margin-top:36px):
+      Primary: "See How It Works →" (background:white, color:--primary, border-radius:12px, height:56px, padding:0 32px, font-size:16px, font-weight:700, transition: transform 0.2s, box-shadow 0.2s; hover: transform:scale(1.04), box-shadow:0 12px 40px rgba(0,0,0,0.25))
+      Ghost: "Book Free Discovery Call" (border:2px solid rgba(255,255,255,0.4), color:white, background:transparent, border-radius:12px, height:56px, padding:0 28px, font-size:16px, font-weight:600)
+  - Trust bar (display:flex, gap:32px, justify-content:center, margin-top:40px, flex-wrap:wrap): 4 micro-stats relevant to ${industry}. Format: "⚡ Built in 6–8 weeks" · "🔒 NDA day one" · "📈 Avg 3.2× ROI" · "🏆 100% US-based team"
+  - Scroll indicator at bottom: small animated chevron-down SVG
 
-   f. HOW IT WORKS — "How we build it" — 3-step process (horizontal on desktop, vertical on mobile):
-      - Step numbers in gradient-border circles, step title + 1-line description
-      - Steps: 1) Discovery & Planning (1 week), 2) Build & Integrate (4-8 weeks), 3) Launch & Support
+SECTION 3 — PROBLEM ("What's holding ${companyName} back")
+  Section padding: var(--section-pad). Background: var(--bg).
+  Section label (small caps, --primary color, font-size:11px, letter-spacing:0.15em): "THE CHALLENGE"
+  H2 (font-size:40px, font-weight:800, margin-top:8px): "Every day without this system costs ${companyName} real money"
+  Subtext: Reference their specific industry — how these problems compound over time.
+  3-card grid (class="grid-3", display:grid, grid-template-columns:repeat(3,1fr), gap:24px, margin-top:48px):
+    Each card (background:var(--surface), border:1px solid var(--border), border-radius:var(--radius), padding:32px, class="animate-in"):
+      - Top-left inline SVG icon (48px×48px, stroke: --primary)
+      - H3 (font-size:18px, font-weight:700, margin-top:20px): Problem name — be SPECIFIC to their business
+      - P (font-size:14px, color:var(--text-muted), line-height:1.7, margin-top:8px): 2 sentences naming the real cost of this problem. Use numbers where possible.
 
-   g. CTA SECTION — full-width, semi-dark background:
-      - Large headline: "Ready to build this for ${companyName}?"
-      - Subtext: specific transformation they'll experience
-      - Single large CTA button: "Book a free discovery call →" linking to https://nexoflow.tech
-      - Below button: "No commitment. 30-min call. We'll scope your project for free."
-      - Three proof points inline: "⚡ Response in 24h", "🏆 100% satisfaction", "🔒 NDA on request"
+SECTION 4 — SOLUTION ("What NexoFlow builds for ${companyName}")
+  Background: slightly offset from --bg (use var(--surface) or a subtle gradient).
+  Section label: "THE SOLUTION"
+  H2 (font-size:40px, font-weight:800): "Custom software engineered for your exact workflow"
+  Subtext: "Every feature below is built from scratch for ${companyName} — not a template, not an off-the-shelf app."
+  3–4 card grid (same styling as problem section but with a colored top border: 3px solid --primary):
+    Each card: distinct inline SVG icon + feature name from recommendedFeatures + 2-sentence description of what it does and why it matters for THIS company specifically.
+    Add a small "Included" badge (background: --primary 15% opacity, color: --primary, border-radius:100px, font-size:11px, padding:3px 10px) on each card.
 
-   h. FOOTER — minimal:
-      - "Custom demo built exclusively for ${companyName} · NexoFlow © 2026"
-      - nexoflow.tech | hello@nexoflow.tech
+SECTION 5 — SOFTWARE ECOSYSTEM ("Your complete tech stack, curated by NexoFlow")
+  Background: var(--bg). This section is a KEY differentiator — NexoFlow as strategic advisor, not just a vendor.
+  Section label: "SOFTWARE ECOSYSTEM"
+  H2 (font-size:40px, font-weight:800): "We don't just build — we architect your entire digital operation"
+  Subtext: "NexoFlow recommends, integrates, and connects the best-in-class tools for ${companyName}'s industry — so you have one seamless system instead of 6 disconnected tabs."
+  Grid (repeat(auto-fill, minmax(200px, 1fr)), gap:20px, margin-top:48px):
+    Each tool card (background:var(--surface), border:1px solid var(--border), border-radius:var(--radius-sm), padding:24px, class="animate-in"):
+      - Category badge (background: --primary 12% opacity, color: --primary, border-radius:100px, font-size:10px, font-weight:700, letter-spacing:0.1em, padding:4px 10px)
+      - Tool name (font-size:18px, font-weight:700, margin-top:12px)
+      - Reason text (font-size:13px, color:var(--text-muted), margin-top:8px, line-height:1.6): Use WHY text from RECOMMENDED SOFTWARE TOOLS — must be specific to ${companyName}
+      - Footer row: "✓ NexoFlow integrates this" (font-size:11px, color: --primary, font-weight:600, margin-top:16px, display:flex, align-items:center, gap:4px)
+  Callout box below grid (background: linear-gradient(135deg, --primary 10% opacity, --secondary 10% opacity), border:1px solid --primary 20% opacity, border-radius:var(--radius), padding:32px, margin-top:32px, display:flex, align-items:center, gap:24px):
+    Large quote: "The difference between good software and great software is the ecosystem it lives in. NexoFlow builds the custom core — and wires it to the tools you already use."
+    CTA button: "Talk to us about your stack →" linking to https://nexoflow.tech
 
-4. ANIMATIONS — CSS keyframes only:
-   @keyframes fadeInUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
-   .animate-in { opacity:0; transform:translateY(24px) }
-   .animate-in.visible { animation: fadeInUp 0.6s ease forwards }
-   Add IntersectionObserver script at end of body:
-   <script>const obs=new IntersectionObserver((e)=>{e.forEach(i=>{if(i.isIntersecting){i.target.classList.add('visible');obs.unobserve(i.target)}})},{threshold:0.15});document.querySelectorAll('.animate-in').forEach(el=>obs.observe(el));</script>
+SECTION 6 — ROI / VALUE ("The numbers behind the decision")
+  Background: linear-gradient(135deg, --primary, --secondary). Full-width. Text white.
+  H2 (font-size:40px, font-weight:800, color:#fff): "What this investment returns for ${companyName}"
+  Subtext (color:rgba(255,255,255,0.8)): Use the ROI NARRATIVE to write a specific, credible 2-sentence value statement. Reference hours saved, revenue recovered, or efficiency gained.
+  3 metric cards (display:flex, gap:32px, justify-content:center, flex-wrap:wrap, margin-top:48px, class="stats-row"):
+    Each (background:rgba(255,255,255,0.12), backdrop-filter:blur(16px), border:1px solid rgba(255,255,255,0.2), border-radius:var(--radius), padding:40px 32px, text-align:center, min-width:220px):
+      - Big number (font-size:56px, font-weight:900, color:#fff): Industry-specific metric (e.g. "↓ 68%", "$42K", "3.4×")
+      - Label (font-size:14px, color:rgba(255,255,255,0.75), margin-top:8px): What this number represents
+  Below metrics, a pull-quote in large italic text: "The real question isn't what building this costs. It's what NOT building it costs ${companyName} every month."
 
-5. RESPONSIVE — mobile-first, single breakpoint at 768px. Grid collapses to single column. Hero H1 shrinks to 40px. CTA buttons stack vertically.
+SECTION 7 — BEFORE / AFTER ("The transformation")
+  Background: var(--bg). This section creates contrast and urgency.
+  Section label: "BEFORE & AFTER"
+  H2 (font-size:40px, font-weight:800): "How ${companyName} operates today — and where you're headed"
+  2-column grid (class="grid-2", gap:24px, margin-top:48px):
+    LEFT — "Today" (background:rgba(239,68,68,0.06), border:1px solid rgba(239,68,68,0.2), border-radius:var(--radius), padding:32px):
+      H3 (color:#ef4444, font-size:16px, font-weight:700): "⚠ Without NexoFlow"
+      List of 4–5 pain points specific to ${companyName}'s business. Each item: "✗ [specific problem]" (color:#ef4444 for the ✗, text color var(--text-muted)). Draw directly from weaknesses and pain points.
+    RIGHT — "With NexoFlow" (background: --primary 6% opacity, border: 1px solid --primary 20% opacity, border-radius:var(--radius), padding:32px):
+      H3 (color:--primary, font-size:16px, font-weight:700): "✓ With NexoFlow"
+      List of 4–5 corresponding wins, written as specific transformations. Each: "✓ [specific positive outcome]" (color:--primary for the ✓).
 
-6. COPY TONE — write as if you know this company personally. Reference their specific industry, their actual pain points (${weaknesses || "manual processes, slow operations"}), and their target customers (${targetCustomer ?? "their clients"}). Zero generic business-speak.
+SECTION 8 — HOW IT WORKS ("From kickoff to launch in 8 weeks")
+  Background: slightly different shade from main bg (use var(--surface) or similar).
+  Section label: "THE PROCESS"
+  H2 (font-size:40px, font-weight:800): "From first call to live system — here's how we work"
+  Subtext: "No bloated agency processes. NexoFlow moves fast without cutting corners."
+  3-step horizontal timeline (display:grid, grid-template-columns:repeat(3,1fr), gap:32px, margin-top:48px, position:relative):
+    Add connector line between steps: ::before pseudo-element, height:2px, gradient --primary→--secondary, top:40px, left:calc(50% + 50px), width:calc(100% - 100px) (hide on mobile).
+    Each step (text-align:center, class="animate-in"):
+      - Step circle (width:80px, height:80px, border-radius:50%, background: linear-gradient(135deg, --primary, --secondary), display:flex, align-items:center, justify-content:center, margin:0 auto, font-size:28px, font-weight:900, color:#fff)
+      - Step title (font-size:18px, font-weight:700, margin-top:20px)
+      - Duration badge (background: --primary 12% opacity, color: --primary, border-radius:100px, font-size:11px, padding:4px 12px, margin-top:8px, display:inline-block)
+      - Description (font-size:14px, color:var(--text-muted), margin-top:12px, line-height:1.7)
+    Steps: (1) "Discovery & Blueprint" / 1 week, (2) "Build & Integrate" / 4–8 weeks, (3) "Launch & Scale" / Ongoing
+    If QUICK WINS provided: add quick wins as small checkboxes below step 3 content.
 
-7. ALL ICONS — inline SVG only (24-40px). No external icon libraries. Draw relevant icons (chart, lightning, shield, rocket, code brackets, etc.) directly in the HTML.
+SECTION 9 — FINAL CTA (the close)
+  Background: very dark (#080812 for dark theme, #1a1a2e for any theme). Full-width.
+  Centered content, max-width:640px, margin:0 auto.
+  H2 (font-size:48px, font-weight:900, color:#fff, line-height:1.15): "Ready to build this for ${companyName}?" — then a line break + gradient text (--primary→--secondary): "[specific transformation in 6 words or less]"
+  Subtext (color:rgba(255,255,255,0.65), font-size:18px, margin-top:16px): Reference the urgency signal (competitor context or market timing) in one sentence.
+  CTA button (margin-top:40px, background: linear-gradient(135deg, --primary, --secondary), color:#fff, border:none, border-radius:14px, height:64px, padding:0 48px, font-size:18px, font-weight:700, cursor:pointer, animation: pulse-glow 2s ease-in-out infinite, display:inline-flex, align-items:center, gap:10px): "Book a Free 30-Min Call →" — link to https://nexoflow.tech
+  Below CTA: "No commitment. We'll scope your project for free and tell you exactly what it would cost." (font-size:13px, color:rgba(255,255,255,0.4), margin-top:16px)
+  3 proof points (display:flex, gap:32px, justify-content:center, margin-top:32px, flex-wrap:wrap):
+    "⚡ Response within 24h" · "🔒 NDA on request" · "🇺🇸 US-based team"
 
-8. NO external images. Background textures via CSS gradients and SVG patterns only.
+SECTION 10 — FOOTER
+  Background: var(--bg). Border-top: 1px solid var(--border).
+  Two-column layout: left side = "NexoFlow" logo + tagline "We build software that works."; right side = links.
+  Bottom bar: "Custom demo built exclusively for ${companyName} · © 2026 NexoFlow · nexoflow.tech · hello@nexoflow.tech"
 
-CRITICAL: You MUST output the COMPLETE HTML from <!DOCTYPE html> to </html>. Do not stop early. Do not truncate. Do not summarise sections — write them all out in full.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JAVASCRIPT (at end of </body>)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<script>
+// Scroll animations
+const obs = new IntersectionObserver(
+  (entries) => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
+  { threshold: 0.12 }
+);
+document.querySelectorAll('.animate-in').forEach(el => obs.observe(el));
 
-Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown fences. No explanation.`;
+// Sticky nav scroll effect
+const nav = document.querySelector('.sticky-nav');
+window.addEventListener('scroll', () => {
+  if (nav) nav.style.borderBottomColor = window.scrollY > 20 ? 'var(--border)' : 'transparent';
+});
+</script>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COPY RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Write every headline as if you personally know ${companyName} and their specific struggles
+- Reference their EXACT industry, EXACT pain points, and EXACT customer type throughout
+- NO generic phrases: "take your business to the next level", "digital transformation", "cutting-edge solutions"
+- Every number must be credible and industry-specific (not "10× better" — use real estimates)
+- The Before/After section must list ACTUAL problems from the weaknesses data, not invented ones
+- The ROI section must use the ROI NARRATIVE data provided — do not make up unrelated numbers
+- All icons: inline SVG only, no external libraries, no <img> tags
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Return ONLY the complete HTML from <!DOCTYPE html> to </html>
+- No markdown code fences. No explanation. No preamble.
+- ALL 10 sections must be present and fully written out
+- Do NOT truncate, summarise, or skip any section
+- The HTML must be valid and render correctly in a browser with no external dependencies beyond Google Fonts`;
 }
 
 export const leadsRouter = createTRPCRouter({
@@ -329,7 +472,15 @@ export const leadsRouter = createTRPCRouter({
           const tone = profile?.toneOfVoice ?? "professional";
 
           const softwareRecommendations = profile?.softwareRecommendations ?? [];
-          const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations });
+          const demoPrompt = buildDemoPrompt({
+            companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer,
+            targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts,
+            demoAngle, recommendedFeatures, softwareRecommendations,
+            roiEstimate: profile?.roiEstimate ?? null,
+            urgencySignals: profile?.urgencySignals ?? null,
+            quickWins: profile?.quickWins ?? null,
+            competitorContext: profile?.competitorContext ?? null,
+          });
 
           const demoResponse = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
@@ -558,18 +709,23 @@ export const leadsRouter = createTRPCRouter({
 
       const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "this lead";
       const profile = lead.businessProfile;
-      const profileSummary = profile ? `
 
-Business profile (already generated):
-- Offer: ${profile.offer ?? "?"}
-- Target customer: ${profile.targetCustomer ?? "?"}
+      const profileContext = profile ? `
+BUSINESS PROFILE (from website analysis):
+- Summary: ${profile.summary ?? "?"}
+- Their offer: ${profile.offer ?? "?"}
+- Their customer: ${profile.targetCustomer ?? "?"}
 - Visible weaknesses: ${profile.visibleWeaknesses?.join("; ") ?? "?"}
-- Build opportunities: ${profile.buildOpportunities?.map((o) => o.title).join("; ") ?? "?"}` : "";
+- Build opportunities: ${profile.buildOpportunities?.map((o) => `${o.title} (${o.effort})`).join("; ") ?? "?"}
+- Estimated project value: ${profile.estimatedValue ?? "?"}
+- ROI estimate: ${profile.roiEstimate ?? "?"}
+- Urgency signals: ${profile.urgencySignals?.join("; ") ?? "?"}
+- Competitor context: ${profile.competitorContext ?? "?"}
+- Quick wins available: ${profile.quickWins?.map((w) => `${w.title} (${w.timeline})`).join("; ") ?? "?"}` : "";
 
-      const prompt = `You are a sales consultant for NexoFlow, a software development agency.
+      const prompt = `You are NexoFlow's senior sales strategist. Generate a complete, actionable sales brief that an account executive can use before their first call with this lead. Be specific, opinionated, and direct — generic advice is useless.
 
-Analyze this lead and provide actionable insights for the sales team:
-
+LEAD DATA:
 Name: ${name}
 Company: ${lead.company ?? "Unknown"}
 Title: ${lead.jobTitle ?? "Unknown"}
@@ -577,22 +733,39 @@ Industry: ${lead.industry ?? "Unknown"}
 Website: ${lead.website ?? "None"}
 Tech Stack: ${lead.techStack ?? "Unknown"}
 Pain Points: ${lead.painPoints ?? "Not captured"}
-${profileSummary}
+AI Score: ${lead.aiScore ?? "Not scored"}
+${profileContext}
 
-Respond in JSON with this exact structure:
+Return ONLY valid JSON with this exact structure:
 {
-  "summary": "2-3 sentence profile of the lead",
-  "whatWeBuild": "What NexoFlow should propose to build for them",
-  "techRecommendation": "Recommended tech stack for their project",
-  "estimatedScope": "Small (1-2 weeks) | Medium (1-2 months) | Large (3-6 months)",
-  "talkingPoints": ["3-5 bullet points for the sales call"],
-  "redFlags": ["any concerns or risks"],
-  "nextAction": "Specific recommended next step"
+  "summary": "3 sentences: who they are, what they do, and why NexoFlow is a strong fit right now. Be specific — no generic filler.",
+
+  "whatWeBuild": "Specific 2-3 sentence description of the exact thing NexoFlow proposes to build for them. Reference their industry and their actual gaps. Name the product type (booking system, client portal, AI chatbot, etc.).",
+
+  "techRecommendation": "Exact stack NexoFlow would use for this project and why it's right for their scale and needs. Use real technology names.",
+
+  "estimatedScope": "Small (1–4 weeks) | Medium (5–10 weeks) | Large (3–6 months)",
+
+  "talkingPoints": [
+    "5 highly specific talking points for the discovery call. Each must reference a real detail about their business. Format: '[Problem/opportunity observed] → [How NexoFlow addresses it] → [Expected outcome]'. Never use generic statements."
+  ],
+
+  "openingHook": "The single most compelling opening line for the first email or call — references something specific to their business that shows you've done your homework. 1-2 sentences.",
+
+  "objectionHandlers": [
+    { "objection": "Likely objection they'll raise", "response": "Exactly how to handle it — specific to their business context" }
+  ],
+
+  "redFlags": ["Genuine risks or concerns that could kill the deal — be honest. If budget mismatch, unclear decision maker, or low urgency, say so."],
+
+  "pricingAnchor": "Suggested opening price range and how to frame it. Reference the estimated value range and ROI context. Example: 'Open at $18K–$22K, anchored to the $45K/yr savings from eliminating manual scheduling.'",
+
+  "nextAction": "The single most important next step — specific and time-bound. What should happen in the next 48 hours?"
 }`;
 
       const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
         messages: [{ role: "user", content: prompt }],
       });
 
@@ -663,7 +836,15 @@ Respond in JSON with this exact structure:
       const tone = profile?.toneOfVoice ?? "professional";
 
       const softwareRecommendations = profile?.softwareRecommendations ?? [];
-      const demoPrompt = buildDemoPrompt({ companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer, targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts, demoAngle, recommendedFeatures, softwareRecommendations });
+      const demoPrompt = buildDemoPrompt({
+        companyName, name, jobTitle: lead.jobTitle, industry: lead.industry, offer,
+        targetCustomer: profile?.targetCustomer, tone, weaknesses, brandColors, brandFonts,
+        demoAngle, recommendedFeatures, softwareRecommendations,
+        roiEstimate: profile?.roiEstimate ?? null,
+        urgencySignals: profile?.urgencySignals ?? null,
+        quickWins: profile?.quickWins ?? null,
+        competitorContext: profile?.competitorContext ?? null,
+      });
 
       const demoResponse = await anthropic.messages.create({
         model: "claude-sonnet-4-6",

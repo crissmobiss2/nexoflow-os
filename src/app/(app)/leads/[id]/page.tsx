@@ -164,6 +164,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     try { insights = JSON.parse(lead.aiInsights); } catch { /* ignore */ }
   }
 
+  const bp = lead.businessProfile;
+
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
       {actionError && (
@@ -292,51 +294,66 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-4">
-          {/* AI Insights */}
+          {/* Sales Brief (AI Insights) */}
           {insights ? (
-            <div
-              className="rounded-xl p-5"
-              style={{ background: "hsl(262 83% 68% / 0.06)", border: "1px solid hsl(262 83% 68% / 0.2)" }}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4" style={{ color: "hsl(262, 83%, 68%)" }} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(262, 83%, 68%)" }}>AI Insights</h3>
+            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(262 83% 68% / 0.25)" }}>
+              <div className="flex items-center justify-between px-5 py-3" style={{ background: "hsl(262 83% 68% / 0.08)", borderBottom: "1px solid hsl(262 83% 68% / 0.15)" }}>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" style={{ color: "hsl(262, 83%, 68%)" }} />
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(262, 83%, 68%)" }}>Sales Brief</span>
+                </div>
+                <button
+                  onClick={() => generateInsights.mutate({ id: lead.id })}
+                  disabled={generateInsights.isPending}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}
+                >
+                  {generateInsights.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
+                  Refresh
+                </button>
               </div>
-              <div className="space-y-4">
+              <div className="p-5 space-y-4">
                 {!!insights.summary && (
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
-                    {String(insights.summary)}
-                  </p>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>{String(insights.summary)}</p>
                 )}
-                {!!insights.whatWeBuild && (
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>What we'd build</div>
-                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{String(insights.whatWeBuild)}</p>
+
+                {/* Opening hook — the most important field for employees */}
+                {!!insights.openingHook && (
+                  <div className="rounded-xl px-4 py-3" style={{ background: "hsl(262 83% 68% / 0.08)", border: "1px solid hsl(262 83% 68% / 0.2)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "hsl(262, 83%, 68%)" }}>Opening hook</div>
+                    <p className="text-sm italic leading-relaxed" style={{ color: "var(--text-primary)" }}>"{String(insights.openingHook)}"</p>
                   </div>
                 )}
-                {!!insights.techRecommendation && (
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Tech recommendation</div>
-                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{String(insights.techRecommendation)}</p>
-                  </div>
-                )}
-                {!!insights.estimatedScope && (
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Estimated scope</div>
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: "hsl(262 83% 68% / 0.15)", color: "hsl(262, 83%, 68%)" }}
-                    >
-                      {String(insights.estimatedScope)}
-                    </span>
-                  </div>
-                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {!!insights.whatWeBuild && (
+                    <div className="col-span-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>What we'd build</div>
+                      <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{String(insights.whatWeBuild)}</p>
+                    </div>
+                  )}
+                  {!!insights.estimatedScope && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Scope</div>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "hsl(262 83% 68% / 0.15)", color: "hsl(262, 83%, 68%)" }}>
+                        {String(insights.estimatedScope)}
+                      </span>
+                    </div>
+                  )}
+                  {!!insights.pricingAnchor && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Pricing anchor</div>
+                      <p className="text-xs font-semibold" style={{ color: "hsl(142, 80%, 45%)" }}>{String(insights.pricingAnchor)}</p>
+                    </div>
+                  )}
+                </div>
+
                 {Array.isArray(insights.talkingPoints) && (insights.talkingPoints as string[]).length > 0 && (
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Talking points</div>
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-2">
                       {(insights.talkingPoints as string[]).map((pt, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                        <li key={i} className="flex items-start gap-2 text-xs leading-relaxed rounded-lg px-3 py-2" style={{ color: "var(--text-secondary)", background: "var(--surface-elevated)" }}>
                           <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "hsl(142, 68%, 52%)" }} />
                           {pt}
                         </li>
@@ -344,12 +361,27 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                     </ul>
                   </div>
                 )}
+
+                {Array.isArray(insights.objectionHandlers) && (insights.objectionHandlers as {objection:string;response:string}[]).length > 0 && (
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Objection handlers</div>
+                    <div className="space-y-2">
+                      {(insights.objectionHandlers as {objection:string;response:string}[]).map((o, i) => (
+                        <div key={i} className="rounded-lg px-3 py-2.5" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border-subtle)" }}>
+                          <div className="text-xs font-semibold mb-1" style={{ color: "hsl(35, 90%, 60%)" }}>"{o.objection}"</div>
+                          <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{o.response}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {Array.isArray(insights.redFlags) && (insights.redFlags as string[]).length > 0 && (
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Watch out for</div>
                     <ul className="space-y-1.5">
                       {(insights.redFlags as string[]).map((f, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                        <li key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
                           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "hsl(35, 90%, 60%)" }} />
                           {f}
                         </li>
@@ -357,11 +389,9 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                     </ul>
                   </div>
                 )}
+
                 {!!insights.nextAction && (
-                  <div
-                    className="flex items-start gap-2 px-4 py-3 rounded-xl"
-                    style={{ background: "hsl(142 68% 52% / 0.08)", border: "1px solid hsl(142 68% 52% / 0.2)" }}
-                  >
+                  <div className="flex items-start gap-2 px-4 py-3 rounded-xl" style={{ background: "hsl(142 68% 52% / 0.08)", border: "1px solid hsl(142 68% 52% / 0.2)" }}>
                     <Zap className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "hsl(142, 68%, 52%)" }} />
                     <div>
                       <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(142, 68%, 52%)" }}>Next action</div>
@@ -372,14 +402,11 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
           ) : (
-            <div
-              className="rounded-xl p-5"
-              style={{ background: "hsl(262 83% 68% / 0.05)", border: "1px dashed hsl(262 83% 68% / 0.3)" }}
-            >
+            <div className="rounded-xl p-5" style={{ background: "hsl(262 83% 68% / 0.05)", border: "1px dashed hsl(262 83% 68% / 0.3)" }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4" style={{ color: "hsl(262, 83%, 68%)" }} />
-                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Generate AI Insights</span>
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Generate Sales Brief</span>
                 </div>
                 <button
                   onClick={() => generateInsights.mutate({ id: lead.id })}
@@ -392,7 +419,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 </button>
               </div>
               <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-                AI will analyze their tech stack, pain points, and scraped data to give you a sales brief, recommended solution, and talking points.
+                Generates: opening hook, talking points, objection handlers, pricing anchor, and next action.
               </p>
             </div>
           )}
@@ -494,6 +521,74 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                   <div className="rounded-lg px-3 py-2.5" style={{ background: "hsl(262 83% 68% / 0.06)", border: "1px solid hsl(262 83% 68% / 0.15)" }}>
                     <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "hsl(262, 83%, 68%)" }}>Demo angle</div>
                     <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{lead.businessProfile.demoAngle}</p>
+                  </div>
+                )}
+
+                {/* ROI Estimate */}
+                {bp?.roiEstimate && (
+                  <div className="rounded-lg px-3 py-2.5" style={{ background: "hsl(142 68% 52% / 0.06)", border: "1px solid hsl(142 68% 52% / 0.2)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "hsl(142, 68%, 52%)" }}>ROI estimate</div>
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{bp.roiEstimate}</p>
+                  </div>
+                )}
+
+                {/* Urgency signals */}
+                {(bp?.urgencySignals?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Urgency signals</div>
+                    <ul className="space-y-1">
+                      {bp!.urgencySignals!.map((s, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>
+                          <Zap className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "hsl(35, 90%, 60%)" }} />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Quick wins */}
+                {(bp?.quickWins?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Quick wins (show value fast)</div>
+                    <div className="space-y-1.5">
+                      {bp!.quickWins!.map((w, i) => (
+                        <div key={i} className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ background: "var(--surface-elevated)" }}>
+                          <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "hsl(142, 68%, 52%)" }} />
+                          <div>
+                            <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{w.title}</span>
+                            <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded-full font-medium" style={{ background: "hsl(142 68% 52% / 0.12)", color: "hsl(142, 68%, 52%)" }}>{w.timeline}</span>
+                            <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{w.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Software Recommendations */}
+                {(bp?.softwareRecommendations?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>Recommended software stack</div>
+                    <div className="space-y-1.5">
+                      {bp!.softwareRecommendations!.map((s, i) => (
+                        <div key={i} className="rounded-lg px-3 py-2.5" style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border-subtle)" }}>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{s.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "hsl(262 83% 68% / 0.12)", color: "hsl(262, 83%, 68%)" }}>{s.category}</span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>{s.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Competitor context */}
+                {bp?.competitorContext && (
+                  <div className="rounded-lg px-3 py-2.5" style={{ background: "hsl(35 90% 58% / 0.06)", border: "1px solid hsl(35 90% 58% / 0.2)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "hsl(35, 90%, 58%)" }}>Competitor context</div>
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{bp.competitorContext}</p>
                   </div>
                 )}
               </div>

@@ -2,11 +2,8 @@
  * Business profile generator.
  *
  * Takes scraped data (+ any existing lead fields) and uses Claude Sonnet to
- * produce a structured BusinessProfile: their offer, target customer, tone of
- * voice, visible weaknesses, and 3–5 concrete things NexoFlow could build.
- *
- * This is what then seeds the demo + proposal prompts so the output matches
- * the prospect's actual business and brand — not generic copy.
+ * produce a deep BusinessProfile that seeds the demo, proposal, and sales
+ * playbook for this prospect. Every field here directly improves output quality.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -29,7 +26,7 @@ interface BusinessProfileInput {
 export async function generateBusinessProfile(input: BusinessProfileInput): Promise<BusinessProfile> {
   const scrapedSummary = summarizeScraped(input.scraped, input.scrapedDataText);
 
-  const prompt = `You are NexoFlow's lead-research analyst. Synthesize a deep "Business Internal Profile" that NexoFlow's sales + delivery team will use to generate a branded demo and proposal for this prospect.
+  const prompt = `You are NexoFlow's senior research analyst and sales strategist. Produce a deep "Business Intelligence Profile" — the definitive brief that NexoFlow's sales team and AI engine will use to generate a custom demo, proposal, and sales playbook for this prospect. Every field must be specific, grounded in the data, and immediately usable.
 
 # Prospect data
 Company: ${input.company ?? "Unknown"}
@@ -38,44 +35,87 @@ Website: ${input.website ?? "Unknown"}
 Contact role: ${input.jobTitle ?? "Unknown"}
 Known pain points: ${input.painPoints ?? "None captured"}
 Known tech stack: ${input.techStack ?? "Unknown"}
-${input.industryAngle ? `NexoFlow industry angle: ${input.industryAngle}` : ""}
+${input.industryAngle ? `NexoFlow industry angle for this sector: ${input.industryAngle}` : ""}
 
 # Scraped website data
-${scrapedSummary || "No scrape data available — infer reasonably from company/industry."}
+${scrapedSummary || "No scrape data available — infer confidently from company name, industry, and typical patterns for this business type."}
 
 # Output
-Return ONLY valid JSON in this exact shape:
+Return ONLY valid JSON in this exact shape (no markdown, no explanation):
 {
-  "summary": "2-3 sentence profile of the business",
-  "offer": "what they sell, in their own words if possible",
-  "targetCustomer": "who they're trying to reach",
-  "toneOfVoice": "professional/playful/authoritative/warm/technical — pick the closest match",
-  "positioningStatement": "their differentiator in one line",
-  "brandColors": ["#hex1","#hex2","#hex3"],
-  "brandFonts": ["Font Name 1","Font Name 2"],
-  "visibleWeaknesses": ["concrete issues visible on their site or in their offer — eg 'no online booking', 'page LCP >4s', 'no mobile menu', 'pricing hidden', 'no social proof'"],
+  "summary": "2-3 sentences: what this business does, who they serve, and what stage they're at. Be specific.",
+
+  "offer": "What they sell — use their own language where possible. Be concrete.",
+
+  "targetCustomer": "Who their buyers are — job title, company size, location if relevant. One sentence.",
+
+  "toneOfVoice": "professional | playful | authoritative | warm | technical — pick the one that best matches their site and industry.",
+
+  "positioningStatement": "Their stated or implied differentiator in one sharp line.",
+
+  "brandColors": ["#hex1", "#hex2", "#hex3"],
+
+  "brandFonts": ["Font Name 1", "Font Name 2"],
+
+  "visibleWeaknesses": [
+    "Concrete, specific issues visible on their site or in how they operate. Reference actual evidence. Examples: 'No online booking — calls only forces manual scheduling', 'Homepage takes >4s to load on mobile', 'No pricing page — likely losing comparison shoppers', 'Zero customer reviews or social proof anywhere on site', 'Contact form only — no live chat or immediate response mechanism'. Do NOT invent if no evidence."
+  ],
+
   "buildOpportunities": [
-    { "title": "Short opportunity name", "description": "What NexoFlow would build and why it solves a real problem they have", "effort": "Small | Medium | Large" }
+    {
+      "title": "Short, punchy opportunity name (e.g. 'Online Booking System', 'Client Portal', 'AI Follow-up Engine')",
+      "description": "2 sentences: exactly what NexoFlow would build, why it solves a real and specific problem this company has, and what measurable outcome it delivers.",
+      "effort": "Small | Medium | Large"
+    }
   ],
-  "industryFit": "one of: hvac, dental, law, restaurant, ecommerce, saas, agency, real_estate, healthcare, fitness, education, finance, other",
-  "demoAngle": "one paragraph: how the demo should feel and what to lead with",
-  "recommendedFeatures": ["specific features to include in the demo"],
+
   "softwareRecommendations": [
-    { "name": "Tool Name", "category": "Category (CRM|Payments|Analytics|Automation|Marketing|Scheduling|Communication|Security|HR|Finance)", "reason": "1-2 sentences: WHY this specific tool for THIS specific company — reference their industry/size/use-case", "url": "https://tool.com" }
+    {
+      "name": "Exact product name (e.g. HubSpot, Stripe, Calendly)",
+      "category": "CRM | Payments | Analytics | Automation | Marketing | Scheduling | Communication | Security | HR | Finance | Booking | Reviews",
+      "reason": "1-2 sentences: WHY this tool for THIS company specifically. Reference their industry, their customer type, or their visible gaps. Do not write generic descriptions.",
+      "url": "https://exact-product-url.com"
+    }
   ],
-  "estimatedValue": "rough project value range eg '$10k–$25k'"
+
+  "roiEstimate": "A specific, credible narrative of the financial return on investment this company would see from working with NexoFlow. Example: 'An online booking system for this dental practice would eliminate ~15 hrs/week of phone scheduling (worth ~$18K/yr at a receptionist wage), while reducing no-shows by 30% through automated reminders — adding back roughly $45K in annual revenue. Total project ROI in Year 1: ~3.5×.' Be specific to their industry and size.",
+
+  "urgencySignals": [
+    "Specific, credible reasons WHY they should act now rather than later. Examples: 'Competitors in their zip code already have online booking', 'Their site hasn't been updated in 3+ years based on copyright footer', 'Google reviews mention long wait times / hard to reach — a known conversion killer', 'Their industry is seeing rapid digital adoption — laggards lose 20-30% market share in 2 years'. Ground in evidence where possible."
+  ],
+
+  "quickWins": [
+    {
+      "title": "Fast win NexoFlow can deliver (e.g. 'Google Review Automation', 'Mobile-First Redesign', 'Live Chat Integration')",
+      "description": "What we do and the immediate visible impact on their business.",
+      "timeline": "1 week | 2 weeks | 1 month"
+    }
+  ],
+
+  "competitorContext": "1-2 sentences on what their direct competitors are doing digitally that this company is not. This is the FOMO angle for the sales call.",
+
+  "industryFit": "hvac | dental | law | restaurant | ecommerce | saas | agency | real_estate | healthcare | fitness | education | finance | other",
+
+  "demoAngle": "One paragraph describing how the demo should feel and what to lead with. What emotion should the prospect feel when they see it? What specific transformation should the hero headline promise? What's the #1 thing the demo must communicate to make them say 'I need this'?",
+
+  "recommendedFeatures": [
+    "Specific custom-built features to showcase in the demo — name them concretely (e.g. 'Automated appointment reminder SMS flow', 'Client-facing project dashboard with live status', 'AI-powered quote generator'). Not generic ('contact form', 'about page')."
+  ],
+
+  "estimatedValue": "Specific project investment range using NexoFlow's pricing framework. Examples: '$12K–$18K', '$35K–$55K'. Base it on the scope implied by their build opportunities."
 }
 
-Important:
-- Use the brand colors from the scrape data if available. If only 1-2 are present, derive a complementary palette. If none, suggest tasteful colors that match their industry and tone.
-- visibleWeaknesses must be concrete and grounded in the scrape data when possible. Don't invent.
-- buildOpportunities should be 3-5 items that NexoFlow can realistically deliver and that match the company's stage.
-- softwareRecommendations: provide 4-6 best-in-class tools for this specific business. These are NOT custom builds — these are commercial SaaS tools NexoFlow recommends and can integrate. Examples by industry: dental (Dentrix, Kareo, SimplePractice), law (Clio, LawPay, MyCase), restaurant (Toast, OpenTable, 7shifts), ecommerce (Shopify, Klaviyo, Gorgias), saas (Stripe, Intercom, Mixpanel, Segment), hvac (ServiceTitan, Jobber), fitness (Mindbody, Acuity). Always include at least one analytics tool and one communication tool.
-- Be specific. Generic answers ("modern responsive website") are useless. Lean into industry signals.`;
+RULES:
+- Every field must be specific. Generic answers like "modern website" or "improve user experience" are REJECTED.
+- softwareRecommendations: 5-7 tools. Industry examples: dental→(Dentrix, SimplePractice, NexHealth, Birdeye, Google Ads); law→(Clio, MyCase, LawPay, Calendly, Birdeye); restaurant→(Toast, OpenTable, 7shifts, Mailchimp, Google Ads); ecommerce→(Shopify, Klaviyo, Gorgias, Recharge, Triple Whale); saas→(Stripe, Intercom, Mixpanel, Segment, LaunchDarkly); hvac→(ServiceTitan, Jobber, Google Local Services Ads, Podium, Mailchimp); fitness→(Mindbody, Acuity, Mailchimp, Instagram Ads, Google Analytics). Always include at least one analytics tool and one customer communication tool.
+- quickWins: 3 items, each deliverable in ≤1 month, with visible impact the client can see immediately.
+- urgencySignals: 2-4 items. At least one must reference market/competitive pressure, one must reference an observable gap from their site data.
+- buildOpportunities: 3-5 items ordered by business impact (highest first). The first one is what the demo and proposal should lead with.
+- Be specific. Infer confidently. A good analyst doesn't say "unknown" — they reason from available signals.`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2048,
+    max_tokens: 3000,
     messages: [{ role: "user", content: prompt }],
   });
 
