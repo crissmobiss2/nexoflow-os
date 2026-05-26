@@ -38,7 +38,7 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
   const tasks = projectIds.length > 0
     ? await db.select().from(sprintTasks)
         .where(eq(sprintTasks.projectId, projectIds[0]!))
-        .orderBy(asc(sprintTasks.orderVal))
+        .orderBy(asc(sprintTasks.createdAt))
         .limit(30)
     : [];
 

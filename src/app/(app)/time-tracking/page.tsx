@@ -20,7 +20,7 @@ export default function TimeTrackingPage() {
   const { data: entries = [], refetch } = api.timeTracking.list.useQuery();
   const { data: stats } = api.timeTracking.stats.useQuery();
   const { data: byProject = [] } = api.timeTracking.byProject.useQuery();
-  const { data: projects = [] } = api.projects.list.useQuery({});
+  const { data: projects = [] } = api.projects.list.useQuery();
 
   const createMutation = api.timeTracking.create.useMutation({
     onSuccess: () => { void refetch(); setShowForm(false); setForm({ projectId: "", date: new Date().toISOString().slice(0, 10), hours: "1", minutes: "0", description: "", billable: true }); },

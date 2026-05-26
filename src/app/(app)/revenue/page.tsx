@@ -103,7 +103,7 @@ export default function RevenuePage() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 20%)" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(220 20% 55%)" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(220 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} contentStyle={{ background: "hsl(220 20% 10%)", border: "1px solid hsl(220 20% 20%)", borderRadius: 8 }} />
+              <Tooltip formatter={(v) => [`$${Number(v ?? 0).toLocaleString()}`, ""]} contentStyle={{ background: "hsl(220 20% 10%)", border: "1px solid hsl(220 20% 20%)", borderRadius: 8 }} />
               <Area type="monotone" dataKey="paid" stroke="hsl(142,68%,52%)" fill="url(#paid)" strokeWidth={2} name="Paid" />
               <Area type="monotone" dataKey="outstanding" stroke="hsl(35,90%,58%)" fill="url(#out)" strokeWidth={2} name="Outstanding" />
             </AreaChart>
@@ -120,7 +120,7 @@ export default function RevenuePage() {
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} contentStyle={{ background: "hsl(220 20% 10%)", border: "1px solid hsl(220 20% 20%)", borderRadius: 8 }} />
+                <Tooltip formatter={(v) => [`$${Number(v ?? 0).toLocaleString()}`, ""]} contentStyle={{ background: "hsl(220 20% 10%)", border: "1px solid hsl(220 20% 20%)", borderRadius: 8 }} />
                 <Legend formatter={(value) => <span style={{ color: "hsl(220 20% 70%)", fontSize: 12 }}>{value}</span>} />
               </PieChart>
             </ResponsiveContainer>

@@ -22,7 +22,7 @@ export default function OnboardingPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
-  const { data: clients = [], isLoading: clientsLoading } = api.clients.list.useQuery({});
+  const { data: clients = [], isLoading: clientsLoading } = api.clients.list.useQuery();
   const { data: summary = {} } = api.onboarding.summary.useQuery();
 
   const clientList = (clients as any[]);

@@ -56,7 +56,7 @@ export const wikiRouter = createTRPCRouter({
         .values({
           ...input,
           slug: slugify(input.title),
-          authorId: ctx.session.user.id,
+          authorId: ctx.session!.user.id,
         })
         .returning();
       return page;
