@@ -49,29 +49,52 @@ export default function AffiliateJoinPage() {
   if (step === "success") {
     return (
       <div style={styles.page}>
-        <div style={{ ...styles.card, maxWidth: 540, textAlign: "center" }}>
+        <div style={{ ...styles.card, maxWidth: 560, textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 20 }}>🎉</div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#e2e8f0", marginBottom: 10 }}>Application received!</h1>
           <p style={{ color: "#666", fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
-            We review applications within 1–2 business days. Once approved, you'll get access
+            We review applications within <strong style={{ color: "#a78bfa" }}>24 hours</strong>. Once approved, you'll get access
             to your personal affiliate portal with your unique referral link and live commission tracking.
           </p>
 
-          <div style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 10, padding: "16px 20px", marginBottom: 28, textAlign: "left" }}>
-            <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Commission structure</div>
+          {/* Commission structure */}
+          <div style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 12, padding: "20px 24px", marginBottom: 16, textAlign: "left" }}>
+            <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Commission Structure</div>
             {[
-              { tier: "Base", rate: "10%", deals: "0–4 deals / year" },
-              { tier: "Silver", rate: "12%", deals: "5–19 deals / year" },
-              { tier: "Gold", rate: "15%", deals: "20+ deals / year" },
+              { tier: "Standard", rate: "10%", desc: "$10,000 – $20,000 projects", color: "#60a5fa" },
+              { tier: "Elite", rate: "20%", desc: "$20,000+ projects", color: "#a78bfa" },
             ].map((t) => (
-              <div key={t.tier} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #111" }}>
-                <span style={{ fontSize: 13, color: "#888" }}>{t.tier} — {t.deals}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>{t.rate}</span>
+              <div key={t.tier} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #111" }}>
+                <div>
+                  <span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{t.tier}</span>
+                  <span style={{ fontSize: 12, color: "#555", marginLeft: 10 }}>{t.desc}</span>
+                </div>
+                <span style={{ fontSize: 15, fontWeight: 700, color: t.color }}>{t.rate}</span>
               </div>
             ))}
-            <div style={{ marginTop: 10, fontSize: 12, color: "#444" }}>
-              Commissions are calculated on confirmed project value and paid within 30 days of project start.
+            <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.6 }}>
+              Commissions paid monthly on the <strong style={{ color: "#666" }}>15th</strong> via PayPal or bank transfer.
+              Minimum payout <strong style={{ color: "#666" }}>$50</strong>. 90-day attribution cookie.
             </div>
+          </div>
+
+          {/* Bonus programs teaser */}
+          <div style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 12, padding: "16px 20px", marginBottom: 24, textAlign: "left" }}>
+            <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Bonus Programs</div>
+            {[
+              { icon: "🔄", label: "Recurring Commissions", desc: "5-10% on retainer for 12 months" },
+              { icon: "⚡", label: "Tier Escalation", desc: "3+ clients in 6 months → permanent 20%" },
+              { icon: "👥", label: "Affiliate Referral Bonus", desc: "$500–$1,000 per affiliate you refer" },
+              { icon: "🏆", label: "Top Performer Bonus", desc: "$1,500 completion bonus for high volume" },
+            ].map((b) => (
+              <div key={b.label} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{b.icon}</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>{b.label}</div>
+                  <div style={{ fontSize: 11, color: "#555" }}>{b.desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <p style={{ fontSize: 12, color: "#444" }}>
@@ -91,7 +114,7 @@ export default function AffiliateJoinPage() {
             NexoFlow Affiliate Program
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: "#e2e8f0", marginBottom: 10, lineHeight: 1.2 }}>
-            Earn 10–15% on every<br />project you refer
+            Earn 10–20% on every<br />project you refer
           </h1>
           <p style={{ color: "#555", fontSize: 14, lineHeight: 1.7 }}>
             Refer businesses that need custom software, AI tools, or automation
@@ -99,16 +122,32 @@ export default function AffiliateJoinPage() {
           </p>
         </div>
 
-        {/* Commission tiers at a glance */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
+        {/* Key stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 24 }}>
           {[
-            { tier: "Base", pct: "10%", color: "#60a5fa" },
-            { tier: "Silver", pct: "12%", color: "#94a3b8" },
-            { tier: "Gold", pct: "15%", color: "#f59e0b" },
+            { value: "$7,900+", label: "avg per referral" },
+            { value: "90 days", label: "cookie window" },
+            { value: "24 hrs", label: "approval time" },
+            { value: "$50 min", label: "payout threshold" },
+          ].map((s) => (
+            <div key={s.label} style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 10, padding: "10px 6px", textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Commission tiers */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 28 }}>
+          {[
+            { tier: "Standard", pct: "10%", range: "$10k – $20k", color: "#60a5fa", desc: "Perfect starting point" },
+            { tier: "Elite", pct: "20%", range: "$20k+ projects", color: "#a78bfa", desc: "Double your earnings" },
           ].map((t) => (
-            <div key={t.tier} style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 10, padding: "12px 0", textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: t.color }}>{t.pct}</div>
-              <div style={{ fontSize: 11, color: "#555", marginTop: 3 }}>{t.tier}</div>
+            <div key={t.tier} style={{ background: "#0a0a0f", border: "1px solid #1e1e2e", borderRadius: 10, padding: "14px 16px" }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.color }}>{t.pct}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", marginTop: 2 }}>{t.tier}</div>
+              <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{t.range}</div>
+              <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{t.desc}</div>
             </div>
           ))}
         </div>

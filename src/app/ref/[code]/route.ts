@@ -2,7 +2,7 @@
  * GET /ref/[code]
  *
  * Affiliate referral redirect. Records a click server-side with no client JS,
- * sets a 30-day attribution cookie, then redirects to nexoflow.tech.
+ * sets a 90-day attribution cookie, then redirects to nexoflow.tech.
  *
  * Supports UTM passthrough: /ref/abc123?utm_source=twitter&utm_campaign=launch
  * Supports custom destination: /ref/abc123?to=https://nexoflow.tech/services
@@ -16,7 +16,7 @@ import { and, eq } from "drizzle-orm";
 
 const DESTINATION = "https://nexoflow.tech";
 const COOKIE_NAME = "nf_ref";
-const COOKIE_DAYS = 30;
+const COOKIE_DAYS = 90;
 
 export async function GET(
   req: NextRequest,
@@ -54,7 +54,7 @@ export async function GET(
     country: country?.slice(0, 2) ?? null,
   });
 
-  // Set 30-day first-touch attribution cookie (don't overwrite existing)
+  // Set 90-day first-touch attribution cookie (don't overwrite existing)
   const existingCookie = req.cookies.get(COOKIE_NAME);
   const res = NextResponse.redirect(redirectTo);
 

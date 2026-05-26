@@ -11,9 +11,9 @@ import {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const TIER_CONFIG = {
-  base:   { label: "Base 10%",   color: "hsl(220, 90%, 62%)",  bg: "hsl(220, 90%, 62%, 0.12)",  icon: Zap },
-  silver: { label: "Silver 12%", color: "hsl(220, 14%, 65%)",  bg: "hsl(220, 14%, 65%, 0.12)",  icon: Star },
-  gold:   { label: "Gold 15%",   color: "hsl(40, 90%, 58%)",   bg: "hsl(40, 90%, 58%, 0.12)",   icon: Award },
+  base:   { label: "Standard",  color: "hsl(220, 90%, 62%)",  bg: "hsl(220, 90%, 62%, 0.12)",  icon: Zap },
+  silver: { label: "Standard",  color: "hsl(220, 90%, 62%)",  bg: "hsl(220, 90%, 62%, 0.12)",  icon: Zap },
+  gold:   { label: "Elite 20%", color: "hsl(262, 83%, 68%)",  bg: "hsl(262, 83%, 68%, 0.12)",  icon: Award },
 };
 
 const STATUS_CONFIG = {
@@ -72,8 +72,7 @@ function LogConversionModal({ affiliate, onClose, onSuccess }: {
   });
 
   const valueCents = Math.round(parseFloat(value || "0") * 100);
-  const tier = affiliate.tier;
-  const pct = tier === "gold" ? 15 : tier === "silver" ? 12 : 10;
+  const pct = affiliate.tier === "gold" ? 20 : valueCents >= 2_000_000 ? 20 : 10;
   const commissionPreview = Math.round(valueCents * (pct / 100));
 
   function submit(e: React.FormEvent) {
@@ -89,7 +88,7 @@ function LogConversionModal({ affiliate, onClose, onSuccess }: {
       <div style={modalStyle}>
         <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Log Conversion</h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
-          Record a deal closed for <strong>{affiliate.name}</strong>. Commission is auto-calculated at {pct}%.
+          Record a deal closed for <strong>{affiliate.name}</strong>. Commission auto-calculated: 10% (&lt;$20k) or 20% ($20k+){affiliate.tier === "gold" ? " — Elite tier (flat 20%)" : ""}.
         </p>
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -269,7 +268,7 @@ function AffiliateDetail({ affiliate, refetchAll }: { affiliate: AffiliateRow; r
       <div style={{ padding: "16px 20px" }}>
         {pipeline.length === 0 ? (
           <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>
-            No leads attributed yet. Share <code style={{ fontSize: 12, color: "var(--text-secondary)" }}>nexoflow.tech/?ref={affiliate.referralCode}</code>
+            No leads attributed yet. Share <code style={{ fontSize: 12, color: "var(--text-secondary)" }}>nexoflow.tech/ref/{affiliate.referralCode}</code>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -389,7 +388,7 @@ export default function AffiliatesPage() {
   const affiliates = affiliateList as AffiliateRow[];
 
   function copyLink(code: string) {
-    void navigator.clipboard.writeText(`https://nexoflow.tech/?ref=${code}`);
+    void navigator.clipboard.writeText(`https://nexoflow.tech/ref/${code}`);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
   }
@@ -598,9 +597,8 @@ export default function AffiliatesPage() {
                           className="text-[11px] px-2 py-1.5 rounded-lg font-semibold"
                           style={{ background: "var(--surface-elevated)", color: "var(--text-secondary)", border: "1px solid var(--surface-border)" }}
                         >
-                          <option value="base">Base 10%</option>
-                          <option value="silver">Silver 12%</option>
-                          <option value="gold">Gold 15%</option>
+                          <option value="base">Standard (10–20%)</option>
+                          <option value="gold">Elite (20% flat)</option>
                         </select>
                         <button
                           onClick={() => setConversionModal(aff)}

@@ -12,8 +12,15 @@ function date(d: Date | string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
-function commissionPct(tier: string) {
-  return tier === "gold" ? 15 : tier === "silver" ? 12 : 10;
+
+// Elite (gold) = flat 20%; Standard = 10% on <$20k, 20% on $20k+
+function commissionPct(tier: string, projectValueCents = 0): number {
+  if (tier === "gold") return 20;
+  return projectValueCents >= 2_000_000 ? 20 : 10;
+}
+
+function tierLabel(tier: string) {
+  return tier === "gold" ? "Elite" : "Standard";
 }
 
 // ─── Journey Stage Config ─────────────────────────────────────────────────────
@@ -129,13 +136,10 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
     totalEarnedCents: affiliate.totalEarningsCents,
   };
 
-  const pct = commissionPct(affiliate.tier);
-  const tierTarget = affiliate.tier === "gold" ? null : affiliate.tier === "silver" ? 20 : 5;
-  const wonCount = summary.dealsWon;
-  const referralLink = `https://nexoflow.tech/?ref=${affiliate.referralCode}`;
-
-  const TIER_COLOR: Record<string, string> = { base: "#60a5fa", silver: "#94a3b8", gold: "#f59e0b" };
-  const tierColor = TIER_COLOR[affiliate.tier] ?? "#60a5fa";
+  const label = tierLabel(affiliate.tier);
+  const tierColor = affiliate.tier === "gold" ? "#a78bfa" : "#60a5fa";
+  const referralLink = `https://nexoflow.tech/ref/${affiliate.referralCode}`;
+  const qualifierLink = `https://nexoflow.tech/qualifier?ref=${affiliate.referralCode}`;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#e2e8f0", fontFamily: "Inter, system-ui, sans-serif", fontSize: 14 }}>
@@ -153,24 +157,56 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, background: `${tierColor}1a`, color: tierColor, border: `1px solid ${tierColor}33`, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            {affiliate.tier} · {pct}% commission
+            {label} tier
           </span>
         </div>
       </div>
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
 
-        {/* Referral Link */}
+        {/* Referral Links */}
         <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "20px 24px", marginBottom: 28 }}>
-          <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Your Referral Link</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <code style={{ flex: 1, fontSize: 13, color: "#a78bfa", background: "#0a0a0f", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e1e2e", wordBreak: "break-all" }}>
-              {referralLink}
-            </code>
+          <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Your Referral Links</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>Main referral link</div>
+              <code style={{ display: "block", fontSize: 13, color: "#a78bfa", background: "#0a0a0f", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e1e2e", wordBreak: "break-all" }}>
+                {referralLink}
+              </code>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>Lead qualifier (pre-qualify leads before you refer)</div>
+              <code style={{ display: "block", fontSize: 13, color: "#7dd3fc", background: "#0a0a0f", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e1e2e", wordBreak: "break-all" }}>
+                {qualifierLink}
+              </code>
+            </div>
           </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: "#444" }}>
-            Share this link. Anyone who visits nexoflow.tech through it is attributed to you for 30 days.
+          <div style={{ marginTop: 12, fontSize: 12, color: "#444" }}>
+            Anyone who visits nexoflow.tech through your link is attributed to you for <strong style={{ color: "#666" }}>90 days</strong>.
+            Payouts processed on the <strong style={{ color: "#666" }}>15th of each month</strong> ($50 minimum).
           </div>
+        </div>
+
+        {/* Commission rates */}
+        <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "20px 24px", marginBottom: 28 }}>
+          <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Your Commission Rates</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ background: "#0a0a0f", borderRadius: 10, padding: "14px 16px", border: affiliate.tier !== "gold" ? "1px solid #60a5fa33" : "1px solid #1e1e2e" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#60a5fa" }}>10%</div>
+              <div style={{ fontSize: 13, color: "#e2e8f0", marginTop: 2 }}>Standard rate</div>
+              <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>$10k – $20k projects</div>
+            </div>
+            <div style={{ background: "#0a0a0f", borderRadius: 10, padding: "14px 16px", border: "1px solid #a78bfa33" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#a78bfa" }}>20%</div>
+              <div style={{ fontSize: 13, color: "#e2e8f0", marginTop: 2 }}>{affiliate.tier === "gold" ? "Elite rate (your tier)" : "Elite rate"}</div>
+              <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{affiliate.tier === "gold" ? "All projects — permanent" : "$20k+ projects"}</div>
+            </div>
+          </div>
+          {affiliate.tier !== "gold" && (
+            <div style={{ marginTop: 12, fontSize: 12, color: "#555", lineHeight: 1.6 }}>
+              Refer <strong style={{ color: "#e2e8f0" }}>3+ clients within 6 months</strong> to unlock the Elite tier and earn 20% permanently on all projects.
+            </div>
+          )}
         </div>
 
         {/* Pipeline Progress Bar */}
@@ -178,11 +214,11 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
           <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16 }}>Your Pipeline</div>
           <div style={{ display: "flex", gap: 0 }}>
             {[
-              { label: "Clicks",        value: summary.clicks,       color: "#60a5fa" },
-              { label: "Leads",         value: summary.leads,        color: "#818cf8" },
-              { label: "Calls Booked",  value: summary.callsBooked,  color: "#a78bfa" },
+              { label: "Clicks",        value: summary.clicks,         color: "#60a5fa" },
+              { label: "Leads",         value: summary.leads,          color: "#818cf8" },
+              { label: "Calls Booked",  value: summary.callsBooked,    color: "#a78bfa" },
               { label: "Calls Done",    value: summary.callsCompleted, color: "#c084fc" },
-              { label: "Deals Won",     value: summary.dealsWon,     color: "#22c55e" },
+              { label: "Deals Won",     value: summary.dealsWon,       color: "#22c55e" },
             ].map((step, i, arr) => (
               <div key={step.label} style={{ flex: 1, textAlign: "center", position: "relative" }}>
                 {i < arr.length - 1 && (
@@ -205,7 +241,7 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
           {[
             { label: "Pending Commissions", value: money(summary.pendingCents), color: "#f59e0b", sub: "awaiting payout" },
             { label: "Total Paid Out",      value: money(summary.paidCents),    color: "#22c55e", sub: "paid to date" },
-            { label: "Total Earned",        value: money(summary.totalEarnedCents), color: tierColor, sub: `${pct}% per deal` },
+            { label: "Total Earned",        value: money(summary.totalEarnedCents), color: tierColor, sub: "lifetime earnings" },
           ].map((s) => (
             <div key={s.label} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "18px 20px" }}>
               <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{s.label}</div>
@@ -215,20 +251,24 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
           ))}
         </div>
 
-        {/* Tier Progress */}
-        {tierTarget && (
-          <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "18px 24px", marginBottom: 28 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>Tier Progress</div>
-              <div style={{ fontSize: 12, color: "#555" }}>
-                {wonCount} / {tierTarget} deals to {affiliate.tier === "base" ? "Silver (12%)" : "Gold (15%)"}
+        {/* Bonus Programs */}
+        <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "20px 24px", marginBottom: 28 }}>
+          <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Bonus Programs</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+            {[
+              { icon: "🔄", title: "Recurring Commissions", desc: "Earn 5–10% on retainer & maintenance contracts for 12 full months — passive income after the initial deal." },
+              { icon: "⚡", title: "Tier Escalation Bonus", desc: "Refer 3+ clients within 6 months → permanent 20% rate unlocked on all future projects." },
+              { icon: "👥", title: "Affiliate Referral Bonus", desc: "Refer another affiliate who closes their first sale → earn $500–$1,000 bonus." },
+              { icon: "🏆", title: "Top Performer Bonus", desc: "High-volume affiliates earn an extra $1,000 bonus or luxury experience — ask your manager for details." },
+            ].map((b) => (
+              <div key={b.title} style={{ background: "#0a0a0f", borderRadius: 10, padding: "14px 16px", border: "1px solid #1e1e2e" }}>
+                <div style={{ fontSize: 20, marginBottom: 8 }}>{b.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{b.title}</div>
+                <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{b.desc}</div>
               </div>
-            </div>
-            <div style={{ height: 6, background: "#1e1e2e", borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 3, background: tierColor, width: `${Math.min(100, (wonCount / tierTarget) * 100)}%`, transition: "width 0.3s ease" }} />
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Lead Pipeline Table */}
         <div style={{ marginBottom: 28 }}>
@@ -244,6 +284,7 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
                 const stage = getStage(item);
                 const stageCfg = STAGE_CONFIG[stage];
                 const name = [item.lead.firstName, item.lead.lastName].filter(Boolean).join(" ") || item.lead.company || item.lead.email || "Unknown";
+                const itemPct = commissionPct(affiliate.tier, item.lead.wonValueCents ?? 0);
 
                 return (
                   <div key={item.lead.id} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 14, padding: "16px 20px" }}>
@@ -302,7 +343,7 @@ export default async function AffiliatePortalPage({ params }: { params: Promise<
                             </div>
                           </>
                         ) : item.lead.status === "won" ? (
-                          <div style={{ fontSize: 12, color: "#f59e0b" }}>Pending logging</div>
+                          <div style={{ fontSize: 12, color: "#f59e0b" }}>Pending logging<br /><span style={{ color: "#555", fontSize: 11 }}>est. {itemPct}%</span></div>
                         ) : (
                           <div style={{ fontSize: 12, color: "#333" }}>—</div>
                         )}

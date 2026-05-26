@@ -16,10 +16,10 @@ function generateCode(name: string): string {
   return `${slug}${rand}`;
 }
 
-function commissionPct(tier: string): number {
-  if (tier === "gold") return 15;
-  if (tier === "silver") return 12;
-  return 10;
+// Elite (gold) = permanent 20% flat; Standard = 10% on <$20k, 20% on $20k+
+function commissionPct(tier: string, projectValueCents = 0): number {
+  if (tier === "gold") return 20;
+  return projectValueCents >= 2_000_000 ? 20 : 10;
 }
 
 export const affiliatesRouter = createTRPCRouter({
@@ -270,7 +270,7 @@ export const affiliatesRouter = createTRPCRouter({
       const { id, ...data } = input;
       // Auto-update commission rate when tier changes
       const extra: Record<string, number> = {};
-      if (data.tier) extra.commissionRate = commissionPct(data.tier);
+      if (data.tier) extra.commissionRate = commissionPct(data.tier, 0);
       const [updated] = await ctx.db
         .update(affiliates)
         .set({ ...data, ...extra, updatedAt: new Date() })
@@ -295,7 +295,7 @@ export const affiliatesRouter = createTRPCRouter({
       });
       if (!affiliate) throw new Error("Affiliate not found");
 
-      const pct = commissionPct(affiliate.tier);
+      const pct = commissionPct(affiliate.tier, input.projectValueCents);
       const commissionCents = Math.round(input.projectValueCents * (pct / 100));
 
       // Upsert the referral record
