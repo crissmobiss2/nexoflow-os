@@ -55,44 +55,67 @@ body {
 
 /* ─── Mobile responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* Prevent horizontal overflow on all pages */
-  body { overflow-x: hidden; }
+  /* Hard stop on ALL horizontal overflow */
+  html, body { overflow-x: hidden; max-width: 100vw; }
 
-  /* Tighten page padding on small screens */
-  .p-8 { padding: 1rem !important; }
-  .p-6 { padding: 0.875rem !important; }
-  .max-w-7xl, .max-w-6xl, .max-w-5xl { max-width: 100% !important; }
+  /* ── Page container padding ── */
+  .p-8  { padding: 1rem !important; }
+  .p-7  { padding: 0.875rem !important; }
+  .p-6  { padding: 0.875rem !important; }
+  .p-5  { padding: 0.75rem !important; }
+  .px-8, .px-7, .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-8, .py-7         { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
 
-  /* Stack grid columns on mobile */
-  .grid-cols-2, .grid-cols-3, .grid-cols-4,
-  .md\:grid-cols-3, .lg\:grid-cols-6 {
-    grid-template-columns: 1fr 1fr !important;
+  /* ── Max widths ── */
+  .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl, .max-w-3xl { max-width: 100% !important; }
+
+  /* ── Grid columns — force 2-col max for 3+ col grids ── */
+  .grid-cols-3  { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-cols-4  { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-cols-5  { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-cols-6  { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-cols-12 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* Force form grids to single column */
+  .grid.grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+
+  /* col-span overrides (cards that span multiple cols in a now-stacked grid) */
+  .col-span-2, .col-span-3, .col-span-4 { grid-column: span 1 !important; }
+
+  /* ── Charts — ensure the charts grid stacks vertically ── */
+  .grid.grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+
+  /* ── Gap tightening ── */
+  .gap-6 { gap: 0.875rem !important; }
+  .gap-8 { gap: 1rem !important; }
+
+  /* ── Text sizes ── */
+  .text-3xl { font-size: 1.5rem !important; }
+  .text-2xl { font-size: 1.25rem !important; }
+  .text-xl  { font-size: 1.1rem !important; }
+
+  /* ── Tables — always horizontally scrollable ── */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
   }
 
-  /* Full-width single column for very small grids */
-  .grid-cols-3 > * { min-width: 0; }
+  /* ── Touch targets ── */
+  button, a[href], [role="button"] { min-height: 40px; }
 
-  /* Charts full width */
-  .col-span-2 { grid-column: span 1 !important; }
+  /* ── Flex layouts that shouldn't overflow ── */
+  .flex.items-center.justify-between { flex-wrap: wrap; gap: 0.5rem; }
 
-  /* Revenue chart — stack vertically */
-  .grid.grid-cols-3 { grid-template-columns: 1fr !important; }
-
-  /* Text size adjustments */
-  .text-xl { font-size: 1.1rem !important; }
-  .text-2xl { font-size: 1.25rem !important; }
-  h1.text-xl { font-size: 1.1rem !important; }
-
-  /* Tables — horizontal scroll */
-  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-  /* Card padding */
+  /* ── Card padding ── */
   .rounded-2xl.p-6 { padding: 0.875rem !important; }
   .rounded-2xl.p-8 { padding: 1rem !important; }
+  .rounded-xl.p-6  { padding: 0.875rem !important; }
+  .rounded-xl.p-8  { padding: 1rem !important; }
 
-  /* Fix form grids */
-  .grid.grid-cols-2 { grid-template-columns: 1fr !important; }
-  .col-span-2 { grid-column: span 1 !important; }
+  /* ── Space-y tightening ── */
+  .space-y-8 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; margin-top: calc(1.5rem * (1 - var(--tw-space-y-reverse))); margin-bottom: calc(1.5rem * var(--tw-space-y-reverse)); }
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */

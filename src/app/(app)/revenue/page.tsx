@@ -61,7 +61,7 @@ export default function RevenuePage() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
       <div>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-1.5 h-5 rounded-full" style={{ background: "var(--brand-gradient)" }} />
@@ -85,8 +85,8 @@ export default function RevenuePage() {
       </div>
 
       {/* Revenue trend + pie */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 rounded-2xl p-6" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div className="md:col-span-2 rounded-2xl p-4 md:p-6" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Monthly Revenue (last 6 months)</div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={monthlyData}>
@@ -177,7 +177,7 @@ export default function RevenuePage() {
       {(affiliateStats?.totalEarningsCents ?? 0) > 0 && (
         <div className="rounded-2xl p-6" style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Affiliate Program Performance</div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Total Affiliates", value: String(affiliateStats!.total) },
               { label: "Active Partners", value: String(affiliateStats!.approved) },

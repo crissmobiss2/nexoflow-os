@@ -218,7 +218,8 @@ export default function BoardPage() {
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-7 gap-3 min-h-[65vh]">
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="grid grid-cols-7 gap-3 min-h-[65vh] min-w-[700px]">
           {STATUS_LANES.map((lane) => {
             const projectsInLane = laneProjects(lane.key);
             return (
@@ -350,6 +351,7 @@ export default function BoardPage() {
               </Droppable>
             );
           })}
+        </div>
         </div>
       </DragDropContext>
     </div>

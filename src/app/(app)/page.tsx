@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-8">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Clients",            value: totalClients,                     icon: Users,       href: "/clients",   color: "hsl(220, 90%, 62%)" },
           { label: "Projects",           value: totalProjects,                    icon: FolderKanban,href: "/projects",  color: "hsl(262, 83%, 68%)" },
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
             </div>
             <Link href="/leads" className="text-xs hover:underline" style={{ color: "var(--brand-primary)" }}>View all →</Link>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
             {[
               { label: "Total Leads", value: leadStats.total, color: "hsl(220, 90%, 62%)", href: "/leads" },
               { label: "🔥 Hot Leads", value: leadStats.hot, color: "hsl(35, 90%, 60%)", href: "/leads" },
@@ -137,7 +137,7 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>AI Studio</h2>
           <Link href="/ai" className="text-xs hover:underline" style={{ color: "var(--brand-primary)" }}>Open Studio →</Link>
         </div>
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {AI_MODES.map((mode) => {
             const Icon = mode.icon;
             return (
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
 
       {/* Knowledge bar */}
       <div
-        className="rounded-xl p-5 flex items-center gap-5"
+        className="rounded-xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
         style={{ background: "var(--surface-card)", border: "1px solid var(--surface-border)" }}
       >
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "hsl(35 90% 58% / 0.15)" }}>

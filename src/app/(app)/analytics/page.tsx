@@ -784,7 +784,7 @@ export default function AnalyticsPage() {
 
         {/* ── MRR / ARR / Revenue Summary ─────────────────────────────────── */}
         {revenueSummary && (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "MRR", value: `$${(revenueSummary.mrr / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(262, 83%, 68%)" },
               { label: "ARR", value: `$${(revenueSummary.arr / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`, color: "hsl(142, 68%, 52%)" },
