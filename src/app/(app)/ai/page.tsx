@@ -249,10 +249,10 @@ function AiStudioInner() {
   const activeMode = MODES.find((m) => m.id === selectedMode)!;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
+    <div className="flex flex-col md:flex-row" style={{ height: "calc(100dvh - 56px)", maxHeight: "calc(100dvh - 56px)", overflow: "hidden" }}>
+      {/* Sidebar — desktop only */}
       <aside
-        className="w-64 shrink-0 flex flex-col"
+        className="hidden md:flex md:w-64 shrink-0 flex-col"
         style={{ borderRight: "1px solid var(--surface-border)", background: "var(--surface-card)" }}
       >
         <div className="p-3 shrink-0" style={{ borderBottom: "1px solid var(--surface-border)" }}>
@@ -331,10 +331,36 @@ function AiStudioInner() {
       </aside>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Mobile: horizontal mode selector */}
+        <div
+          className="md:hidden flex gap-2 px-3 py-2 shrink-0 overflow-x-auto"
+          style={{ borderBottom: "1px solid var(--surface-border)", background: "var(--surface-card)", scrollbarWidth: "none" }}
+        >
+          {MODES.map((m) => {
+            const Icon = m.icon;
+            const active = selectedMode === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMode(m.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 transition-all active:scale-95"
+                style={active
+                  ? { background: `${m.color}22`, color: m.color, border: `1px solid ${m.color}44` }
+                  : { background: "var(--surface-elevated)", color: "var(--text-muted)", border: "1px solid var(--surface-border)" }
+                }
+              >
+                <Icon className="w-3 h-3" />
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Mode indicator + Sandbox toggle */}
         <div
-          className="flex items-center gap-3 px-5 py-3 shrink-0"
+          className="flex items-center gap-3 px-4 md:px-5 py-2.5 md:py-3 shrink-0"
           style={{ borderBottom: "1px solid var(--surface-border)", background: "var(--surface-card)" }}
         >
           <div
@@ -373,7 +399,7 @@ function AiStudioInner() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
+        <div className="flex-1 overflow-auto px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-5">
           {displayMessages.length === 0 && !streamText ? (
             <div className="flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
               <div
@@ -450,11 +476,11 @@ function AiStudioInner() {
 
         {/* Input */}
         <div
-          className="p-4 shrink-0"
+          className="px-3 md:px-4 py-3 shrink-0"
           style={{ borderTop: "1px solid var(--surface-border)", background: "var(--surface-card)" }}
         >
           <div
-            className="flex items-end gap-3 rounded-2xl px-4 py-3"
+            className="flex items-end gap-2 md:gap-3 rounded-2xl px-3 md:px-4 py-2.5 md:py-3"
             style={{ background: "var(--surface-elevated)", border: "1px solid var(--surface-border)" }}
           >
             <textarea
@@ -462,26 +488,26 @@ function AiStudioInner() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Ask the ${activeMode.label} anything… (Enter to send, Shift+Enter for newline)`}
+              placeholder={`Ask ${activeMode.label}…`}
               rows={1}
-              className="flex-1 bg-transparent text-sm resize-none outline-none leading-relaxed"
-              style={{ color: "var(--text-primary)", maxHeight: "120px" }}
+              className="flex-1 bg-transparent resize-none outline-none leading-relaxed"
+              style={{ color: "var(--text-primary)", maxHeight: "100px", fontSize: "16px" }}
             />
             <button
               onClick={() => void send()}
               disabled={!input.trim() || streaming}
-              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all disabled:opacity-30"
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all disabled:opacity-30 active:scale-90"
               style={{ background: "var(--brand-gradient)" }}
             >
               {streaming ? (
-                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
               ) : (
-                <Send className="w-3.5 h-3.5 text-white" />
+                <Send className="w-4 h-4 text-white" />
               )}
             </button>
           </div>
-          <p className="text-[10px] text-center mt-2" style={{ color: "var(--text-muted)" }}>
-            Responses use relevant snippets from the NexoFlow second brain. Review before sharing with clients.
+          <p className="hidden md:block text-[10px] text-center mt-2" style={{ color: "var(--text-muted)" }}>
+            Responses use relevant snippets from the NexoFlow second brain.
           </p>
         </div>
       </div>

@@ -38,7 +38,7 @@ export default function ApiKeysPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6 md:mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1.5 h-5 rounded-full" style={{ background: "var(--brand-gradient)" }} />

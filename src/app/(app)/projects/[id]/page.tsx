@@ -129,7 +129,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6 md:mb-8">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             {project.name}

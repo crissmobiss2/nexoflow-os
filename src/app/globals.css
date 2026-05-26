@@ -53,6 +53,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Touch base (all screen sizes) ────────────────────────────────────────── */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Prevent iOS from zooming on input focus (inputs must be ≥16px) */
+input, select, textarea {
+  font-size: max(16px, 0.875rem);
+}
+
+/* Momentum scrolling everywhere */
+.overflow-auto, .overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Active press feedback on touch */
+@media (hover: none) and (pointer: coarse) {
+  a:active, button:active, [role="button"]:active {
+    opacity: 0.72;
+    transform: scale(0.97);
+    transition: opacity 80ms, transform 80ms;
+  }
+}
+
 /* ─── Mobile responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   /* Hard stop on ALL horizontal overflow */
@@ -79,10 +101,10 @@ body {
   /* Force form grids to single column */
   .grid.grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
 
-  /* col-span overrides (cards that span multiple cols in a now-stacked grid) */
+  /* col-span overrides */
   .col-span-2, .col-span-3, .col-span-4 { grid-column: span 1 !important; }
 
-  /* ── Charts — ensure the charts grid stacks vertically ── */
+  /* Charts grid — always stack vertically */
   .grid.grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
 
   /* ── Gap tightening ── */
@@ -102,12 +124,6 @@ body {
     max-width: 100%;
   }
 
-  /* ── Touch targets ── */
-  button, a[href], [role="button"] { min-height: 40px; }
-
-  /* ── Flex layouts that shouldn't overflow ── */
-  .flex.items-center.justify-between { flex-wrap: wrap; gap: 0.5rem; }
-
   /* ── Card padding ── */
   .rounded-2xl.p-6 { padding: 0.875rem !important; }
   .rounded-2xl.p-8 { padding: 1rem !important; }
@@ -115,8 +131,40 @@ body {
   .rounded-xl.p-8  { padding: 1rem !important; }
 
   /* ── Space-y tightening ── */
-  .space-y-8 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; margin-top: calc(1.5rem * (1 - var(--tw-space-y-reverse))); margin-bottom: calc(1.5rem * var(--tw-space-y-reverse)); }
+  .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.5rem;
+  }
+
+  /* ── Page transition — fade in content on navigate ── */
+  main > * {
+    animation: nf-fade-in 0.18s ease-out;
+  }
+
+  /* ── Pill/stat cards: ensure min readable width ── */
+  .grid > * { min-width: 0; }
+
+  /* ── Page headers with action buttons: stack on mobile ── */
+  .nf-page-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+  }
+  .nf-page-header a,
+  .nf-page-header button {
+    align-self: stretch;
+    justify-content: center;
+  }
 }
+
+/* ─── Page transition animation ─────────────────────────────────────────────── */
+@keyframes nf-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Safe area utilities ────────────────────────────────────────────────────── */
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

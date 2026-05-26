@@ -258,7 +258,7 @@ export default function PlaybooksPage() {
       <div className="flex-1 overflow-auto">
         <div className="max-w-3xl mx-auto p-8">
           {/* Header */}
-          <div className="flex items-start justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6 md:mb-8">
             <div className="flex items-center gap-4">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
