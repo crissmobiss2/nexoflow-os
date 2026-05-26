@@ -53,6 +53,48 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Prevent horizontal overflow on all pages */
+  body { overflow-x: hidden; }
+
+  /* Tighten page padding on small screens */
+  .p-8 { padding: 1rem !important; }
+  .p-6 { padding: 0.875rem !important; }
+  .max-w-7xl, .max-w-6xl, .max-w-5xl { max-width: 100% !important; }
+
+  /* Stack grid columns on mobile */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4,
+  .md\:grid-cols-3, .lg\:grid-cols-6 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Full-width single column for very small grids */
+  .grid-cols-3 > * { min-width: 0; }
+
+  /* Charts full width */
+  .col-span-2 { grid-column: span 1 !important; }
+
+  /* Revenue chart — stack vertically */
+  .grid.grid-cols-3 { grid-template-columns: 1fr !important; }
+
+  /* Text size adjustments */
+  .text-xl { font-size: 1.1rem !important; }
+  .text-2xl { font-size: 1.25rem !important; }
+  h1.text-xl { font-size: 1.1rem !important; }
+
+  /* Tables — horizontal scroll */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Card padding */
+  .rounded-2xl.p-6 { padding: 0.875rem !important; }
+  .rounded-2xl.p-8 { padding: 1rem !important; }
+
+  /* Fix form grids */
+  .grid.grid-cols-2 { grid-template-columns: 1fr !important; }
+  .col-span-2 { grid-column: span 1 !important; }
+}
+
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
