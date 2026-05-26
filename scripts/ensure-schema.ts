@@ -1237,6 +1237,84 @@ async function main() {
       )
   `);
 
+  // ── nf_time_entries ──────────────────────────────────────────────────────
+  await run("nf_time_entries table", `
+    CREATE TABLE IF NOT EXISTS nf_time_entries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES nf_projects(id) ON DELETE CASCADE,
+      user_id TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      date TIMESTAMPTZ NOT NULL,
+      minutes_logged INTEGER NOT NULL,
+      description TEXT,
+      billable BOOLEAN NOT NULL DEFAULT true,
+      rate_per_hour_cents INTEGER,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_time_entries_project_idx", `CREATE INDEX IF NOT EXISTS nf_time_entries_project_idx ON nf_time_entries (project_id)`);
+  await run("nf_time_entries_user_idx",    `CREATE INDEX IF NOT EXISTS nf_time_entries_user_idx ON nf_time_entries (user_id)`);
+  await run("nf_time_entries_date_idx",    `CREATE INDEX IF NOT EXISTS nf_time_entries_date_idx ON nf_time_entries (date)`);
+
+  // ── nf_onboarding_tasks ───────────────────────────────────────────────────
+  await run("enum nf_onboarding_task_status", `DO $$ BEGIN CREATE TYPE nf_onboarding_task_status AS ENUM ('todo','in_progress','done','skipped'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+  await run("nf_onboarding_tasks table", `
+    CREATE TABLE IF NOT EXISTS nf_onboarding_tasks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id UUID NOT NULL REFERENCES nf_clients(id) ON DELETE CASCADE,
+      project_id UUID REFERENCES nf_projects(id) ON DELETE SET NULL,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      category VARCHAR(100),
+      status nf_onboarding_task_status NOT NULL DEFAULT 'todo',
+      assignee_id TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      due_date TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      order_val INTEGER NOT NULL DEFAULT 0,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_onboarding_tasks_client_idx", `CREATE INDEX IF NOT EXISTS nf_onboarding_tasks_client_idx ON nf_onboarding_tasks (client_id)`);
+  await run("nf_onboarding_tasks_status_idx", `CREATE INDEX IF NOT EXISTS nf_onboarding_tasks_status_idx ON nf_onboarding_tasks (status)`);
+
+  // ── nf_wiki_pages ─────────────────────────────────────────────────────────
+  await run("nf_wiki_pages table", `
+    CREATE TABLE IF NOT EXISTS nf_wiki_pages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title VARCHAR(500) NOT NULL,
+      slug VARCHAR(255) NOT NULL UNIQUE,
+      content TEXT NOT NULL DEFAULT '',
+      category VARCHAR(100),
+      tags TEXT[],
+      author_id TEXT REFERENCES nf_user(id) ON DELETE SET NULL,
+      pinned BOOLEAN NOT NULL DEFAULT false,
+      published BOOLEAN NOT NULL DEFAULT true,
+      team_id UUID REFERENCES nf_teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_wiki_pages_category_idx", `CREATE INDEX IF NOT EXISTS nf_wiki_pages_category_idx ON nf_wiki_pages (category)`);
+  await run("nf_wiki_pages_slug_idx",     `CREATE INDEX IF NOT EXISTS nf_wiki_pages_slug_idx ON nf_wiki_pages (slug)`);
+
+  // ── nf_client_messages ────────────────────────────────────────────────────
+  await run("nf_client_messages table", `
+    CREATE TABLE IF NOT EXISTS nf_client_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id UUID NOT NULL REFERENCES nf_clients(id) ON DELETE CASCADE,
+      direction VARCHAR(20) NOT NULL,
+      author_name VARCHAR(255) NOT NULL,
+      content TEXT NOT NULL,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run("nf_client_messages_client_idx",  `CREATE INDEX IF NOT EXISTS nf_client_messages_client_idx ON nf_client_messages (client_id)`);
+  await run("nf_client_messages_created_idx", `CREATE INDEX IF NOT EXISTS nf_client_messages_created_idx ON nf_client_messages (created_at)`);
+
   console.log("── Done ──────────────────────────────────────────────");
   await sql.end();
 }

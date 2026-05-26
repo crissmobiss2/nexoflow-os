@@ -317,4 +317,36 @@ export const projectsRouter = createTRPCRouter({
         orderBy: [desc(projectArtifacts.createdAt)],
       });
     }),
+
+  updateArtifact: teamProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        artifactType: z.enum([
+          "scope_doc", "tech_stack", "architecture", "risk_register",
+          "code_bundle", "file_tree", "database_schema", "deployment_config",
+        ]),
+        content: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.projectArtifacts.findFirst({
+        where: (a, { and, eq }) =>
+          and(eq(a.projectId, input.projectId), eq(a.artifactType, input.artifactType)),
+        orderBy: [desc(projectArtifacts.createdAt)],
+      });
+      if (existing) {
+        const [updated] = await ctx.db
+          .update(projectArtifacts)
+          .set({ content: input.content })
+          .where(eq(projectArtifacts.id, existing.id))
+          .returning();
+        return updated;
+      }
+      const [created] = await ctx.db
+        .insert(projectArtifacts)
+        .values({ projectId: input.projectId, artifactType: input.artifactType as any, content: input.content })
+        .returning();
+      return created;
+    }),
 });

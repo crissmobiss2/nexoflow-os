@@ -1175,6 +1175,122 @@ export const followUpSequenceRelations = relations(followUpSequences, ({ one }) 
   lead: one(leads, { fields: [followUpSequences.leadId], references: [leads.id] }),
 }));
 
+// ─── Time Tracking ────────────────────────────────────────────────────────────
+
+export const timeEntries = pgTable(
+  "nf_time_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    date: timestamp("date").notNull(),
+    minutesLogged: integer("minutes_logged").notNull(),
+    description: text("description"),
+    billable: boolean("billable").default(true).notNull(),
+    ratePerHourCents: integer("rate_per_hour_cents"),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_time_entries_project_idx").on(t.projectId),
+    index("nf_time_entries_user_idx").on(t.userId),
+    index("nf_time_entries_date_idx").on(t.date),
+  ],
+);
+
+export const timeEntryRelations = relations(timeEntries, ({ one }) => ({
+  project: one(projects, { fields: [timeEntries.projectId], references: [projects.id] }),
+  user: one(users, { fields: [timeEntries.userId], references: [users.id] }),
+}));
+
+// ─── Onboarding Checklists ────────────────────────────────────────────────────
+
+export const onboardingTaskStatusEnum = pgEnum("nf_onboarding_task_status", [
+  "todo", "in_progress", "done", "skipped",
+]);
+
+export const onboardingTasks = pgTable(
+  "nf_onboarding_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 500 }).notNull(),
+    description: text("description"),
+    category: varchar("category", { length: 100 }),
+    status: onboardingTaskStatusEnum("status").default("todo").notNull(),
+    assigneeId: text("assignee_id").references(() => users.id, { onDelete: "set null" }),
+    dueDate: timestamp("due_date"),
+    completedAt: timestamp("completed_at"),
+    orderVal: integer("order_val").default(0).notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_onboarding_tasks_client_idx").on(t.clientId),
+    index("nf_onboarding_tasks_status_idx").on(t.status),
+  ],
+);
+
+export const onboardingTaskRelations = relations(onboardingTasks, ({ one }) => ({
+  client: one(clients, { fields: [onboardingTasks.clientId], references: [clients.id] }),
+  project: one(projects, { fields: [onboardingTasks.projectId], references: [projects.id] }),
+  assignee: one(users, { fields: [onboardingTasks.assigneeId], references: [users.id] }),
+}));
+
+// ─── Internal Wiki (SOPs, pricing, processes) ─────────────────────────────────
+
+export const wikiPages = pgTable(
+  "nf_wiki_pages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: varchar("title", { length: 500 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    content: text("content").notNull().default(""),
+    category: varchar("category", { length: 100 }),
+    tags: text("tags").array(),
+    authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+    pinned: boolean("pinned").default(false).notNull(),
+    published: boolean("published").default(true).notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_wiki_pages_category_idx").on(t.category),
+    index("nf_wiki_pages_slug_idx").on(t.slug),
+  ],
+);
+
+export const wikiPageRelations = relations(wikiPages, ({ one }) => ({
+  author: one(users, { fields: [wikiPages.authorId], references: [users.id] }),
+}));
+
+// ─── Client Portal Messages ───────────────────────────────────────────────────
+
+export const clientMessages = pgTable(
+  "nf_client_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+    direction: varchar("direction", { length: 20 }).notNull(), // "from_client" | "from_team"
+    authorName: varchar("author_name", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("nf_client_messages_client_idx").on(t.clientId),
+    index("nf_client_messages_created_idx").on(t.createdAt),
+  ],
+);
+
+export const clientMessageRelations = relations(clientMessages, ({ one }) => ({
+  client: one(clients, { fields: [clientMessages.clientId], references: [clients.id] }),
+}));
+
 // ─── Relations for new tables added above ─────────────────────────────────────
 
 export const accountRelations = relations(accounts, ({ one }) => ({

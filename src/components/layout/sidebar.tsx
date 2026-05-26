@@ -8,7 +8,8 @@ import {
   LayoutDashboard, FolderKanban, Users, Plus, Zap,
   BookOpen, Brain, Sparkles, LogOut, BarChart2,
   Key, Search, LayoutTemplate, ScrollText, Database,
-  Target, Star, Link2,
+  Target, Star, Link2, Clock, TrendingUp, CheckSquare,
+  FileText, Handshake,
 } from "lucide-react";
 import type { Session } from "next-auth";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -18,29 +19,40 @@ const NAV_SECTIONS = [
   {
     label: "Intelligence",
     items: [
-      { href: "/ai",        label: "AI Studio",      icon: Brain,          badge: "New" as const },
-      { href: "/knowledge", label: "Knowledge Hub",  icon: BookOpen,       badge: null },
-      { href: "/playbooks", label: "Playbooks",      icon: Sparkles,       badge: null },
+      { href: "/ai",        label: "AI Studio",      icon: Brain,    badge: "New" as const },
+      { href: "/knowledge", label: "Knowledge Hub",  icon: BookOpen, badge: null },
+      { href: "/wiki",      label: "Internal Wiki",  icon: FileText, badge: null },
+      { href: "/playbooks", label: "Playbooks",      icon: Sparkles, badge: null },
     ],
   },
   {
     label: "Pipeline",
     items: [
-      { href: "/leads",         label: "Lead Pipeline",  icon: Target,  badge: null },
-      { href: "/affiliates",    label: "Affiliates",     icon: Link2,   badge: null },
-      { href: "/case-studies",  label: "Case Studies",   icon: Star,    badge: null },
+      { href: "/leads",         label: "Lead Pipeline",  icon: Target,   badge: null },
+      { href: "/affiliates",    label: "Affiliates",     icon: Link2,    badge: null },
+      { href: "/case-studies",  label: "Case Studies",   icon: Star,     badge: null },
+    ],
+  },
+  {
+    label: "Clients & Revenue",
+    items: [
+      { href: "/clients",       label: "Clients",        icon: Users,       badge: null },
+      { href: "/onboarding",    label: "Onboarding",     icon: CheckSquare, badge: null },
+      { href: "/invoices",      label: "Invoices",       icon: Handshake,   badge: null },
+      { href: "/revenue",       label: "Revenue",        icon: TrendingUp,  badge: "New" as const },
     ],
   },
   {
     label: "Workspace",
     items: [
-      { href: "/",          label: "Dashboard",      icon: LayoutDashboard, badge: null },
-      { href: "/search",    label: "Search",         icon: Search,          badge: null },
-      { href: "/analytics", label: "Analytics",      icon: BarChart2,       badge: null },
-      { href: "/clients",   label: "Clients",        icon: Users,           badge: null },
-      { href: "/projects",  label: "Projects",       icon: FolderKanban,    badge: null },
-      { href: "/projects/board", label: "Board",     icon: LayoutDashboard, badge: null },
-      { href: "/templates", label: "Templates",      icon: LayoutTemplate,  badge: null },
+      { href: "/",              label: "Dashboard",      icon: LayoutDashboard, badge: null },
+      { href: "/team-standup",  label: "Team Standup",   icon: Zap,             badge: null },
+      { href: "/time-tracking", label: "Time Tracking",  icon: Clock,           badge: null },
+      { href: "/projects",      label: "Projects",       icon: FolderKanban,    badge: null },
+      { href: "/projects/board", label: "Board",         icon: LayoutDashboard, badge: null },
+      { href: "/analytics",     label: "Analytics",      icon: BarChart2,       badge: null },
+      { href: "/search",        label: "Search",         icon: Search,          badge: null },
+      { href: "/templates",     label: "Templates",      icon: LayoutTemplate,  badge: null },
     ],
   },
 ];

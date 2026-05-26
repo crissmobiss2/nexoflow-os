@@ -1,9 +1,9 @@
 export const revalidate = 30;
 
 import { db } from "@/server/db";
-import { clients } from "@/server/db/schema";
-import { desc } from "drizzle-orm";
-import { Users, Plus, CheckCircle2, Clock, ArrowRight, MapPin, Building2 } from "lucide-react";
+import { clients, invoices } from "@/server/db/schema";
+import { desc, eq, sql } from "drizzle-orm";
+import { Users, Plus, CheckCircle2, Clock, ArrowRight, MapPin, Building2, Activity } from "lucide-react";
 import Link from "next/link";
 
 const URGENCY_BADGE: Record<string, { label: string; color: string; bg: string }> = {
@@ -12,11 +12,57 @@ const URGENCY_BADGE: Record<string, { label: string; color: string; bg: string }
   urgent:    { label: "Urgent",     color: "hsl(142, 68%, 52%)", bg: "hsl(142, 68%, 52%, 0.12)" },
 };
 
+function computeHealthScore(
+  client: { onboardedAt: Date | null; portalEnabled: boolean; updatedAt: Date; industry: string | null; company: string | null },
+  projects: { status: string }[],
+  invStats: { paid: number; overdue: number; total: number },
+): number {
+  let score = 0;
+  if (client.onboardedAt) score += 20;
+  if (client.portalEnabled) score += 10;
+  if (client.industry || client.company) score += 5;
+  const readyProjects = projects.filter((p) => ["ready", "generating", "architected"].includes(p.status)).length;
+  score += Math.min(readyProjects * 15, 25);
+  score += Math.min(projects.length * 5, 15);
+  if (invStats.paid > 0) score += 15;
+  if (invStats.overdue > 0) score -= 20;
+  const daysSinceUpdate = (Date.now() - new Date(client.updatedAt).getTime()) / 86400000;
+  if (daysSinceUpdate < 7) score += 10;
+  else if (daysSinceUpdate > 60) score -= 10;
+  return Math.max(0, Math.min(100, score));
+}
+
+function HealthBadge({ score }: { score: number }) {
+  const color = score >= 70 ? "hsl(142,68%,52%)" : score >= 40 ? "hsl(35,90%,58%)" : "hsl(0,72%,58%)";
+  const label = score >= 70 ? "Healthy" : score >= 40 ? "At risk" : "Low";
+  return (
+    <div className="flex items-center gap-1.5">
+      <Activity style={{ width: 11, height: 11, color }} />
+      <span className="text-[11px] font-semibold" style={{ color }}>{score} · {label}</span>
+    </div>
+  );
+}
+
 export default async function ClientsPage() {
   const allClients = await db.query.clients.findMany({
     orderBy: [desc(clients.createdAt)],
     with: { projects: true },
   });
+
+  // Aggregate invoice stats per client
+  const invoiceStats = await db
+    .select({
+      clientId: invoices.clientId,
+      paid: sql<number>`COUNT(*) FILTER (WHERE status = 'paid')::int`,
+      overdue: sql<number>`COUNT(*) FILTER (WHERE status = 'overdue')::int`,
+      total: sql<number>`COUNT(*)::int`,
+    })
+    .from(invoices)
+    .groupBy(invoices.clientId);
+
+  const invByClient = Object.fromEntries(
+    invoiceStats.map((r) => [r.clientId, { paid: r.paid, overdue: r.overdue, total: r.total }]),
+  );
 
   const onboarded = allClients.filter((c) => c.onboardedAt);
   const pending   = allClients.filter((c) => !c.onboardedAt);
@@ -77,11 +123,11 @@ export default async function ClientsPage() {
             className="grid px-6 py-3"
             style={{
               borderBottom: "1px solid var(--surface-border)",
-              gridTemplateColumns: "1fr 160px 120px 100px 80px 16px",
+              gridTemplateColumns: "1fr 160px 120px 90px 110px 80px 16px",
               gap: "1rem",
             }}
           >
-            {["Client", "Company / Region", "Industry", "Projects", "Status", ""].map((h) => (
+            {["Client", "Company / Region", "Industry", "Projects", "Health Score", "Status", ""].map((h) => (
               <div key={h} className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                 {h}
               </div>
@@ -91,6 +137,8 @@ export default async function ClientsPage() {
           {allClients.map((client) => {
             const urgencyInfo = client.urgency ? URGENCY_BADGE[client.urgency] : null;
             const isOnboarded = !!client.onboardedAt;
+            const invStats = invByClient[client.id] ?? { paid: 0, overdue: 0, total: 0 };
+            const healthScore = computeHealthScore(client, client.projects, invStats);
 
             return (
               <Link
@@ -99,7 +147,7 @@ export default async function ClientsPage() {
                 className="grid items-center px-6 py-4 transition-colors hover:bg-white/[0.02] group"
                 style={{
                   borderBottom: "1px solid var(--surface-border-subtle)",
-                  gridTemplateColumns: "1fr 160px 120px 100px 80px 16px",
+                  gridTemplateColumns: "1fr 160px 120px 90px 110px 80px 16px",
                   gap: "1rem",
                 }}
               >
@@ -147,6 +195,9 @@ export default async function ClientsPage() {
                   <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{client.projects.length}</span>
                   <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>project{client.projects.length !== 1 ? "s" : ""}</span>
                 </div>
+
+                {/* Health Score */}
+                <HealthBadge score={healthScore} />
 
                 {/* Status / Urgency */}
                 <div>

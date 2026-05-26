@@ -22,6 +22,11 @@ import { industryProfilesRouter } from "./industryProfiles";
 import { outreachTemplatesRouter } from "./outreachTemplates";
 import { affiliatesRouter } from "./affiliates";
 import { caseStudiesRouter } from "./caseStudies";
+import { timeTrackingRouter } from "./timeTracking";
+import { onboardingRouter } from "./onboarding";
+import { wikiRouter } from "./wiki";
+import { clientMessagesRouter } from "./clientMessages";
+import { proposalsRouter } from "./proposals";
 
 export const appRouter = createTRPCRouter({
   projects: projectsRouter,
@@ -47,6 +52,11 @@ export const appRouter = createTRPCRouter({
   outreachTemplates: outreachTemplatesRouter,
   affiliates: affiliatesRouter,
   caseStudies: caseStudiesRouter,
+  timeTracking: timeTrackingRouter,
+  onboarding: onboardingRouter,
+  wiki: wikiRouter,
+  clientMessages: clientMessagesRouter,
+  proposals: proposalsRouter,
 });
 
 export type AppRouter = typeof appRouter;
