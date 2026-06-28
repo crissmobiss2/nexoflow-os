@@ -49,14 +49,7 @@ export default function SignInPage() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-            style={{ background: "var(--brand-gradient, linear-gradient(135deg, #6366f1, #a855f7))" }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
+          <img src="/nexoflow-logo.jpg" alt="NexoFlow" className="w-12 h-12 rounded-xl object-cover mb-3" />
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary, #f1f1f7)" }}>
             NexoFlow OS
           </h1>

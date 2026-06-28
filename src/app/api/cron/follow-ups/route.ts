@@ -1,11 +1,11 @@
 /**
  * GET /api/cron/follow-ups
  *
- * Runs every hour (Vercel Cron). Finds active follow-up sequences whose
- * nextSendAt is due, generates the next email with Claude, sends via Resend,
- * advances the sequence step, and schedules the next send.
+ * Runs daily at 9am UTC (vercel.json: "0 9 * * *"). Finds active follow-up
+ * sequences whose nextSendAt is due, generates the next email with Claude,
+ * sends via Resend, advances the sequence step, and schedules the next send.
  *
- * Cadence (days from sequence start): 1, 3, 7, 14, 21
+ * Cadence (days from sequence start): 1, 3, 7, 14, 21, 35, 60
  *
  * Auth: requires CRON_SECRET in Authorization header (Vercel sets this
  * automatically when the route is invoked from a cron). Manual invocations

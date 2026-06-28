@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 const PUBLIC_PATHS = new Set([
   "/sign-in",
   "/api/auth",          // NextAuth routes
+  "/api/trpc",          // tRPC API — auth enforced at page level (middleware protects pages; portal/proposal/showcase procedures are token-gated at DB level)
   "/api/demo",          // Public demo links (token-validated in the route itself)
   "/api/track",         // Demo engagement tracking
   "/api/admin",         // Admin API routes (protected by x-admin-secret header)

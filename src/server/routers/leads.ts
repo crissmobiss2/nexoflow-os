@@ -20,6 +20,8 @@ import { uploadHtml } from "@/lib/blob";
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY ?? process.env.AUTH_RESEND_KEY ?? "not_configured");
 
+const BOOKING_URL = process.env.BOOKING_URL ?? "https://nexoflow.tech/book";
+
 const leadInput = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
@@ -463,12 +465,12 @@ export async function runDemoGeneration(leadId: string, autoBuildProfile: boolea
   const secondary = brandColors[1] ?? "#4f8ef7";
   const fallbackCta = cleanBody.includes('class="cta-section"')
     ? ""
-    : `\n<!-- SECTION 9: FINAL CTA -->\n<section class="cta-section">\n<div class="container">\n<h2 class="section-h2" style="font-size:48px;color:#fff;line-height:1.15">Ready to build this for ${companyName}?<br><span class="grad-text">Stop losing revenue. Start capturing it.</span></h2>\n<p class="section-sub" style="color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0">Most businesses wait until a competitor forces their hand. Don't be that business.</p>\n<a href="https://nexoflow.tech" target="_blank" class="btn-cta" style="display:inline-flex;align-items:center;gap:8px;margin-top:40px">Book a Free 30-Min Call</a>\n<p class="cta-note">No commitment. We will scope your project for free.</p>\n<div class="proof-row"><span class="proof-item">Response within 24h</span><span class="proof-item">NDA on request</span><span class="proof-item">US-based team</span></div>\n</div>\n</section>`;
+    : `\n<!-- SECTION 9: FINAL CTA -->\n<section class="cta-section">\n<div class="container">\n<h2 class="section-h2" style="font-size:48px;color:#fff;line-height:1.15">Ready to build this for ${companyName}?<br><span class="grad-text">Stop losing revenue. Start capturing it.</span></h2>\n<p class="section-sub" style="color:rgba(255,255,255,.65);font-size:18px;margin:16px auto 0">Most businesses wait until a competitor forces their hand. Don't be that business.</p>\n<a href="${BOOKING_URL}" target="_blank" class="btn-cta" style="display:inline-flex;align-items:center;gap:8px;margin-top:40px">Book a Free 30-Min Call</a>\n<p class="cta-note">No commitment. We will scope your project for free.</p>\n<div class="proof-row"><span class="proof-item">Response within 24h</span><span class="proof-item">NDA on request</span><span class="proof-item">US-based team</span></div>\n</div>\n</section>`;
 
   // Fallback footer — appended when the model runs out of tokens before section 10
   const fallbackFooter = cleanBody.includes("<footer")
     ? ""
-    : `\n<!-- SECTION 10: FOOTER -->\n<footer>\n<div class="footer-inner">\n<div><div class="footer-logo">NexoFlow</div><div class="footer-tagline">We build software that works.</div></div>\n<div class="footer-links"><a href="https://nexoflow.tech" target="_blank" rel="noopener">Website</a><a href="mailto:hello@nexoflow.tech">hello@nexoflow.tech</a></div>\n</div>\n<div class="footer-bar">Custom demo built exclusively for ${companyName} · © 2026 NexoFlow · <a href="https://nexoflow.tech" style="color:inherit">nexoflow.tech</a></div>\n</footer>`;
+    : `\n<!-- SECTION 10: FOOTER -->\n<footer>\n<div class="footer-inner">\n<div><div class="footer-logo">NexoFlow</div><div class="footer-tagline">We build software that works.</div></div>\n<div class="footer-links"><a href="${BOOKING_URL}" target="_blank" rel="noopener">Book a Call</a><a href="mailto:hello@nexoflow.tech">hello@nexoflow.tech</a></div>\n</div>\n<div class="footer-bar">Custom demo built exclusively for ${companyName} · © 2026 NexoFlow · <a href="https://nexoflow.tech" style="color:inherit">nexoflow.tech</a></div>\n</footer>`;
 
   const demoHtml = `<!DOCTYPE html>
 <html lang="en">

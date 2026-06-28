@@ -32,6 +32,14 @@ export const env = createEnv({
     NEXOFLOW_PASSWORD: z.string().min(8).optional(),
     // Admin endpoint secret (used by internal scripts only — never expose to clients)
     ADMIN_REGEN_SECRET: z.string().optional(),
+    // Booking / calendar link shown in generated demos
+    BOOKING_URL: z.string().url().optional(),
+    // Stripe (payment webhooks)
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    // Upstash Redis (rate limiting — falls back to in-memory if absent)
+    UPSTASH_REDIS_URL: z.string().url().optional(),
+    UPSTASH_REDIS_TOKEN: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -58,6 +66,11 @@ export const env = createEnv({
     NEXOFLOW_ADMIN_EMAIL: process.env.NEXOFLOW_ADMIN_EMAIL,
     NEXOFLOW_PASSWORD: process.env.NEXOFLOW_PASSWORD,
     ADMIN_REGEN_SECRET: process.env.ADMIN_REGEN_SECRET,
+    BOOKING_URL: process.env.BOOKING_URL,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
+    UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION || process.env.VERCEL === "1",

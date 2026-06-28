@@ -100,11 +100,7 @@ export function Sidebar({ session }: { session: Session | null }) {
       {/* Logo */}
       <div className="h-14 flex items-center px-5 shrink-0" style={{ borderBottom: "1px solid var(--surface-border)" }}>
         <div className="flex items-center gap-2.5 flex-1">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--brand-gradient)" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
+          <img src="/nexoflow-logo.jpg" alt="NexoFlow" className="w-7 h-7 rounded-lg object-cover shrink-0" />
           <div>
             <div className="text-sm font-semibold leading-none" style={{ color: "var(--text-primary)" }}>NexoFlow</div>
             <div className="text-[10px] leading-none mt-0.5 font-medium tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>OS</div>
@@ -321,7 +317,7 @@ export function Sidebar({ session }: { session: Session | null }) {
           className="grid"
           style={{
             gridTemplateColumns: `repeat(${BOTTOM_NAV.length}, 1fr)`,
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            paddingBottom: "env(safe-area-inset-bottom, 20px)",
           }}
         >
           {BOTTOM_NAV.map(({ href, label, icon: Icon }) => {
